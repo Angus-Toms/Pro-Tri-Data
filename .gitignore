@@ -1,6 +1,33 @@
-.vscode/
+# ================================
+# PYTHON
+# ================================
 __pycache__/
-._DS_Store
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# ================================
+# VS CODE
+# ================================
+.vscode/
+*.code-workspace
+
+# ================================
+# SYSTEM FILES
+# ================================
+.DS_Store
+
+# ================================
+# ENV / SECRETS
+# ================================
+.env
+.env.*
+secrets.json
 
 /static/athlete_imgs
 /static/data
