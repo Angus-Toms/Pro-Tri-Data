@@ -42,15 +42,15 @@ class TriathlonELOSystem:
     """
     ELO rating system for triathlon athletes using Athlete objects.
     """
-    def __init__(self, initial_rating: int, k_factor: float, race_guide_fname: Path, race_dir: Path):
+    def __init__(self, k_factor: float, race_guide_fname: Path, race_dir: Path):
         """
         Initialize the ELO system.
         
         Args:
-            initial_rating: Starting ELO rating for new athletes
             k_factor: ELO K-factor for rating adjustment magnitude
+            race_guide_fname: Path to CSV file with key race info 
+            race_dir: Directory containing race CSVs
         """
-        self.initial_rating: int = initial_rating
         self.scale: float = 46175.8
         self.k_factor: float = k_factor
         self.athletes: Dict[int, Athlete] = {}  
@@ -92,8 +92,8 @@ class TriathlonELOSystem:
                     race_title = row.race_title,
                     prog_name = row.prog_name,
                     date = datetime.strptime(row.prog_date, '%Y-%m-%d'),
-                    location = str(row.race_venue).replace('"', '').replace("'", ""),
-                    country = str(row.race_country).replace('"', '').replace("'", "")
+                    location = str(row.race_venue),
+                    country = str(row.race_country)
                 )
                 self.races[row.prog_id] = race
                 self.process_single_race(fname, row)
@@ -118,8 +118,9 @@ class TriathlonELOSystem:
             
             race_date = datetime.strptime(prog_row.prog_date, '%Y-%m-%d')
             
-            # Store rae results and get athlete data
-            athlete_data = self.make_race_and_athletes(race_df, race_id, race_date)
+            # Store race results and get athlete data
+            prog_name = str(prog_row.prog_name) # Pass prog name so we can initialise AG vs. Elites correctly
+            athlete_data = self.make_race_and_athletes(race_df, race_id, race_date, prog_name)
             
             # Calculate ELO changes
             elo_changes = self.calculate_elo_changes(athlete_data)
@@ -217,10 +218,16 @@ class TriathlonELOSystem:
         
         return race_df
     
-    def make_race_and_athletes(self, race_df: pd.DataFrame, race_id: int, race_date: datetime) -> Dict:
+    def make_race_and_athletes(self, race_df: pd.DataFrame, race_id: int, race_date: datetime, prog_name: str) -> Dict:
         """
         Store race results and athlete data, return data needed for ELO calculations.
-        
+
+        Args:
+            race_df: DataFrame of results including athletes, splits, positions and overall times
+            race_id: int ID
+            race_date: datetime of the race
+            prog_name: Name of the program (e.g., "AG" or "Elites") to initialise athletes correctly
+
         Returns:
             athlete_data: Dict mapping athlete_id to (ratings, times) tuples
         """
@@ -233,7 +240,8 @@ class TriathlonELOSystem:
             athlete_id = row['athlete_id']
             
             athlete = self.get_or_create_athlete(row)
-            
+            athlete.initialise_ratings(prog_name) # Set initial ratings based on AG vs. Elites
+
             # Save to Race
             race.add_result(
                 athlete_id = athlete_id,
@@ -306,6 +314,7 @@ class TriathlonELOSystem:
         
         Args:
             athlete_data: Dict mapping athlete_id to (ratings, times) tuples
+            Ratings and times correspond to [overall, swim, bike, run, transition]
         Returns:
             Dict mapping athlete_id to list of ELO changes
         """
@@ -470,6 +479,8 @@ class TriathlonELOSystem:
             last_race_date = athlete.rating_history[-1].race_date
             diff = datetime.now() - last_race_date
             athlete.active = diff < timedelta(days = 365 * 2)
+
+    # TODO: 1 yr change
             
     def make_leaderboard(self, leaderboard_path: str) -> None:
         leaderboard_data = {}
@@ -525,14 +536,14 @@ class TriathlonELOSystem:
         
 
 def main():
-    female_short_elo = TriathlonELOSystem(initial_rating = 1000, k_factor = 16, race_guide_fname = FEMALE_SHORT_EVENTS, race_dir = FEMALE_SHORT_DIR)
+    female_short_elo = TriathlonELOSystem(k_factor = 16, race_guide_fname = FEMALE_SHORT_EVENTS, race_dir = FEMALE_SHORT_DIR)
     female_short_elo.process_all_races()
     female_short_elo.set_athlete_active_status()
     female_short_elo.make_leaderboard(FEMALE_SHORT_LEADERBOARD)
     female_short_elo.save_athlete_data(ATHLETES_DIR)
     female_short_elo.save_race_data(RACES_DIR)
     
-    # male_short_elo = TriathlonELOSystem(initial_rating = 1000, k_factor = 16, race_guide_fname = MALE_SHORT_EVENTS, race_dir = MALE_SHORT_DIR)
+    # male_short_elo = TriathlonELOSystem(k_factor = 16, race_guide_fname = MALE_SHORT_EVENTS, race_dir = MALE_SHORT_DIR)
     # male_short_elo.process_all_races()
     # male_short_elo.set_athlete_active_status()
     # male_short_elo.make_leaderboard(MALE_SHORT_LEADERBOARD)
@@ -549,7 +560,7 @@ def main():
     make_athlete_lookup()
     # Rebuild race lookups
     make_race_lookup(
-        event_guides = [FEMALE_SHORT_EVENTS, MALE_SHORT_DIR],
+        event_guides = [FEMALE_SHORT_EVENTS],
         output_path = RACE_LOOKUP
     )
 

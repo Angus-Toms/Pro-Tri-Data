@@ -5,7 +5,7 @@ Data format for site APIs:
 - [ ] Add athlete search by name
 - [ ] Add race search by name 
 - [X] Clean up ignored files handling
-- [ ] Ensure stripping of location names
+- [X] Ensure stripping of location names
 - [ ] Add more race info - QOF, hists etc.
 - [ ] Add best performances section to athlete page
 - [ ] Add athlete comparisons

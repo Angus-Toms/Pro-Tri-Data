@@ -24,5 +24,8 @@ FEMALE_SHORT_EVENTS = SOURCE_DIR / "female_short.csv"
 MALE_SHORT_EVENTS = SOURCE_DIR / "male_short.csv"
 FEMALE_SHORT_DIR = SOURCE_DIR / "female_short"
 MALE_SHORT_DIR = SOURCE_DIR / "male_short"
-
 CORRECTIONS = SOURCE_DIR / "corrections.csv"
+
+# Constants 
+ELITE_START_RATING = 1500
+AG_START_RATING = 250

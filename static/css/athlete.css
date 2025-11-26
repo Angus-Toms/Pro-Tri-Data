@@ -201,6 +201,11 @@
     text-overflow: ellipsis;
 }
 
+.rating-change-1yr {
+    font-size: 0.75rem;
+    margin-top: 0.5rem;
+}
+
 /* ============================================
    HISTORICAL TABLES
    ============================================ */

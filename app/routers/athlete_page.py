@@ -54,6 +54,15 @@ def get_current_ratings(athlete: Athlete) -> dict:
         "transition_rating": round(athlete.transition_rating)
     }
 
+def get_rating_changes_1yr(athlete: Athlete) -> dict:
+    return {
+        "overall_change_1yr": format_rating_change(athlete.overall_change_1yr),
+        "swim_change_1yr": format_rating_change(athlete.swim_change_1yr),
+        "bike_change_1yr": format_rating_change(athlete.bike_change_1yr),
+        "run_change_1yr": format_rating_change(athlete.run_change_1yr),
+        "transition_change_1yr": format_rating_change(athlete.transition_change_1yr)
+    }
+
 def get_best_ratings(athlete: Athlete, race_lookup: dict) -> dict:
     return {
         "max_overall": round(athlete.max_overall),
@@ -113,8 +122,6 @@ def get_rating_history(athlete: Athlete, race_lookup: dict) -> List[dict]:
     formatted_ratings = []
     results = sorted(athlete.race_results, key = lambda x: x.race_date, reverse = True)
     ratings = sorted(athlete.rating_history, key = lambda x: x.race_date, reverse = True)
-    
-    print(f"Results count: {len(results)}, Ratings count: {len(ratings)}")
     
     for result, rating in zip(results, ratings):
         race_title = race_lookup.get(int(rating.race_id), ['', '', ''])[2]
@@ -426,6 +433,7 @@ async def get_athlete(request: Request, athlete_id: int):
     race_lookup: dict = get_race_lookup()
 
     current_ratings = get_current_ratings(athlete)
+    rating_changes_1yr = get_rating_changes_1yr(athlete)
     rating_peaks = get_best_ratings(athlete, race_lookup)
     best_performances = get_best_performances(athlete, race_lookup)
 
@@ -450,6 +458,7 @@ async def get_athlete(request: Request, athlete_id: int):
             "active_page": "athletes",
             "athlete": athlete,
             "current_ratings": current_ratings,
+            "rating_changes_1yr": rating_changes_1yr,
             "rating_peaks": rating_peaks,
             "best_performances": best_performances,
             "race_history": race_history,

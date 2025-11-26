@@ -61,22 +61,37 @@
             <div class="rating-box">
                 <div class="rating-discipline">Overall</div>
                 <div class="rating-number">{{ current_ratings.overall_rating }}</div>
+                <div class="rating-change-1yr {{ rating_changes_1yr.overall_change_1yr.css_class }}">
+                    {{ rating_changes_1yr.overall_change_1yr.formatted_str }} (1 yr)
+                </div>
             </div>
             <div class="rating-box">
                 <div class="rating-discipline">Swim</div>
                 <div class="rating-number">{{ current_ratings.swim_rating }}</div>
+                <div class="rating-change-1yr {{ rating_changes_1yr.swim_change_1yr.css_class }}">
+                    {{ rating_changes_1yr.swim_change_1yr.formatted_str }} (1 yr)
+                </div>
             </div>
             <div class="rating-box">
                 <div class="rating-discipline">Bike</div>
                 <div class="rating-number">{{ current_ratings.bike_rating }}</div>
+                <div class="rating-change-1yr {{ rating_changes_1yr.bike_change_1yr.css_class }}">
+                    {{ rating_changes_1yr.bike_change_1yr.formatted_str }} (1 yr)
+                </div>
             </div>
             <div class="rating-box">
                 <div class="rating-discipline">Run</div>
                 <div class="rating-number">{{ current_ratings.run_rating }}</div>
+                <div class="rating-change-1yr {{ rating_changes_1yr.run_change_1yr.css_class }}">
+                    {{ rating_changes_1yr.run_change_1yr.formatted_str }} (1 yr)
+                </div>
             </div>
             <div class="rating-box">
                 <div class="rating-discipline">Transition</div>
                 <div class="rating-number">{{ current_ratings.transition_rating }}</div>
+                <div class="rating-change-1yr {{ rating_changes_1yr.transition_change_1yr.css_class }}">
+                    {{ rating_changes_1yr.transition_change_1yr.formatted_str }} (1 yr)
+                </div>
             </div>
         </div>
     </div>
@@ -87,27 +102,47 @@
             <div class="rating-box highlight">
                 <div class="rating-discipline">Overall</div>
                 <div class="rating-number">{{ rating_peaks.max_overall }}</div>
-                <div class="rating-race">{{ rating_peaks.max_overall_race }}</div>
+                <div class="rating-race">
+                    <a href="/races/{{ athlete.max_overall_race_id }}" class="small-link">
+                        {{ rating_peaks.max_overall_race }}
+                    </a>
+                </div>
             </div>
             <div class="rating-box highlight">
                 <div class="rating-discipline">Swim</div>
                 <div class="rating-number">{{ rating_peaks.max_swim }}</div>
-                <div class="rating-race">{{ rating_peaks.max_swim_race }}</div>
+                <div class="rating-race">
+                    <a href="/races/{{ athlete.max_swim_race_id }}" class="small-link">
+                        {{ rating_peaks.max_swim_race }}
+                    </a>
+                </div>
             </div>
             <div class="rating-box highlight">
                 <div class="rating-discipline">Bike</div>
                 <div class="rating-number">{{ rating_peaks.max_bike }}</div>
-                <div class="rating-race">{{ rating_peaks.max_bike_race }}</div>
+                <div class="rating-race">
+                    <a href="/races/{{ athlete.max_bike_race_id}}" class="small-link">
+                        {{ rating_peaks.max_bike_race }}
+                    </a>
+                </div>
             </div>
             <div class="rating-box highlight">
                 <div class="rating-discipline">Run</div>
                 <div class="rating-number">{{ rating_peaks.max_run }}</div>
-                <div class="rating-race">{{ rating_peaks.max_run_race }}</div>
+                <div class="rating-race">
+                    <a href="/races/{{ athlete.max_run_race_id }}" class="small-link">
+                        {{ rating_peaks.max_run_race }}
+                    </a>
+                </div>
             </div>
             <div class="rating-box highlight">
                 <div class="rating-discipline">Transition</div>
                 <div class="rating-number">{{ rating_peaks.max_transition }}</div>
-                <div class="rating-race">{{ rating_peaks.max_transition_race }}</div>
+                <div class="rating-race">
+                    <a href="/races/{{ athlete.max_transition_race_id }}" class="small-link">
+                        {{ rating_peaks.max_transition_race }}
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -118,27 +153,47 @@
             <div class="rating-box best">
                 <div class="rating-discipline">Overall</div>
                 <div class="rating-number {{ best_performances.overall_change.css_class }}">{{ best_performances.overall_change.formatted_str }}</div>
-                <div class="rating-race">{{ best_performances.overall_race }}</div>
+                <div class="rating-race">
+                    <a href="/races/{{ athlete.overall_increase_race_id }}" class="small-link">
+                        {{ best_performances.overall_race }}
+                    </a>
+                </div>
             </div>
             <div class="rating-box best">
                 <div class="rating-discipline">Swim</div>
                 <div class="rating-number {{ best_performances.swim_change.css_class }}">{{ best_performances.swim_change.formatted_str }}</div>
-                <div class="rating-race">{{ best_performances.swim_race }}</div>
+                <div class="rating-race">
+                    <a href="/races/{{ athlete.swim_increase_race_id }}" class="small-link">
+                        {{ best_performances.swim_race }}
+                    </a>
+                </div>
             </div>
             <div class="rating-box best">
                 <div class="rating-discipline">Bike</div>
                 <div class="rating-number {{ best_performances.bike_change.css_class }}">{{ best_performances.bike_change.formatted_str }}</div>
-                <div class="rating-race">{{ best_performances.bike_race }}</div>
+                <div class="rating-race">
+                    <a href="/races/{{ athlete.bike_increase_race_id }}" class="small-link">
+                        {{ best_performances.bike_race }}
+                    </a>
+                </div>
             </div>
             <div class="rating-box best">
                 <div class="rating-discipline">Run</div>
                 <div class="rating-number {{ best_performances.run_change.css_class }}">{{ best_performances.run_change.formatted_str }}</div>
-                <div class="rating-race">{{ best_performances.run_race }}</div>
+                <div class="rating-race">
+                    <a href="/races/{{ athlete.run_increase_race_id }}" class="small-link">
+                        {{ best_performances.run_race }}
+                    </a>
+                </div>
             </div>
             <div class="rating-box best">
                 <div class="rating-discipline">Transition</div>
                 <div class="rating-number {{ best_performances.transition_change.css_class }}">{{ best_performances.transition_change.formatted_str }}</div>
-                <div class="rating-race">{{ best_performances.transition_race }}</div>
+                <div class="rating-race">
+                    <a href="/races/{{ athlete.transition_increase_race_id }}" class="small-link">
+                        {{ best_performances.transition_race }}
+                    </a>
+                </div>
             </div>
         </div>
     </div>

@@ -104,10 +104,9 @@ def process_single_race_guide(race_guide: Path):
         # 2) Short venue
         if race_handle is None and pd.notna(row.get("race_venue")):
             venue_words = (
-                str(row.race_venue)
-                .replace('"', "")
-                .replace("'", "")
-                .split()
+                str(row.race_venue).translate(
+                    str.maketrans('', '', '\'"')
+                )
             )
             if 0 < len(venue_words) <= 3:
                 race_handle = f"{' '.join(venue_words)} {year_suffix}"

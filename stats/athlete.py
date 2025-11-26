@@ -12,7 +12,11 @@ import requests
 root_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(root_dir))
 
-from config import ATHLETE_IMG_DIR
+from config import (
+    ATHLETE_IMG_DIR,
+    ELITE_START_RATING,
+    AG_START_RATING
+)
 
 def get_short_country_and_emoji(full_name: str) -> Tuple[str, str]:
     special_cases = {
@@ -118,11 +122,11 @@ class Athlete:
         self.lap_pct: float = 0.0
 
         # Ratings
-        self.overall_rating: float = 1000.0
-        self.swim_rating: float = 1000.0
-        self.bike_rating: float = 1000.0
-        self.run_rating: float = 1000.0
-        self.transition_rating: float = 1000.0
+        self.overall_rating: float = 0.0
+        self.swim_rating: float = 0.0
+        self.bike_rating: float = 0.0
+        self.run_rating: float = 0.0
+        self.transition_rating: float = 0.0
         
         # Peaks 
         self.max_overall: float = self.overall_rating
@@ -147,6 +151,14 @@ class Athlete:
         self.run_increase_race_id: int = 0
         self.transition_increase: float = float('-inf')
         self.transition_increase_race_id: int = 0
+
+        # Changes in last year
+        # 0 if no races in the last year
+        self.overall_change_1yr: float = 0.0
+        self.swim_change_1yr: float = 0.0
+        self.bike_change_1yr: float = 0.0
+        self.run_change_1yr: float = 0.0
+        self.transition_change_1yr: float = 0.0
 
         # Rating history
         self.rating_history: List[AthleteRating] = []
@@ -175,6 +187,24 @@ class Athlete:
                         
             except Exception as e:
                 print(f"Error accessing profile image: {e}")
+
+    def initialise_ratings(self, prog_name: str) -> None:
+        """
+        Initialise athlete ratings based on program name. Elites have higher starting ratings
+        """
+        prog_words = prog_name.lower().split() 
+        if 'ag' in set(prog_words):
+            self.overall_rating = AG_START_RATING
+            self.swim_rating = AG_START_RATING
+            self.bike_rating = AG_START_RATING
+            self.run_rating = AG_START_RATING
+            self.transition_rating = AG_START_RATING
+        else:
+            self.overall_rating = ELITE_START_RATING
+            self.swim_rating = ELITE_START_RATING
+            self.bike_rating = ELITE_START_RATING
+            self.run_rating = ELITE_START_RATING
+            self.transition_rating = ELITE_START_RATING
 
     def add_result(
         self,
@@ -349,3 +379,37 @@ class Athlete:
                 transition_change = transition_delta,
             )
         )
+
+    def get_1yr_changes(self) -> None:
+        """
+        Calculate rating changes over the last year
+        """
+        if not self.rating_history:
+            return
+        
+        today = datetime.now()
+        yr_ago = today.replace(year = today.year - 1)
+
+        # Find the oldest race in the last year
+        # 0 change if no races completed in last year
+        past_overall = 0.0
+        past_swim = 0.0
+        past_bike = 0.0
+        past_run = 0.0
+        past_transition = 0.0
+        for rating in reversed(self.rating_history):
+            if rating.race_date < yr_ago:
+                break 
+
+            past_overall = rating.overall_rating
+            past_swim = rating.swim_rating
+            past_bike = rating.bike_rating
+            past_run = rating.run_rating
+            past_transition = rating.transition_rating
+
+        self.overall_change_1yr = self.overall_rating - past_overall
+        self.swim_change_1yr = self.swim_rating - past_swim
+        self.bike_change_1yr = self.bike_rating - past_bike
+        self.run_change_1yr = self.run_rating - past_run
+        self.transition_change_1yr = self.transition_rating - past_transition
+
