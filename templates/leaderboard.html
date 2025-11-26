@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}Leaderboard - Triathlon Stats{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/leaderboard.css">
+{% endblock %}
+
+{% block content %}
+<div class="leaderboard-header">
+    <h1>Athlete Leaderboard</h1>
+    <p>Compare athlete performance across different disciplines</p>
+</div>
+
+<div class="filters-card">
+    <form method="get" action="/leaderboard" class="filters-form">
+        <div class="filter-section">
+            <h3>Gender</h3>
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>
+                        <input type="radio" name="gender" value="female" 
+                            {% if gender == 'female' %}checked{% endif %}>
+                        Women
+                    </label>
+                    <label>
+                        <input type="radio" name="gender" value="male" 
+                            {% if gender == 'male' %}checked{% endif %}>
+                        Men
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="filter-section">
+            <h3>Sort By</h3>
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="rating_type">Discipline:</label>
+                    <select name="rating_type" id="rating_type">
+                        <option value="overall" {% if rating_type == 'overall' %}selected{% endif %}>Overall</option>
+                        <option value="swim" {% if rating_type == 'swim' %}selected{% endif %}>Swim</option>
+                        <option value="bike" {% if rating_type == 'bike' %}selected{% endif %}>Bike</option>
+                        <option value="run" {% if rating_type == 'run' %}selected{% endif %}>Run</option>
+                        <option value="transition" {% if rating_type == 'transition' %}selected{% endif %}>Transition</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="order">Order:</label>
+                    <select name="order" id="order">
+                        <option value="desc" {% if order == 'desc' %}selected{% endif %}>Highest First</option>
+                        <option value="asc" {% if order == 'asc' %}selected{% endif %}>Lowest First</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="filter-section">
+            <h3>Filter By</h3>
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="country">Country:</label>
+                    <select name="country" id="country">
+                        <option value="all" {% if country == 'all' %}selected{% endif %}>All Countries</option>
+                        <option value="GBR" {% if country == 'GBR' %}selected{% endif %}>Great Britain</option>
+                        <option value="FRA" {% if country == 'FRA' %}selected{% endif %}>France</option>
+                        <option value="USA" {% if country == 'USA' %}selected{% endif %}>United States</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="yob_start">Birth Year From:</label>
+                    <input type="number" name="yob_start" id="yob_start" 
+                        min="1950" max="2010" value="{{ yob_start }}" step="1">
+                </div>
+
+                <div class="filter-group">
+                    <label for="yob_end">Birth Year To:</label>
+                    <input type="number" name="yob_end" id="yob_end" 
+                        min="1950" max="2010" value="{{ yob_end }}" step="1">
+                </div>
+
+                <div class="filter-group">
+                    <label for="active_only">
+                        <input type="checkbox" name="active_only" id="active_only" value="true"
+                            {% if active_only %}checked{% endif %}>
+                        Active Only
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="filter-actions">
+            <button type="submit" class="btn">Apply Filters</button>
+            <a href="/leaderboard" class="btn btn-secondary">Reset</a>
+        </div>
+    </form>
+</div>
+
+<div class="results-summary">
+    <p>Showing <strong>{{ athletes|length }}</strong> athletes</p>
+</div>
+
+<div class="leaderboard-grid">
+    {% for athlete in athletes %}
+    <div class="athlete-card {{ 'rank-' ~ athlete.rank if athlete.rank <= 3 else '' }}">
+        <div class="rank-badge {{ 'rank-' ~ athlete.rank ~ '-text' if athlete.rank <= 3 else '' }}">#{{athlete.rank}}</div>
+        <div class="athlete-card-content">
+            <div class="athlete-main-info">
+                <img src="{{ request.url_for('static', path='athlete_imgs/' ~ athlete['athlete_id'] ~ '.jpg') if athlete['profile_img_exists'] else request.url_for('static', path='default_user.jpg') }}" 
+                     alt="{{ athlete.name }}" 
+                     class="athlete-profile-img">
+                
+                <div class="athlete-details">
+                    <h2 class="athlete-name">{{ athlete.name }} {{ athlete.country_emoji }}</h2>
+                    <div class="athlete-meta">
+                        <span class="meta-item">
+                            {{ athlete.country_full }}
+                        </span>
+                        {% if athlete.year_of_birth > 0 %}
+                        <span class="meta-item">
+                            <strong>YOB:</strong> {{ athlete.year_of_birth }}
+                        </span>
+                        {% endif %}
+                        <span class="meta-item">
+                            <strong>Races:</strong> {{ athlete.race_starts }}
+                        </span>
+                        <span class="meta-item">
+                            <strong>Wins:</strong> {{ athlete.win_count }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="athlete-ratings">
+                <div class="rating-item">
+                    <span class="rating-label">Overall</span>
+                    <span class="rating-value {% if rating_type == 'overall' %}rating-highlight{% endif %}">
+                        {{ athlete.overall_rating }}
+                    </span>
+                </div>
+                <div class="rating-item">
+                    <span class="rating-label">Swim</span>
+                    <span class="rating-value {% if rating_type == 'swim' %}rating-highlight{% endif %}">
+                        {{ athlete.swim_rating }}
+                    </span>
+                </div>
+                <div class="rating-item">
+                    <span class="rating-label">Bike</span>
+                    <span class="rating-value {% if rating_type == 'bike' %}rating-highlight{% endif %}">
+                        {{ athlete.bike_rating }}
+                    </span>
+                </div>
+                <div class="rating-item">
+                    <span class="rating-label">Run</span>
+                    <span class="rating-value {% if rating_type == 'run' %}rating-highlight{% endif %}">
+                        {{ athlete.run_rating }}
+                    </span>
+                </div>
+                <div class="rating-item">
+                    <span class="rating-label">Transition</span>
+                    <span class="rating-value {% if rating_type == 'transition' %}rating-highlight{% endif %}">
+                        {{ athlete.transition_rating }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <a href="/athletes/{{ athlete.athlete_id }}" class="athlete-card-link">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+        </a>
+    </div>
+    {% endfor %}
+</div>
+
+{% if not athletes %}
+<div class="no-results">
+    <p>No athletes found matching your filters.</p>
+    <a href="/leaderboard" class="btn">Reset Filters</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% endblock %}

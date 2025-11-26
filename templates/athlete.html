@@ -1,0 +1,432 @@
+{% extends "base.html" %}
+
+{% block title %}{{ athlete.name }} - Athlete Profile{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/athlete.css') }}">
+{% endblock %}
+
+{%block content %}
+<div class="athlete-hero">
+    <div class="athlete-hero-main">
+        <img
+            src="{{ url_for('static', path = 'athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') if athlete.profile_img else url_for('static', path='default_user.jpg') }}"
+            alt="{{ athlete.name }}"
+            class="athlete-hero-img {{ 'active' if athlete.active else 'inactive' }}"
+        >
+        <div class="athlete-hero-info">
+            <h1>{{ athlete.name }} {{ athlete.country_emoji }}</h1>
+            <div class="athlete-basic-info">
+                <span class="status-badge {{ 'active' if athlete.active else 'inactive' }}">
+                    {{ 'Active' if athlete.active else 'Inactive' }}
+                </span>
+                <span class="info-divider">•</span>
+                <span class="info-text">{{ athlete.country_full }}</span>
+                <span class="info-divider">•</span>
+                <span class="info-text">Born {{ athlete.year_of_birth|int }}</span>
+                <span class="info-divider">•</span>
+                <span class="info-text">ID: {{ athlete.athlete_id }}</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="athlete-stats-banner">
+        <div class="stat-block">
+            <div class="stat-number">{{ athlete.race_starts }}</div>
+            <div class="stat-label">Race Starts</div>
+        </div>
+        <div class="stat-block">
+            <div class="stat-number">{{ athlete.win_count }}</div>
+            <div class="stat-label">Wins ({{ "%.1f"|format(athlete.win_pct * 100) }}%)</div>
+        </div>
+        <div class="stat-block">
+            <div class="stat-number">{{ athlete.podium_count }}</div>
+            <div class="stat-label">Podiums ({{ "%.1f"|format(athlete.podium_pct * 100) }}%)</div>
+        </div>
+        <div class="stat-block">
+            <div class="stat-number">{{ athlete.dnf_count }}</div>
+            <div class="stat-label">DNFs ({{ "%.1f"|format(athlete.dnf_pct * 100) }}%)</div>
+        </div>
+        <div class="stat-block">
+            <div class="stat-number">{{ athlete.dq_count }}</div>
+            <div class="stat-label">DQs ({{ "%.1f"|format(athlete.dq_pct * 100) }}%)</div>
+        </div>
+    </div>
+</div>
+
+<div class="ratings-overview">
+    <div class="ratings-section">
+        <h3 class="ratings-section-title">Current Ratings</h3>
+        <div class="ratings-grid">
+            <div class="rating-box">
+                <div class="rating-discipline">Overall</div>
+                <div class="rating-number">{{ current_ratings.overall_rating }}</div>
+            </div>
+            <div class="rating-box">
+                <div class="rating-discipline">Swim</div>
+                <div class="rating-number">{{ current_ratings.swim_rating }}</div>
+            </div>
+            <div class="rating-box">
+                <div class="rating-discipline">Bike</div>
+                <div class="rating-number">{{ current_ratings.bike_rating }}</div>
+            </div>
+            <div class="rating-box">
+                <div class="rating-discipline">Run</div>
+                <div class="rating-number">{{ current_ratings.run_rating }}</div>
+            </div>
+            <div class="rating-box">
+                <div class="rating-discipline">Transition</div>
+                <div class="rating-number">{{ current_ratings.transition_rating }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="ratings-section">
+        <h3 class="ratings-section-title">Peak Ratings</h3>
+        <div class="ratings-grid">
+            <div class="rating-box highlight">
+                <div class="rating-discipline">Overall</div>
+                <div class="rating-number">{{ rating_peaks.max_overall }}</div>
+                <div class="rating-race">{{ rating_peaks.max_overall_race }}</div>
+            </div>
+            <div class="rating-box highlight">
+                <div class="rating-discipline">Swim</div>
+                <div class="rating-number">{{ rating_peaks.max_swim }}</div>
+                <div class="rating-race">{{ rating_peaks.max_swim_race }}</div>
+            </div>
+            <div class="rating-box highlight">
+                <div class="rating-discipline">Bike</div>
+                <div class="rating-number">{{ rating_peaks.max_bike }}</div>
+                <div class="rating-race">{{ rating_peaks.max_bike_race }}</div>
+            </div>
+            <div class="rating-box highlight">
+                <div class="rating-discipline">Run</div>
+                <div class="rating-number">{{ rating_peaks.max_run }}</div>
+                <div class="rating-race">{{ rating_peaks.max_run_race }}</div>
+            </div>
+            <div class="rating-box highlight">
+                <div class="rating-discipline">Transition</div>
+                <div class="rating-number">{{ rating_peaks.max_transition }}</div>
+                <div class="rating-race">{{ rating_peaks.max_transition_race }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="ratings-section">
+        <h3 class="ratings-section-title">Best Single Performances</h3>
+        <div class="ratings-grid">
+            <div class="rating-box best">
+                <div class="rating-discipline">Overall</div>
+                <div class="rating-number {{ best_performances.overall_change.css_class }}">{{ best_performances.overall_change.formatted_str }}</div>
+                <div class="rating-race">{{ best_performances.overall_race }}</div>
+            </div>
+            <div class="rating-box best">
+                <div class="rating-discipline">Swim</div>
+                <div class="rating-number {{ best_performances.swim_change.css_class }}">{{ best_performances.swim_change.formatted_str }}</div>
+                <div class="rating-race">{{ best_performances.swim_race }}</div>
+            </div>
+            <div class="rating-box best">
+                <div class="rating-discipline">Bike</div>
+                <div class="rating-number {{ best_performances.bike_change.css_class }}">{{ best_performances.bike_change.formatted_str }}</div>
+                <div class="rating-race">{{ best_performances.bike_race }}</div>
+            </div>
+            <div class="rating-box best">
+                <div class="rating-discipline">Run</div>
+                <div class="rating-number {{ best_performances.run_change.css_class }}">{{ best_performances.run_change.formatted_str }}</div>
+                <div class="rating-race">{{ best_performances.run_race }}</div>
+            </div>
+            <div class="rating-box best">
+                <div class="rating-discipline">Transition</div>
+                <div class="rating-number {{ best_performances.transition_change.css_class }}">{{ best_performances.transition_change.formatted_str }}</div>
+                <div class="rating-race">{{ best_performances.transition_race }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="data-table collapsible-card results-table">
+    <h3>
+        Race Results
+        <span class="collapse-toggle" onclick="toggleCollapse(this)">−</span>
+    </h3>
+    <div class="collapsible-content">
+        <table class="sortable-table">
+            <thead>
+                <tr>
+                    <th class="sortable date-col" data-sort="date">Date</th>
+                    <th class="sortable race-col" data-sort="string">Race</th>
+                    <th class="sortable position-col" data-sort="position">Position</th>
+                    <th class="sortable time-col" data-sort="time">Overall</th>
+                    <th class="sortable time-col" data-sort="time">Swim</th>
+                    <th class="sortable time-col" data-sort="time">T1</th>
+                    <th class="sortable time-col" data-sort="time">Bike</th>
+                    <th class="sortable time-col" data-sort="time">T2</th>
+                    <th class="sortable time-col" data-sort="time">Run</th>
+                </tr>
+
+            </thead>
+            <tbody>
+                {% if race_history %}
+                    {% for race in race_history %}
+                        <tr>
+                            <td class="date-col" data-value="{{ race.race_date }}">
+                                {{ race.race_date.strftime('%d %b %Y') }}
+                            </td>
+                            <td class="race-col" data-value="{{ race.race_title }}">
+                                <a href="/races/{{ race.race_id }}" class="link">
+                                    {{ race.race_title }}
+                                </a>
+                            </td>
+                            <td class="position-cell {{ 'position-gold' if race.position == '1' else ('position-silver' if race.position == '2' else ('position-bronze' if race.position == '3' else ('position-dnf' if race.position in ['DNF', 'DQ', 'LAP'] else ''))) }}" data-value="{{ race.position }}">
+                                {{ race.position }}
+                            </td>
+                            <td class="time-col overall-time" data-value="{{ race.overall }}">
+                                <div class="time-cell">
+                                    {{ race.overall }}
+                                    <span class="time-behind">{{ race.overall_behind }}</span>
+                                </div>
+                            </td>
+                            <td class="time-col" data-value="{{ race.swim }}">
+                                <div class="time-cell">
+                                    {{ race.swim }}
+                                    <span class="time-behind">{{ race.swim_behind }}</span>
+                                </div>
+                            </td>
+                            <td class="time-col" data-value="{{ race.t1 }}">
+                                <div class="time-cell">
+                                    {{ race.t1 }}
+                                    <span class="time-behind">{{ race.t1_behind }}</span>
+                                </div>
+                            </td>
+                            <td class="time-col" data-value="{{ race.bike }}">
+                                <div class="time-cell">
+                                    {{ race.bike }}
+                                    <span class="time-behind">{{ race.bike_behind }}</span>
+                                </div>
+                            </td>
+                            <td class="time-col" data-value="{{ race.t2 }}">
+                                <div class="time-cell">
+                                    {{ race.t2 }}
+                                    <span class="time-behind">{{ race.t2_behind }}</span>
+                                </div>
+                            </td>
+                            <td class="time-col" data-value="{{ race.run }}">
+                                <div class="time-cell">
+                                    {{ race.run }}
+                                    <span class="time-behind">{{ race.run_behind }}</span>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="9" class="no-data">No race results available</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="data-table collapsible-card rating-table">
+    <h3>
+        Rating History
+        <span class="collapse-toggle" onclick="toggleCollapse(this)">−</span>
+    </h3>
+    <div class="collapsible-content">
+        <table class="sortable-table">
+            <thead>
+                <tr>
+                    <th class="sortable date-col" data-sort="date">Date</th>
+                    <th class="sortable race-col" data-sort="race-id">Race</th>
+                    <th class="sortable position-col" data-sort="position">Position</th>
+                    <th class="sortable rating-col" data-sort="rating">Overall</th>
+                    <th class="sortable rating-col" data-sort="rating">Swim</th>
+                    <th class="sortable rating-col" data-sort="rating">Bike</th>
+                    <th class="sortable rating-col" data-sort="rating">Run</th>
+                    <th class="sortable rating-col" data-sort="rating">Transition</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if rating_history %}
+                    {% for rating in rating_history %}
+                        <tr>
+                            <td data-value="{{ rating.race_date }}">{{ rating.race_date.strftime('%d %b %Y') }}</td>
+                            <td data-value="{{ rating.race_title }}">
+                                <a href="/races/{{ rating.race_id }}" class="link">
+                                    {{ rating.race_title }}
+                                </a>
+                            </td>
+                            <td class="position-cell {{ 'position-gold' if rating.position == '1' else ('position-silver' if rating.position == '2' else ('position-bronze' if rating.position == '3' else ('position-dnf' if rating.position in ['DNF', 'DQ', 'LAP'] else ''))) }}" data-value="{{ rating.position }}">
+                                {{ rating.position }}
+                            </td>
+                            <td class="overall-time" data-value="{{ rating.overall_rating }}">
+                                <div class="rating-cell">
+                                    {{ rating.overall_rating }}
+                                    <span class="rating-change {{ rating.overall_change.css_class }}">
+                                        {{ rating.overall_change.formatted_str }}
+                                    </span>
+                                </div>
+                            </td>
+                            <td data-value="{{ rating.swim_rating }}">
+                                <div class="rating-cell">
+                                    {{ rating.swim_rating }}
+                                    <span class="rating-change {{ rating.swim_change.css_class }}">
+                                        {{ rating.swim_change.formatted_str }}
+                                    </span>
+                                </div>
+                            </td>
+                            <td data-value="{{ rating.bike_rating }}">
+                                <div class="rating-cell">
+                                    {{ rating.bike_rating }}
+                                    <span class="rating-change {{ rating.bike_change.css_class }}">
+                                        {{ rating.bike_change.formatted_str }}
+                                    </span>
+                                </div>
+                            </td>
+                            <td data-value="{{ rating.run_rating }}">
+                                <div class="rating-cell">
+                                    {{ rating.run_rating }}
+                                    <span class="rating-change {{ rating.run_change.css_class }}">
+                                        {{ rating.run_change.formatted_str }}
+                                    </span>
+                                </div>
+                            </td>
+                            <td data-value="{{ rating.transition_rating }}">
+                                <div class="rating-cell">
+                                    {{ rating.transition_rating }}
+                                    <span class="rating-change {{ rating.transition_change.css_class }}">
+                                        {{ rating.transition_change.formatted_str }}
+                                    </span>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="no-data">No race history available</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="collapsible-card">
+    <h3>
+    Historical Performance Ratings
+    <span class="collapse-toggle" onclick="toggleCollapse(this)">−</span>
+    </h3>
+    <div class="collapsible-content">
+        <div class="chart-container">
+            <canvas id="ratings-chart-canvas"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="chart-section collapsible-card">
+    <h3>
+    % Behind Leader
+    <span class="collapse-toggle" onclick="toggleCollapse(this)">−</span>
+    </h3>
+    <div class="collapsible-content">
+        <div>
+            <h4>Overall % Behind Leader</h4>
+            <div class="chart-container-compact">
+                <canvas id="overall-pct-behind-chart-canvas"></canvas>
+            </div>
+        </div>
+        <div>
+            <h4>Swim % Behind Leader</h4>
+            <div class="chart-container-compact">
+                <canvas id="swim-pct-behind-chart-canvas"></canvas>
+            </div>
+        </div>
+        <div>
+            <h4>Bike % Behind Leader</h4>
+            <div class="chart-container-compact">
+                <canvas id="bike-pct-behind-chart-canvas"></canvas>
+            </div>
+        </div>
+        <div>
+            <h4>Run % Behind Leader</h4>
+            <div class="chart-container-compact">
+                <canvas id="run-pct-behind-chart-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="chart-section collapsible-card">
+    <h3>
+    Split Times
+    <span class="collapse-toggle" onclick="toggleCollapse(this)">−</span>
+    </h3>
+    <div class="collapsible-content">
+        <div class="mini-chart">
+            <h4>Swim Times</h4>
+            <div class="chart-container-compact">
+                <canvas id="swim-times-chart-canvas"></canvas>
+            </div>
+        </div>
+        <div class="mini-chart">
+            <h4>Bike Times</h4>
+            <div class="chart-container-compact">
+                <canvas id="bike-times-chart-canvas"></canvas>
+            </div>
+        </div>
+        <div class="mini-chart">
+            <h4>Run Times</h4>
+            <div class="chart-container-compact">
+                <canvas id="run-times-chart-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    <!-- Historical ratings chart -->
+    <script id="ratings-chart-data" type="application/json">
+        {{ ratings_chart | tojson }}
+    </script>
+
+    <!-- Overall % Behind Leader chart -->
+    <script id="overall-pct-behind-chart-data" type="application/json">
+        {{ overall_pct_behind_chart | tojson }}
+    </script>
+
+    <!-- Swim % Behind Leader chart -->
+    <script id="swim-pct-behind-chart-data" type="application/json">
+        {{ swim_pct_behind_chart | tojson }}
+    </script>
+
+    <!-- Bike % Behind Leader chart -->
+    <script id="bike-pct-behind-chart-data" type="application/json">
+        {{ bike_pct_behind_chart | tojson }}
+    </script>
+
+    <!-- Run % Behind Leader chart -->
+    <script id="run-pct-behind-chart-data" type="application/json">
+        {{ run_pct_behind_chart | tojson }}
+    </script>
+
+    <!-- Swim Times chart -->
+    <script id="swim-times-chart-data" type="application/json">
+        {{ swim_times_chart | tojson }}
+    </script>
+
+    <!-- Bike Times chart -->
+    <script id="bike-times-chart-data" type="application/json">
+        {{ bike_times_chart | tojson }}
+    </script>
+
+    <!-- Run Times chart -->
+    <script id="run-times-chart-data" type="application/json">
+        {{ run_times_chart | tojson }}
+    </script>
+
+    <!-- Load JS -->
+    <script src="{{ url_for('static', path='js/utils.js') }}"></script>
+    <script src="{{ url_for('static', path='js/athlete.js') }}"></script>
+{% endblock %}

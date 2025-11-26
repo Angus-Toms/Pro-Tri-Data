@@ -1,0 +1,51 @@
+race_id,athlete_id,swim,t1,bike,t2,run,overall,notes
+394359,5546,00:21:20,00:00:00,01:05:12,00:00:00,00:36:25,02:02:57,Reinders has incorrect overall time 
+673634,159129,00:09:57,00:01:10,00:00:00,00:00:16,00:00:00,01:07:53,Miriam Lopez Arenazas runtime is split across run and bike; both removed for consistency. Overall time remains correct
+6430,47698,00:12:27,00:01:04,00:44:08,00:00:22,00:24:06,01:22:07,Louise Montoisy has incorrect run (should be 24:06)
+582158,166239,00:09:18,00:00:36,00:30:56,00:00:31,00:20:01,01:01:19,Mateo Pesantez is missing the hour from overall time
+336877,49541,00:00:00,00:00:00,00:00:00,00:00:00,00:00:00,01:38:45,Calum Johnson has nonsensial splits and overall time; overall time has been interpolated from others
+550676,124356,00:18:51,00:01:07,01:00:16,00:00:34,00:34:23,01:55:11,Eduardo Nuñez Gomez bike time was 00:01:00; missing an hour
+545457,68564,00:09:29,00:00:40,00:30:33,00:00:00,00:00:00,00:56:42,Henry Räppo run split is half-measured by T2; remove both for consistency (overall time and other splits remains correct)
+545457,95395,00:09:48,00:00:39,00:31:55,00:08:26,00:08:27,00:59:15,Kevin Vabaorg run split is half-measured by T2; remove both for consistency (overall time and other splits remains correct)
+545905,49284,00:03:45,00:01:23,00:12:37,00:00:32,00:00:00,00:00:00,Donald Hillebregt run and overall time are incorrect for his position; both removed for consistency
+26480,47782,00:00:00,00:00:00,00:00:00,00:00:00,00:00:00,02:05:20,Luisa Baptista has run split of 00:02:05; removed for consistency. Overall time remains correct
+281289,83241,00:09:55,00:01:13,00:35:09,00:00:00,00:00:00,01:09:08,Marije Dankelman run split is half-measured by T2; remove both for consistency (overall time and other splitsremains correct)
+320159,13898,00:21:50,00:00:00,00:00:00,00:00:00,00:00:00,02:00:03,Split times not included in original results; set to 0
+320159,86418,00:21:45,00:00:00,00:00:00,00:00:00,00:00:00,02:00:07,Split times not included in original results; set to 0
+320159,96127,00:21:44,00:00:00,00:00:00,00:00:00,00:00:00,02:04:06,Split times not included in original results; set to 0
+320159,115503,00:24:14,00:00:00,00:00:00,00:00:00,00:00:00,02:04:32,Split times not included in original results; set to 0
+320159,111278,00:23:56,00:00:00,00:00:00,00:00:00,00:00:00,02:05:56,Split times not included in original results; set to 0
+320159,60974,00:24:04,00:00:00,00:00:00,00:00:00,00:00:00,02:06:08,Split times not included in original results; set to 0
+320159,109636,00:25:52,00:00:00,00:00:00,00:00:00,00:00:00,02:08:57,Split times not included in original results; set to 0
+320159,91577,00:25:53,00:00:00,00:00:00,00:00:00,00:00:00,02:09:44,Split times not included in original results; set to 0
+320159,121493,00:29:50,00:00:00,00:00:00,00:00:00,00:00:00,02:12:54,Split times not included in original results; set to 0
+320159,106833,00:27:50,00:00:00,00:00:00,00:00:00,00:00:00,02:17:46,Split times not included in original results; set to 0
+3358,5515,00:19:23,00:00:36,01:02:49,00:00:36,00:39:57,02:04:05,Josie Loane run split was incorrectly recorded as 00:00:44; corrected to 00:39:57
+675869,162677,00:00:00,00:00:00,00:00:00,00:00:00,00:00:00,01:05:49,Gyeongmin Park has no splits at all
+394359,5546,00:21:20,00:00:00,01:05:12,00:00:00,00:36:25,02:02:57,Ina Reinders missing 2 hours from overall time; splits remain correct
+2784,10165,00:23:57,00:00:00,00:00:00,00:00:00,00:00:00,02:06:33,Isabelle Mouthon-Michellys has an incorrect run time of 00:01:41; overall time remains correct
+265633,72976,00:10:55,00:00:42,00:29:49,00:00:29,00:18:10,01:00:05,Tom Stead overall recalculated from splits
+265633,86390,00:09:45,00:00:59,00:32:58,00:00:40,00:16:40,01:01:02,Jacob Anson overall recalculated from splits
+265633,86393,00:11:04,00:00:42,00:31:11,00:00:30,00:17:45,01:01:12,Michael Beech overall recalculated from splits
+265633,72969,00:00:00,00:00:00,00:00:00,00:00:37,00:19:05,01:01:45,Nicholas Haworth has incorrect overall time and missing splits; interpolated overall time from others
+265633,86389,00:09:57,00:00:59,00:31:20,00:00:28,00:19:34,01:02:18,Eli Gibney overall recalculated from splits
+259649,30087,00:09:29,00:00:37,00:31:43,00:00:28,00:18:14,01:00:31,Paulius Dapkus overall recalculated from splits
+259649,11814,00:09:34,00:00:38,00:33:43,00:00:31,00:16:54,01:01:20,Viktors Vovrusko overall recalculated from splits
+259649,70152,00:10:07,00:00:43,00:32:37,00:00:26,00:17:32,01:01:25,Jarno Stenroos overall recalculated from splits
+259649,63758,00:09:45,00:00:00,00:00:00,00:00:00,00:00:00,01:02:24,Pavan Rooprai has incorrect overall time and missing splits; interpolated overall time from others
+259649,46678,00:09:24,00:00:34,00:35:26,00:00:25,00:17:33,01:03:22,Rory Sexton overall recalculated from splits
+259649,74349,00:10:49,00:00:39,00:35:17,00:00:34,00:18:05,01:05:24,Maksims Nagibins overall recalculated from splits
+259649,74383,00:09:50,00:00:45,00:36:13,00:00:32,00:19:39,01:06:59,Stanislavs Vaipans overall recalculated from splits
+259649,61338,00:10:52,00:00:34,00:35:19,00:00:31,00:20:21,01:07:37,Artjoms Scerbakovs overall recalculated from splits
+307376,86049,00:10:35,00:00:20,00:32:33,00:00:23,00:16:12,01:00:03,Maria Bibicheva overall recalculated from splits
+307376,96557,00:10:50,00:00:21,00:32:16,00:00:23,00:17:22,01:01:12,Elizaveta Pokrovskaia overall recalculated from splits
+307376,102390,00:11:11,00:00:23,00:34:04,00:00:27,00:15:18,01:01:23,Veronika Srurtdinova overall recalculated from splits
+307376,115050,00:11:11,00:00:22,00:34:05,00:00:27,00:15:31,01:01:36,Ekaterina Shabalina overall recalculated from splits
+307376,102388,00:11:37,00:00:25,00:33:32,00:00:22,00:15:53,01:01:59,Daria Gordeeva overall recalculated from splits
+307376,106712,00:10:32,00:00:28,00:35:47,00:00:21,00:14:55,01:02:03,Tatiana Baskakova overall recalculated from splits
+307376,106713,00:10:39,00:00:23,00:34:37,00:00:21,00:16:06,01:02:06,Valeria Nagornaia overall recalculated from splits
+307376,110111,00:11:06,00:00:29,00:34:01,00:00:21,00:17:55,01:04:52,Elizaveta Kremkova overall recalculated from splits
+307376,96759,00:10:48,00:00:21,00:37:28,00:00:21,00:14:56,01:03:54,Valentina Riasova overall recalculated from splits
+307376,102389,00:11:38,00:00:23,00:35:08,00:00:27,00:16:42,01:04:18,Anastasia Sgibneva overall recalculated from splits
+307376,102387,00:11:35,00:00:25,00:35:14,00:00:27,00:17:40,01:05:21,Tatiana Lihtorovich overall recalculated from splits
+307376,106532,00:11:43,00:00:25,00:35:33,00:00:21,00:18:21,01:06:23,Nadezhda Klenina overall recalculated from splits

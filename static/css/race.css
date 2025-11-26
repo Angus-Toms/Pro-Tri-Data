@@ -1,0 +1,111 @@
+.race-header {
+    margin-bottom: var(--spacing-xl);
+}
+
+.race-header h1 {
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-color);
+    font-size: var(--font-size-xxl);
+}
+
+.race-info {
+    color: var(--text-light);
+    line-height: 1.6;
+}
+
+.race-meta {
+    margin-bottom: var(--spacing-xs);
+    font-size: var(--font-size-lg);
+}
+
+.race-separator {
+    margin: 0 var(--spacing-sm);
+    color: var(--text-lighter);
+}
+
+.race-athletes {
+    margin: var(--spacing-xs) 0;
+    font-size: var(--font-size-sm);
+    color: var(--text-lighter);
+}
+
+/* ============================================
+   TABLES
+   ============================================ */
+.time-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.time-behind {
+    font-size: 0.75em;
+    white-space: nowrap;
+    color: var(--text-light);
+}
+
+.results-table .athlete-col {
+    width: 200px;
+}
+
+.results-table .yob-col {
+    width: 100px;
+}
+
+.results-table .position-col {
+    width: 70px;
+}
+
+.results-table .time-col {
+    width: calc((100% - 370px) / 6);
+}
+
+/* Ratings table ------------------ */
+.rating-table .athlete-col {
+    width: 200px;
+}
+
+.rating-table .yob-col {
+    width: 100px;
+}
+
+.rating-table .position-col {
+    width: 70px;
+}
+
+.rating-table .time-col {
+    width: calc((100% - 370px) / 5);
+}
+
+.rating-cell {
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+    align-items: center;
+}
+
+.rating-change {
+    font-size: 0.75em;
+    white-space: nowrap;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+    .race-header h1 {
+        font-size: var(--font-size-xl);
+    }
+    
+    .race-meta {
+        font-size: var(--font-size-base);
+    }
+    
+    .data-table {
+        font-size: var(--font-size-sm);
+    }
+    
+    .time-col, .rating-col {
+        font-size: 0.75rem;
+    }
+}

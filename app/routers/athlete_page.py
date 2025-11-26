@@ -1,0 +1,466 @@
+import pickle
+from functools import lru_cache
+from typing import List
+import pandas as pd
+import time
+import numpy as np
+
+from stats.athlete import Athlete
+from stats.cache import get_race_lookup
+
+from config import ATHLETES_DIR
+
+from app.routers.router_utils import format_time, format_time_behind, format_rating_change
+
+from fastapi import HTTPException, Request, APIRouter
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+
+templates = Jinja2Templates(directory = "templates")
+router = APIRouter()
+
+class RenameUnpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        # Redirect old module references to the correct one
+        if module == 'athlete':
+            module = 'stats.athlete'
+        return super().find_class(module, name)
+
+def load_athlete(athlete_id: int) -> Athlete:
+    """ Load athlete data from pickle file """
+    file_path = ATHLETES_DIR / f"{athlete_id}.pkl"
+    
+    if not file_path.exists():
+        # TODO: Add 404 page
+        raise HTTPException(status_code = 404, detail = f"Athlete {athlete_id} not found")
+    
+    try:
+        with open(file_path, 'rb') as f:
+            return RenameUnpickler(f).load()
+            
+    except Exception as e:
+        raise HTTPException(status_code = 500, detail = f"Error loading athlete data: {str(e)}")
+
+@lru_cache(maxsize=32)
+def load_athlete_cached(athlete_id: int) -> Athlete:
+    return load_athlete(athlete_id)
+
+def get_current_ratings(athlete: Athlete) -> dict:
+    return {
+        "overall_rating": round(athlete.overall_rating),
+        "swim_rating": round(athlete.swim_rating),
+        "bike_rating": round(athlete.bike_rating),
+        "run_rating": round(athlete.run_rating),
+        "transition_rating": round(athlete.transition_rating)
+    }
+
+def get_best_ratings(athlete: Athlete, race_lookup: dict) -> dict:
+    return {
+        "max_overall": round(athlete.max_overall),
+        "max_overall_race": race_lookup.get(athlete.max_overall_race_id, ['', ''])[1],
+        "max_swim": round(athlete.max_swim),
+        "max_swim_race": race_lookup.get(athlete.max_swim_race_id, ['', ''])[1],
+        "max_bike": round(athlete.max_bike),
+        "max_bike_race": race_lookup.get(athlete.max_bike_race_id, ['', ''])[1],
+        "max_run": round(athlete.max_run),
+        "max_run_race": race_lookup.get(athlete.max_run_race_id, ['', ''])[1],
+        "max_transition": round(athlete.max_transition),
+        "max_transition_race": race_lookup.get(athlete.max_transition_race_id, ['', ''])[1],
+    }
+    
+# Format best performance data
+def get_best_performances(athlete: Athlete, race_lookup: dict) -> dict:
+    return {
+        "overall_change": format_rating_change(athlete.overall_increase),
+        "overall_race": race_lookup.get(athlete.overall_increase_race_id, ['', ''])[1],
+        "swim_change": format_rating_change(athlete.swim_increase),
+        "swim_race": race_lookup.get(athlete.swim_increase_race_id, ['', ''])[1],
+        "bike_change": format_rating_change(athlete.bike_increase),
+        "bike_race": race_lookup.get(athlete.bike_increase_race_id, ['', ''])[1],
+        "run_change": format_rating_change(athlete.run_increase),
+        "run_race": race_lookup.get(athlete.run_increase_race_id, ['', ''])[1],
+        "transition_change": format_rating_change(athlete.transition_increase),
+        "transition_race": race_lookup.get(athlete.transition_increase_race_id, ['', ''])[1]
+    }
+
+def get_race_history(athlete: Athlete, race_lookup: dict) -> List[dict]:
+    formatted_splits = []
+    for result in sorted(athlete.race_results, key = lambda x : x.race_date, reverse = True):
+        race_title = race_lookup.get(int(result.race_id), ['', '', ''])[2]
+
+        formatted_splits.append({
+            "race_id": result.race_id,
+            "race_title": race_title,
+            "race_date": result.race_date, # Format in template to allow for sorting by numeric date
+            "position": result.position,
+            "overall": format_time(result.overall_s),
+            "overall_behind": format_time_behind(result.overall_behind_s) if result.overall_behind_s is not None else "",
+            "swim": format_time(result.swim_s),
+            "swim_behind": format_time_behind(result.swim_behind_s) if result.swim_behind_s is not None else "",
+            "t1": format_time(result.t1_s),
+            "t1_behind": format_time_behind(result.t1_behind_s) if result.t1_behind_s is not None else "",
+            "bike": format_time(result.bike_s),
+            "bike_behind": format_time_behind(result.bike_behind_s) if result.bike_behind_s is not None else "",
+            "t2": format_time(result.t2_s),
+            "t2_behind": format_time_behind(result.t2_behind_s) if result.t2_behind_s is not None else "",
+            "run": format_time(result.run_s),
+            "run_behind": format_time_behind(result.run_behind_s) if result.run_behind_s is not None else ""
+        })
+            
+    return formatted_splits
+
+def get_rating_history(athlete: Athlete, race_lookup: dict) -> List[dict]:
+    formatted_ratings = []
+    results = sorted(athlete.race_results, key = lambda x: x.race_date, reverse = True)
+    ratings = sorted(athlete.rating_history, key = lambda x: x.race_date, reverse = True)
+    
+    print(f"Results count: {len(results)}, Ratings count: {len(ratings)}")
+    
+    for result, rating in zip(results, ratings):
+        race_title = race_lookup.get(int(rating.race_id), ['', '', ''])[2]
+        
+        formatted_ratings.append({
+            "race_id": rating.race_id,
+            "race_date": rating.race_date, # Format in template to allow for sorting by numeric date
+            "race_title": race_title,
+            "position": result.position,
+            "overall_rating": round(rating.overall_rating),
+            "swim_rating": round(rating.swim_rating),
+            "bike_rating": round(rating.bike_rating),
+            "run_rating": round(rating.run_rating),
+            "transition_rating": round(rating.transition_rating),
+            "overall_change": format_rating_change(rating.overall_change),
+            "swim_change": format_rating_change(rating.swim_change),
+            "bike_change": format_rating_change(rating.bike_change),
+            "run_change": format_rating_change(rating.run_change),
+            "transition_change": format_rating_change(rating.transition_change)
+        })
+        
+    return formatted_ratings
+
+def get_pct_behind_leaders_chart(athlete: Athlete, race_lookup: dict) -> dict:
+    times_df: pd.DataFrame = athlete.get_times_df()
+    
+    dates = times_df['race_date'].dt.strftime('%Y-%m-%d').tolist()
+    race_ids = times_df['race_id'].tolist()
+    race_names = [
+        race_lookup.get(race_id, ['', ''])[1] for race_id in race_ids
+    ]
+    
+    overall_pcts = times_df['overall_pct_behind'].astype(float).replace({np.nan: None}).tolist()
+    swim_pcts = times_df['swim_pct_behind'].astype(float).replace({np.nan: None}).tolist()
+    bike_pcts = times_df['bike_pct_behind'].astype(float).replace({np.nan: None}).tolist()
+    run_pcts = times_df['run_pct_behind'].astype(float).replace({np.nan: None}).tolist()
+    
+    return {
+        "overall": {
+            "datasets": [
+                {
+                    "label": "Overall % Behind Leader",
+                    "data": [
+                        {"x": date, "y": round(pct * 100, 1), "race_name": race_name}
+                        for date, pct, race_name in zip(dates, overall_pcts, race_names)
+                        if pct is not None
+                    ],
+                    "borderColor": "#4CAF50",
+                    "backgroundColor": "rgba(76, 175, 80, 0.1)",
+                    "borderWidth": 2,
+                    "pointRadius": 3
+                }
+            ]
+        },
+        "swim": {
+            "datasets": [
+                {
+                    "label": "Swim % Behind Leader",
+                    "data": [
+                    {"x": date, "y": round(pct * 100, 1), "race_name": race_name}
+                    for date, pct, race_name in zip(dates, swim_pcts, race_names)
+                    if pct is not None
+                ],
+                "borderColor": "#357ABD",
+                "backgroundColor": "rgba(53, 122, 189, 0.1)",
+                "borderWidth": 2,
+                "pointRadius": 3
+                }
+            ]
+        },
+        "bike": {
+            "datasets": [
+                {
+                    "label": "Bike % Behind Leader",
+                "data": [
+                    {"x": date, "y": round(pct * 100, 1), "race_name": race_name}
+                    for date, pct, race_name in zip(dates, bike_pcts, race_names)
+                    if pct is not None
+                ],
+                "borderColor": "#FF9800",
+                "backgroundColor": "rgba(255, 152, 0, 0.1)",
+                "borderWidth": 2,
+                "pointRadius": 3
+                }
+            ]
+        },
+        "run": {
+            "datasets": [
+                {
+                    "label": "Run % Behind Leader",
+                    "data": [
+                    {"x": date, "y": round(pct * 100, 1), "race_name": race_name}
+                    for date, pct, race_name in zip(dates, run_pcts, race_names)
+                    if pct is not None
+                ],
+                "borderColor": "#4CAF50",
+                "backgroundColor": "rgba(76, 175, 80, 0.1)",
+                "borderWidth": 2,
+                "pointRadius": 3
+                }
+            ]
+        }
+    }
+
+def get_splits_chart(athlete: Athlete, race_lookup: dict) -> dict:
+    times_df: pd.DataFrame = athlete.get_times_df()
+    
+    # Prepare date strings and race names once
+    dates = times_df['race_date'].dt.strftime('%Y-%m-%d').tolist()
+    race_ids = times_df['race_id'].tolist()
+    race_names = [
+        race_lookup.get(race_id, ['', ''])[1] for race_id in race_ids
+    ]
+    
+    swim_times = times_df['swim_s'].astype(int).tolist()
+    bike_times = times_df['bike_s'].astype(int).tolist()
+    run_times = times_df['run_s'].astype(int).tolist()
+    
+    return {
+        "swim": {
+            "datasets": [
+                {
+                    "label": "Sprint Swim Times",
+                    "data": [
+                        {"x": date, "y": time, "race_name": race_name}
+                        for date, time, race_name in zip(dates, swim_times, race_names)
+                        if time < 960 and time != 0
+                    ],
+                    "borderColor": "#357ABD",
+                    "backgroundColor": "rgba(53, 122, 189, 0.1)",
+                    "borderWidth": 2,
+                    "pointRadius": 3,
+                },
+                {
+                    "label": "Standard Swim Times",
+                    "data": [
+                        {"x": date, "y": time, "race_name": race_name}
+                        for date, time, race_name in zip(dates, swim_times, race_names)
+                        if time >= 960 and time != 0
+                    ],
+                    "borderColor": "#E91E63",
+                    "backgroundColor": "rgba(233, 30, 99, 0.1)",
+                    "borderWidth": 2,
+                    "pointRadius": 3
+                }
+            ]
+        },
+        "bike": {
+            "datasets": [
+                {
+                    "label": "Sprint Bike Times",
+                    "data": [
+                        {"x": date, "y": time, "race_name": race_name}
+                        for date, time, race_name in zip(dates, bike_times, race_names)
+                        if time <= 2700 and time != 0
+                    ],
+                    "borderColor": "#357ABD",
+                    "backgroundColor": "rgba(53, 122, 189, 0.1)",
+                    "borderWidth": 2,
+                    "pointRadius": 3
+                },
+                {
+                    "label": "Standard Bike Times",
+                    "data": [
+                        {"x": date, "y": time, "race_name": race_name}
+                        for date, time, race_name in zip(dates, bike_times, race_names)
+                        if time > 2700 and time != 0
+                    ],
+                    "borderColor": "#E91E63",
+                    "backgroundColor": "rgba(233, 30, 99, 0.1)",
+                    "borderWidth": 2,
+                    "pointRadius": 3
+                }
+            ]
+        },
+        "run": {
+            "datasets": [
+                {
+                    "label": "Sprint Run Times",
+                    "data": [
+                        {"x": date, "y": time, "race_name": race_name}
+                        for date, time, race_name in zip(dates, run_times, race_names)
+                        if time <= 1560 and time != 0
+                    ],
+                    "borderColor": "#357ABD",
+                    "backgroundColor": "rgba(53, 122, 189, 0.1)",
+                    "borderWidth": 2,
+                    "pointRadius": 3,
+                },
+                {
+                    "label": "Standard Run Times",
+                    "data": [
+                        {"x": date, "y": time, "race_name": race_name}
+                        for date, time, race_name in zip(dates, run_times, race_names)
+                        if time > 1560 and time != 0
+                    ],
+                    "borderColor": "#E91E63",
+                    "backgroundColor": "rgba(233, 30, 99, 0.1)",
+                    "borderWidth": 2,
+                    "pointRadius": 3
+                }
+            ]
+        }
+    }
+
+
+def get_ratings_chart(athlete: Athlete, race_lookup: dict) -> dict:
+    """
+    Prepare historical rating data for Chart.js.
+    """
+    ratings_df: pd.DataFrame = athlete.get_ratings_df()
+
+    # Get race IDs and look up race names
+    race_ids = ratings_df['race_id'].tolist()
+    race_names = [
+        race_lookup.get(race_id, ['', ''])[1] for race_id in race_ids
+    ]
+    race_dates = ratings_df['race_date'].dt.strftime('%Y-%m-%d')
+    
+    return {
+        # "race_names": race_names,
+        "datasets": [
+            {
+                "label": "Overall Rating",
+                "data": [
+                    {"x": date, "y": rating, "race_name": race_name}
+                    for date, rating, race_name in zip(
+                        race_dates,
+                        ratings_df['overall_rating'].astype(int),
+                        race_names
+                    )
+                ],
+                "borderColor": "#357ABD",
+                "backgroundColor": "rgba(53, 122, 189, 0.1)",
+                "borderWidth": 2,
+                "pointRadius": 3,
+            },
+            {
+                "label": "Swim Rating",
+                "data": [
+                    {"x": date, "y": rating, "race_name": race_name}
+                    for date, rating, race_name in zip(
+                        race_dates,
+                        ratings_df['swim_rating'].astype(int),
+                        race_names
+                    )
+                ],
+                "borderColor": "#4CAF50",
+                "backgroundColor": "rgba(76, 175, 80, 0.1)",
+                "borderWidth": 2,
+                "pointRadius": 3,
+            },
+            {
+                "label": "Bike Rating",
+                "data": [
+                    {"x": date, "y": rating, "race_name": race_name}
+                    for date, rating, race_name in zip(
+                        race_dates,
+                        ratings_df['bike_rating'].astype(int),
+                        race_names
+                    )
+                ],
+                "borderColor": "#FF9800",
+                "backgroundColor": "rgba(255, 152, 0, 0.1)",
+                "borderWidth": 2,
+                "pointRadius": 3,
+            },
+            {
+                "label": "Run Rating",
+                "data": [
+                    {"x": date, "y": rating, "race_name": race_name}
+                    for date, rating, race_name in zip(
+                        race_dates,
+                        ratings_df['run_rating'].astype(int),
+                        race_names
+                    )
+                ],
+                "borderColor": "#E91E63",
+                "backgroundColor": "rgba(233, 30, 99, 0.1)",
+                "borderWidth": 2,
+                "pointRadius": 3,
+            },
+            {
+                "label": "Transition Rating",
+                "data": [
+                    {"x": date, "y": rating, "race_name": race_name}
+                    for date, rating, race_name in zip(
+                        race_dates,
+                        ratings_df['transition_rating'].astype(int),
+                        race_names
+                    )
+                ],
+                "borderColor": "#9C27B0",
+                "backgroundColor": "rgba(156, 39, 176, 0.1)",
+                "borderWidth": 2,
+                "pointRadius": 3,
+            }
+        ]
+    }
+
+@router.get("/athletes/{athlete_id}", response_class = HTMLResponse)
+async def get_athlete(request: Request, athlete_id: int):
+    """
+    Prepare athlete information for display as HTML.
+    """
+    start = time.time()
+    athlete: Athlete = load_athlete_cached(athlete_id)
+    
+    race_lookup: dict = get_race_lookup()
+
+    current_ratings = get_current_ratings(athlete)
+    rating_peaks = get_best_ratings(athlete, race_lookup)
+    best_performances = get_best_performances(athlete, race_lookup)
+
+    # Get jsons for rating and times charts
+    ratings_chart = get_ratings_chart(athlete, race_lookup)
+    splits_chart = get_splits_chart(athlete, race_lookup)
+    
+    # Pct behind leader chart
+    pct_behind_leaders_chart = get_pct_behind_leaders_chart(athlete, race_lookup)
+
+    # Format race splits and ratings for display
+    race_history = get_race_history(athlete, race_lookup)
+    rating_history = get_rating_history(athlete, race_lookup)
+    
+    end = time.time()
+    print(f"Athlete format time: {end-start}s")
+    
+    return templates.TemplateResponse(
+        "athlete.html",
+        {
+            "request": request, 
+            "active_page": "athletes",
+            "athlete": athlete,
+            "current_ratings": current_ratings,
+            "rating_peaks": rating_peaks,
+            "best_performances": best_performances,
+            "race_history": race_history,
+            "rating_history": rating_history,
+            "ratings_chart": ratings_chart,
+            "overall_pct_behind_chart": pct_behind_leaders_chart["overall"],
+            "swim_pct_behind_chart": pct_behind_leaders_chart["swim"],
+            "bike_pct_behind_chart": pct_behind_leaders_chart["bike"],
+            "run_pct_behind_chart": pct_behind_leaders_chart["run"],
+            "swim_times_chart": splits_chart["swim"],
+            "bike_times_chart": splits_chart["bike"],
+            "run_times_chart": splits_chart["run"],
+        }
+    )

@@ -1,0 +1,8 @@
+.vscode/
+__pycache__/
+._DS_Store
+
+/static/athlete_imgs
+/static/data
+/stats/data/female_short 
+/stats/data/male_short

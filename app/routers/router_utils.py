@@ -1,0 +1,47 @@
+# Formatting functions for FastAPI routers
+def format_time(seconds: int) -> str:
+    """Convert seconds to HH:MM:SS or MM:SS format.""" 
+    if seconds == 0: return ""
+       
+    hours = int(seconds // 3600)
+    mins = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    
+    if hours > 0:
+        return f"{hours}:{mins:02d}:{secs:02d}"
+    else:
+        return f"{mins}:{secs:02d}"
+ 
+def format_time_behind(seconds_behind: int) -> str:
+    if seconds_behind is None:
+        return ""
+
+    if seconds_behind == 0:
+        return "+00:00"
+    
+    time_fmt = format_time(seconds_behind)
+    return f"+{time_fmt}"
+    
+def format_rating(rating: float) -> float:
+    # Float required as Jinja logic needs to do comparisons to determine class
+    return round(rating, 1)
+
+def format_rating_change(change: float) -> dict:
+    """ 
+    Format rating change to str and provide css-class based on cardinality
+    """
+    if change == 0: return {
+        "formatted_str": "",
+        "css_class": "rating-neutral"
+    }
+    
+    if change > 0:
+        return {
+            "formatted_str": f"▲{change:.1f}",
+            "css_class": "rating-increase"
+        }
+        
+    return {
+        "formatted_str": f"▼{-change:.1f}",
+        "css_class": "rating-decrease"
+    }

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Triathlon Stats{% endblock %}</title>
+
+    <!-- Import Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='favicon.ico') }}">
+    
+    <!-- Base CSS, force cache bust -->
+    <link rel="stylesheet" href="{{ url_for('static', path='css/base.css') }}">
+    
+    <!-- Page-specific CSS -->
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation Banner -->
+    <header class="site-header">
+        <div class="header-container">
+            <div class="logo">
+                <a href="/">
+                    <img src="{{ url_for('static', path='logo_1024.png') }}" alt="Logo" class="logo-img">
+                    <span class="logo-text">Triathlon Stats</span>
+                </a>
+            </div>
+            <nav class="main-nav">
+                <a href="/" class="nav-link{{ ' active' if active_page == 'home' else '' }}">Home</a>
+                <a href="/leaderboard" class="nav-link{{ ' active' if active_page == 'athletes' else '' }}">Athletes</a>
+                <a href="/races" class="nav-link{{ ' active' if active_page == 'races' else '' }}">Races</a>
+                <a href="/about" class="nav-link{{ ' active' if active_page == 'about' else '' }}">About</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="page-container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="footer-container">
+            <p>&copy; 2024 Triathlon Stats. All rights reserved.</p>
+        </div>
+    </footer>
+    
+    <!-- Page-specific JavaScript -->
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

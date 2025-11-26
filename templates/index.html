@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Triathlon Stats{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/index.css">
+{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <h1>Welcome to Triathlon Stats</h1>
+    <p class="hero-subtitle">Track, analyze, and visualize triathlon performance data</p>
+</div>
+
+<div class="info-grid">
+    <div class="info-card">
+        <h2>Athletes</h2>
+        <p>View detailed performance metrics, ratings history, and progress tracking for individual athletes.</p>
+        <a href="/athletes" class="btn">Browse Athletes</a>
+    </div>
+    
+    <div class="info-card">
+        <h2>Races</h2>
+        <p>Explore race results, compare performances, and analyze trends across different events and distances.</p>
+        <a href="/races" class="btn">View Races</a>
+    </div>
+    
+    <div class="info-card">
+        <h2>Analytics</h2>
+        <p>Dive into comprehensive charts and statistics to understand performance patterns and improvements.</p>
+        <a href="/about" class="btn btn-secondary">Learn More</a>
+    </div>
+</div>
+
+<div class="stats-banner">
+    <div class="stat-item">
+        <div class="stat-number">{{ total_athletes }}</div>
+        <div class="stat-label">Athletes Tracked</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-number">{{ total_races }}</div>
+        <div class="stat-label">Races Recorded</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-number">{{ total_results }}</div>
+        <div class="stat-label">Results Analyzed</div>
+    </div>
+</div>
+{% endblock %}
