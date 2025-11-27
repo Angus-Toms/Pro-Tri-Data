@@ -45,6 +45,27 @@ def load_athlete(athlete_id: int) -> Athlete:
 def load_athlete_cached(athlete_id: int) -> Athlete:
     return load_athlete(athlete_id)
 
+def format_1yr_rating_change(change: float) -> dict:
+    """
+    Format 1 year rating change, different to standard formatting to catch zero changes
+    """
+    if change == 0:
+        return {
+            "formatted_str": "▲0 last year",
+            "css_class": "neutral"
+        }
+    
+    if change > 0:
+        return {
+            "formatted_str": f"▲{change:.1f} last year",
+            "css_class": "positive"
+        }
+    
+    return {
+        "formatted_str": f"▼{-change:.1f} last year",
+        "css_class": "negative"
+    }
+
 def get_current_ratings(athlete: Athlete) -> dict:
     return {
         "overall_rating": round(athlete.overall_rating),
@@ -56,46 +77,58 @@ def get_current_ratings(athlete: Athlete) -> dict:
 
 def get_rating_changes_1yr(athlete: Athlete) -> dict:
     return {
-        "overall_change_1yr": format_rating_change(athlete.overall_change_1yr),
-        "swim_change_1yr": format_rating_change(athlete.swim_change_1yr),
-        "bike_change_1yr": format_rating_change(athlete.bike_change_1yr),
-        "run_change_1yr": format_rating_change(athlete.run_change_1yr),
-        "transition_change_1yr": format_rating_change(athlete.transition_change_1yr)
+        "overall_change_1yr": format_1yr_rating_change(athlete.overall_change_1yr),
+        "swim_change_1yr": format_1yr_rating_change(athlete.swim_change_1yr),
+        "bike_change_1yr": format_1yr_rating_change(athlete.bike_change_1yr),
+        "run_change_1yr": format_1yr_rating_change(athlete.run_change_1yr),
+        "transition_change_1yr": format_1yr_rating_change(athlete.transition_change_1yr)
     }
 
 def get_best_ratings(athlete: Athlete, race_lookup: dict) -> dict:
     return {
         "max_overall": round(athlete.max_overall),
-        "max_overall_race": race_lookup.get(athlete.max_overall_race_id, ['', ''])[1],
+        "max_overall_race": race_lookup.get(athlete.max_overall_race_id, ['', '', ''])[2],
         "max_swim": round(athlete.max_swim),
-        "max_swim_race": race_lookup.get(athlete.max_swim_race_id, ['', ''])[1],
+        "max_swim_race": race_lookup.get(athlete.max_swim_race_id, ['', '', ''])[2],
         "max_bike": round(athlete.max_bike),
-        "max_bike_race": race_lookup.get(athlete.max_bike_race_id, ['', ''])[1],
+        "max_bike_race": race_lookup.get(athlete.max_bike_race_id, ['', '', ''])[2],
         "max_run": round(athlete.max_run),
-        "max_run_race": race_lookup.get(athlete.max_run_race_id, ['', ''])[1],
+        "max_run_race": race_lookup.get(athlete.max_run_race_id, ['', '', ''])[2],
         "max_transition": round(athlete.max_transition),
-        "max_transition_race": race_lookup.get(athlete.max_transition_race_id, ['', ''])[1],
+        "max_transition_race": race_lookup.get(athlete.max_transition_race_id, ['', '', ''])[2],
     }
     
 # Format best performance data
 def get_best_performances(athlete: Athlete, race_lookup: dict) -> dict:
+    valid_overall_best = athlete.overall_increase_race_id != 0
+    valid_swim_best = athlete.swim_increase_race_id != 0
+    valid_bike_best = athlete.bike_increase_race_id != 0
+    valid_run_best = athlete.run_increase_race_id != 0
+    valid_transition_best = athlete.transition_increase_race_id != 0
+
+    # Match formatting of rating change
+    no_best = {
+        "formatted_str": "-",
+        "css_class": "no-best-performance"
+    }
+
     return {
-        "overall_change": format_rating_change(athlete.overall_increase),
-        "overall_race": race_lookup.get(athlete.overall_increase_race_id, ['', ''])[1],
-        "swim_change": format_rating_change(athlete.swim_increase),
-        "swim_race": race_lookup.get(athlete.swim_increase_race_id, ['', ''])[1],
-        "bike_change": format_rating_change(athlete.bike_increase),
-        "bike_race": race_lookup.get(athlete.bike_increase_race_id, ['', ''])[1],
-        "run_change": format_rating_change(athlete.run_increase),
-        "run_race": race_lookup.get(athlete.run_increase_race_id, ['', ''])[1],
-        "transition_change": format_rating_change(athlete.transition_increase),
-        "transition_race": race_lookup.get(athlete.transition_increase_race_id, ['', ''])[1]
+        "overall_change": format_rating_change(athlete.overall_increase) if valid_overall_best else no_best,
+        "overall_race": race_lookup.get(athlete.overall_increase_race_id, ['', '', ''])[2] if valid_overall_best else "",
+        "swim_change": format_rating_change(athlete.swim_increase) if valid_swim_best else no_best,
+        "swim_race": race_lookup.get(athlete.swim_increase_race_id, ['', '', ''])[2] if valid_swim_best else "",
+        "bike_change": format_rating_change(athlete.bike_increase) if valid_bike_best else no_best,
+        "bike_race": race_lookup.get(athlete.bike_increase_race_id, ['', '', ''])[2] if valid_bike_best else "",
+        "run_change": format_rating_change(athlete.run_increase) if valid_run_best else no_best,
+        "run_race": race_lookup.get(athlete.run_increase_race_id, ['', '', ''])[2] if valid_run_best else "",
+        "transition_change": format_rating_change(athlete.transition_increase) if valid_transition_best else no_best,
+        "transition_race": race_lookup.get(athlete.transition_increase_race_id, ['', '', ''])[2] if valid_transition_best else ""
     }
 
 def get_race_history(athlete: Athlete, race_lookup: dict) -> List[dict]:
     formatted_splits = []
     for result in sorted(athlete.race_results, key = lambda x : x.race_date, reverse = True):
-        race_title = race_lookup.get(int(result.race_id), ['', '', ''])[2]
+        race_title = race_lookup.get(int(result.race_id), ['', ''])[1]
 
         formatted_splits.append({
             "race_id": result.race_id,
@@ -124,7 +157,7 @@ def get_rating_history(athlete: Athlete, race_lookup: dict) -> List[dict]:
     ratings = sorted(athlete.rating_history, key = lambda x: x.race_date, reverse = True)
     
     for result, rating in zip(results, ratings):
-        race_title = race_lookup.get(int(rating.race_id), ['', '', ''])[2]
+        race_title = race_lookup.get(int(rating.race_id), ['', ''])[1]
         
         formatted_ratings.append({
             "race_id": rating.race_id,

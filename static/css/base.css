@@ -422,15 +422,16 @@ th.sortable.desc::after {
 /* Small links in cards */
 .small-link {
     color: var(--primary-color);
-    font-size: var(--font-size-sm);
     text-decoration: none;
+    font-size: var(--font-size-sm);
     transition: color var(--transition-base);
+    display: inline-block;
 }
 
 .small-link:hover {
     color: var(--primary-hover);
 }
 
-.small-link:visited {
+.small-link:active {
     color: var(--primary-hover);
 }

@@ -240,7 +240,9 @@ class TriathlonELOSystem:
             athlete_id = row['athlete_id']
             
             athlete = self.get_or_create_athlete(row)
-            athlete.initialise_ratings(prog_name) # Set initial ratings based on AG vs. Elites
+            # Set initial ratings for new athletes based on program
+            if athlete.overall_rating == float('-inf'):
+                athlete.initialise_ratings(prog_name)
 
             # Save to Race
             race.add_result(
@@ -468,7 +470,11 @@ class TriathlonELOSystem:
                 return float('inf')
         except:
             return float('inf')
-        
+
+    def perform_athlete_postprocessing(self) -> None:
+        self.set_athlete_active_status()
+        self.set_1yr_change()
+
     def set_athlete_active_status(self) -> None:
         for _, athlete in self.athletes.items():
             # Athletes are active by default
@@ -480,7 +486,9 @@ class TriathlonELOSystem:
             diff = datetime.now() - last_race_date
             athlete.active = diff < timedelta(days = 365 * 2)
 
-    # TODO: 1 yr change
+    def set_1yr_change(self) -> None:
+        for _, athlete in self.athletes.items():
+            athlete.get_1yr_changes()
             
     def make_leaderboard(self, leaderboard_path: str) -> None:
         leaderboard_data = {}

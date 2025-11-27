@@ -122,23 +122,23 @@ class Athlete:
         self.lap_pct: float = 0.0
 
         # Ratings
-        self.overall_rating: float = 0.0
-        self.swim_rating: float = 0.0
-        self.bike_rating: float = 0.0
-        self.run_rating: float = 0.0
-        self.transition_rating: float = 0.0
+        self.overall_rating: float = float('-inf')
+        self.swim_rating: float = float('-inf')
+        self.bike_rating: float = float('-inf')
+        self.run_rating: float = float('-inf')
+        self.transition_rating: float = float('-inf')
         
         # Peaks 
         self.max_overall: float = self.overall_rating
-        self.max_overall_race_id: int = 0
+        self.max_overall_race_id: int = float('-inf')
         self.max_swim: float = self.swim_rating
-        self.max_swim_race_id: int = 0
+        self.max_swim_race_id: int = float('-inf')
         self.max_bike: float = self.bike_rating
-        self.max_bike_race_id: int = 0
+        self.max_bike_race_id: int = float('-inf')
         self.max_run: float = self.run_rating
-        self.max_run_race_id: int = 0
+        self.max_run_race_id: int = float('-inf')
         self.max_transition: float = self.transition_rating
-        self.max_transition_race_id: int = 0
+        self.max_transition_race_id: int = float('-inf')
         
         # Largest improvements
         self.overall_increase: float = float('-inf')
