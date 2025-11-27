@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Athletes - Search & Leaderboards{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/athlete_search.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <header class="page-header">
+        <h1>Athletes</h1>
+        <p class="page-subtitle">Search for athletes or view leaderboards</p>
+    </header>
+
+    <!-- Search Section -->
+    <section class="search-section">
+        <div class="search-container">
+            <div class="search-input-wrapper">
+                <input 
+                    type="text" 
+                    id="athleteSearch" 
+                    class="search-input" 
+                    placeholder="Search for an athlete..."
+                    autocomplete="off"
+                >
+                <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.35-4.35"></path>
+                </svg>
+            </div>
+            
+            <div id="searchResults" class="search-results" style="display: none;">
+                <!-- Results populated by JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Leaderboards Section -->
+    <section class="leaderboards-section">
+        <h2>Leaderboards</h2>
+        <div class="leaderboard-cards">
+            <a href="/leaderboard/women" class="leaderboard-card">
+                <div class="leaderboard-icon">👩‍🏃</div>
+                <h3>Women's Leaderboard</h3>
+                <p>View top-ranked female athletes</p>
+                <span class="card-arrow">→</span>
+            </a>
+            
+            <a href="/leaderboard/men" class="leaderboard-card">
+                <div class="leaderboard-icon">👨‍🏃</div>
+                <h3>Men's Leaderboard</h3>
+                <p>View top-ranked male athletes</p>
+                <span class="card-arrow">→</span>
+            </a>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', path='js/athlete_search.js') }}"></script>
+{% endblock %}

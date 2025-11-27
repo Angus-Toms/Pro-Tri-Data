@@ -11,3 +11,4 @@ Data format for site APIs:
 - [ ] Add athlete comparisons
 - [X] Catch -inf in single best performances
 - [X] Add 1 year changes and formatting
+- [ ] Capitalise all words in venue and location download, probably refactor whole data_access.py

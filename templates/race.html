@@ -52,7 +52,7 @@
                             {{ athlete.position }}
                         </td>
                         <td class="athlete-col" data-value="{{ athlete.name }}">
-                            <a href="/athletes/{{ athlete.athlete_id }}" class="link">
+                            <a href="/athlete/{{ athlete.athlete_id }}" class="link">
                                 {{ athlete.name }} {{ athlete.country_emoji }}
                             </a>
                         </td>
@@ -147,7 +147,7 @@
                             {{ athlete.position }}
                         </td>
                         <td data-value="{{ athlete.name }}">
-                            <a href="/athletes/{{ athlete.athlete_id }}" class="link">
+                            <a href="/athlete/{{ athlete.athlete_id }}" class="link">
                                 {{ "{} {}".format(athlete.name, athlete.country_emoji) }}
                             </a>
                         </td>

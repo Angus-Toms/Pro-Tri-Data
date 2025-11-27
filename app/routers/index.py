@@ -14,7 +14,7 @@ async def index(request: Request):
         "request": request,
         "active_page": "home",
         "total_athletes": 60016,
-        "total_races": 9510,     
+        "total_races": 9519,     
         "total_results": 196287
     }
     

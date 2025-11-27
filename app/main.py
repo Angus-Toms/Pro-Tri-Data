@@ -8,7 +8,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from app.routers import index, athlete_page, race_page, leaderboard
+from app.routers import index, athlete_search, race_search, athlete_page, race_page, leaderboard
 
 BASE_DIR = Path(__file__).resolve().parent.parent # Project root
 
@@ -17,6 +17,8 @@ app.mount("/static", StaticFiles(directory = BASE_DIR / "static"), name = "stati
 
 # Include page routers
 app.include_router(index.router)
+app.include_router(athlete_search.router)
+app.include_router(race_search.router)
 app.include_router(athlete_page.router)
 app.include_router(race_page.router)
 app.include_router(leaderboard.router)

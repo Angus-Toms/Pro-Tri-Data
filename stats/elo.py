@@ -491,6 +491,13 @@ class TriathlonELOSystem:
             athlete.get_1yr_changes()
             
     def make_leaderboard(self, leaderboard_path: str) -> None:
+        """ 
+        Create leaderboard dict and save to pickle.
+        Also save ranks directly to Athlete for fast access 
+        
+        Args:
+            leaderboard_path: Path to save leaderboard pickle
+        """
         leaderboard_data = {}
         
         for athlete_id, athlete in self.athletes.items():
@@ -532,43 +539,66 @@ class TriathlonELOSystem:
         for discipline, rankings in rankings_by_discipline.items():
             for rank, (athlete_id, _) in enumerate(sorted(rankings, key = lambda x: x[1], reverse = True), 1):
                 ranks[athlete_id][f"{discipline}_rank"] = rank
-                
-        # Add leaderboard positions to df
-        for athlete_id, rankdict in ranks.items():
-            leaderboard_data[athlete_id].update(rankdict)
             
         with open(leaderboard_path, 'wb') as f:
             pickle.dump(leaderboard_data, f)
             
         print(f"Saved leaderboard to {leaderboard_path}")
+
+        # Save ranks to Athlete objects
+        self.save_ranks_to_athletes(ranks)
+
+    def save_ranks_to_athletes(self, ranks: Dict[int, Dict[str, int]]) -> None:
+        """ 
+        Save rankings directly to Athlete objects for fast access 
         
+        Args:
+            ranks: Dict mapping athlete_id to dict of rankings per discipline. Example format:
+            {
+                athlete_id: {
+                    "overall_rank": int,
+                    "swim_rank": int,
+                    "bike_rank": int,
+                    "run_rank": int,
+                    "transition_rank": int
+                },
+                ...
+        """
+        for athlete_id, athlete_ranks in ranks.items():
+            athlete = self.athletes.get(athlete_id, None)
+            if athlete is not None:
+                athlete.overall_rank = athlete_ranks.get("overall_rank", -1)
+                athlete.swim_rank = athlete_ranks.get("swim_rank", -1)
+                athlete.bike_rank = athlete_ranks.get("bike_rank", -1)
+                athlete.run_rank = athlete_ranks.get("run_rank", -1)
+                athlete.transition_rank = athlete_ranks.get("transition_rank", -1)
 
 def main():
-    female_short_elo = TriathlonELOSystem(k_factor = 16, race_guide_fname = FEMALE_SHORT_EVENTS, race_dir = FEMALE_SHORT_DIR)
+    female_short_elo = TriathlonELOSystem(k_factor = 24, race_guide_fname = FEMALE_SHORT_EVENTS, race_dir = FEMALE_SHORT_DIR)
     female_short_elo.process_all_races()
     female_short_elo.set_athlete_active_status()
     female_short_elo.make_leaderboard(FEMALE_SHORT_LEADERBOARD)
     female_short_elo.save_athlete_data(ATHLETES_DIR)
     female_short_elo.save_race_data(RACES_DIR)
     
-    # male_short_elo = TriathlonELOSystem(k_factor = 16, race_guide_fname = MALE_SHORT_EVENTS, race_dir = MALE_SHORT_DIR)
-    # male_short_elo.process_all_races()
-    # male_short_elo.set_athlete_active_status()
-    # male_short_elo.make_leaderboard(MALE_SHORT_LEADERBOARD)
-    # male_short_elo.save_athlete_data(ATHLETES_DIR)
-    # male_short_elo.save_race_data(RACES_DIR)
+    male_short_elo = TriathlonELOSystem(k_factor = 24, race_guide_fname = MALE_SHORT_EVENTS, race_dir = MALE_SHORT_DIR)
+    male_short_elo.process_all_races()
+    male_short_elo.set_athlete_active_status()
+    male_short_elo.make_leaderboard(MALE_SHORT_LEADERBOARD)
+    male_short_elo.save_athlete_data(ATHLETES_DIR)
+    male_short_elo.save_race_data(RACES_DIR)
     
-    # athlete_count = len(female_short_elo.athletes) + len(male_short_elo.athletes)
-    # print(f"Total athletes processed: {athlete_count}")
+    athlete_count = len(female_short_elo.athletes) + len(male_short_elo.athletes)
+    print(f"Total athletes processed: {athlete_count}")
     
-    # race_count = len(female_short_elo.races) + len(male_short_elo.races)
-    # print(f"Total races processed: {race_count}")
+    race_count = len(female_short_elo.races) + len(male_short_elo.races)
+    print(f"Total races processed: {race_count}")
     
-    # Rebuild athlete lookup after all athletes have been updated
+    # # Rebuild athlete lookup after all athletes have been updated
     make_athlete_lookup()
     # Rebuild race lookups
     make_race_lookup(
-        event_guides = [FEMALE_SHORT_EVENTS],
+        event_guides = [FEMALE_SHORT_EVENTS, MALE_SHORT_EVENTS],
         output_path = RACE_LOOKUP
     )
 

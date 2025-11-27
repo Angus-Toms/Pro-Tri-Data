@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Races - Search{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/race_search.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <header class="page-header">
+        <h1>Races</h1>
+        <p class="page-subtitle">Search for races and events</p>
+    </header>
+
+    <!-- Search Section -->
+    <section class="search-section">
+        <div class="search-container">
+            <div class="search-input-wrapper">
+                <input 
+                    type="text" 
+                    id="raceSearch" 
+                    class="search-input" 
+                    placeholder="Search for a race..."
+                    autocomplete="off"
+                >
+                <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.35-4.35"></path>
+                </svg>
+            </div>
+            
+            <div id="searchResults" class="search-results" style="display: none;">
+                <!-- Results populated by JS -->
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', path='js/race_search.js') }}"></script>
+{% endblock %}

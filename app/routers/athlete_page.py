@@ -45,6 +45,10 @@ def load_athlete(athlete_id: int) -> Athlete:
 def load_athlete_cached(athlete_id: int) -> Athlete:
     return load_athlete(athlete_id)
 
+def format_ranking(rank: int) -> str:
+    """ Format global ranking """
+    return f"#{rank:,} worldwide" if rank > 0 else "No Ranking"
+
 def format_1yr_rating_change(change: float) -> dict:
     """
     Format 1 year rating change, different to standard formatting to catch zero changes
@@ -69,10 +73,15 @@ def format_1yr_rating_change(change: float) -> dict:
 def get_current_ratings(athlete: Athlete) -> dict:
     return {
         "overall_rating": round(athlete.overall_rating),
+        "overall_rank": format_ranking(athlete.overall_rank),
         "swim_rating": round(athlete.swim_rating),
+        "swim_rank": format_ranking(athlete.swim_rank),
         "bike_rating": round(athlete.bike_rating),
+        "bike_rank": format_ranking(athlete.bike_rank),
         "run_rating": round(athlete.run_rating),
-        "transition_rating": round(athlete.transition_rating)
+        "run_rank": format_ranking(athlete.run_rank),
+        "transition_rating": round(athlete.transition_rating),
+        "transition_rank": format_ranking(athlete.transition_rank)
     }
 
 def get_rating_changes_1yr(athlete: Athlete) -> dict:
@@ -372,7 +381,11 @@ def get_ratings_chart(athlete: Athlete, race_lookup: dict) -> dict:
     race_names = [
         race_lookup.get(race_id, ['', ''])[1] for race_id in race_ids
     ]
-    race_dates = ratings_df['race_date'].dt.strftime('%Y-%m-%d')
+    # Ensure race_date is a datetime series before using .dt accessor
+    # TODO: Check, this was being weird
+    if not pd.api.types.is_datetime64_any_dtype(ratings_df['race_date']):
+        ratings_df['race_date'] = pd.to_datetime(ratings_df['race_date'], errors='coerce')
+    race_dates = ratings_df['race_date'].dt.strftime('%Y-%m-%d').tolist()
     
     return {
         # "race_names": race_names,
@@ -455,7 +468,7 @@ def get_ratings_chart(athlete: Athlete, race_lookup: dict) -> dict:
         ]
     }
 
-@router.get("/athletes/{athlete_id}", response_class = HTMLResponse)
+@router.get("/athlete/{athlete_id}", response_class = HTMLResponse)
 async def get_athlete(request: Request, athlete_id: int):
     """
     Prepare athlete information for display as HTML.

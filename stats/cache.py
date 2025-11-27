@@ -95,7 +95,7 @@ def process_single_race_guide(race_guide: Path):
     for _, row in guide_df.iterrows():
         race_handle = None
         title_words = str(row.race_title).split()
-        year_suffix = f"{row.prog_date.year % 100:02d}"
+        year_suffix = f"{row.prog_date.year % 100:02}"
 
         # 1) National championships
         if len(title_words) > 1 and re.match(r"^[A-Z]{3}$", title_words[1]) and title_words[1] != "ITU":
@@ -104,9 +104,7 @@ def process_single_race_guide(race_guide: Path):
         # 2) Short venue
         if race_handle is None and pd.notna(row.get("race_venue")):
             venue_words = (
-                str(row.race_venue).translate(
-                    str.maketrans('', '', '\'"')
-                )
+                str(row.race_venue).replace('"', '').replace("'", '').split()
             )
             if 0 < len(venue_words) <= 3:
                 race_handle = f"{' '.join(venue_words)} {year_suffix}"
@@ -144,7 +142,6 @@ def make_race_lookup(event_guides: List[Path], output_path: Path):
         }
 
         for i, future in enumerate(as_completed(futures), 1):
-            print(f"Processing race guide {i}/{guide_count}", end="\r")
             partial_lookup = future.result()
             race_lookup.update(partial_lookup)
 

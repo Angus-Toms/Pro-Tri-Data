@@ -43,7 +43,7 @@ def load_race(race_id: int) -> Race:
 def load_race_cached(race_id: int) -> Race:
     return load_race(race_id)
 
-@router.get("/races/{race_id}", response_class = HTMLResponse)
+@router.get("/race/{race_id}", response_class = HTMLResponse)
 async def get_race(request: Request, race_id: int):
     """
     Prepare race information for display as HTML.

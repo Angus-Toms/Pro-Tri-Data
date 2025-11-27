@@ -96,13 +96,13 @@ def get_new_male_short_progs():
                     # Save program details
                     prog_details = row[prog_cols]
                     prog_details["race_title"] = event["event_title"]
-                    # Remove quotes from venue and country
-                    prog_details["race_venue"] = event["event_venue"].translate(
-                        str.maketrans('', '', '\'"')
-                    )
-                    prog_details["race_country"] = event["event_country"].translate(
-                        str.maketrans('', '', '\'"')
-                    )
+
+                    # Remove quotes from venue and country, where possible
+                    venue = event.get("event_venue", "")
+                    prog_details["race_venue"] = "" if pd.isna(venue) else str(venue).replace("'", "").replace('"', "").capitalize()
+                    country = event.get("event_country", "")
+                    prog_details["race_country"] = "" if pd.isna(country) else str(country).replace("'", "").replace('"', "").capitalize()
+                    
                     existing_male_short.loc[len(existing_male_short)] = prog_details
                     existing_male_short.to_csv(MALE_SHORT_EVENTS, index = False)
 
@@ -168,13 +168,12 @@ def get_new_female_short_progs():
                     # Save program details
                     prog_details = row[prog_cols]
                     prog_details["race_title"] = event["event_title"]
-                    # Remove quotes from venue and country
-                    prog_details["race_venue"] = event["event_venue"].translate(
-                        str.maketrans('', '', '\'"')
-                    )
-                    prog_details["race_country"] = event["event_country"].translate(
-                        str.maketrans('', '', '\'"')
-                    )
+
+                    # Remove quotes from venue and country, where possible
+                    venue = event.get("event_venue", "")
+                    prog_details["race_venue"] = "" if pd.isna(venue) else str(venue).replace("'", "").replace('"', "").capitalize()
+                    country = event.get("event_country", "")
+                    prog_details["race_country"] = "" if pd.isna(country) else str(country).replace("'", "").replace('"', "").capitalize()
                     
                     existing_female_short.loc[len(existing_female_short)] = prog_details
                     existing_female_short.to_csv(FEMALE_SHORT_EVENTS, index = False)
@@ -195,6 +194,7 @@ def get_female_short_result(event_id, prog_id):
 
 def main():
     get_new_female_short_progs()
+    get_new_male_short_progs()
 
 if __name__ == "__main__":
     main()

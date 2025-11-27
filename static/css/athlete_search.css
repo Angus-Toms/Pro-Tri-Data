@@ -1,0 +1,210 @@
+/* ============================================
+   ATHLETES SEARCH PAGE
+   ============================================ */
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: var(--spacing-xl) var(--spacing-md);
+}
+
+/* Page Header */
+.page-header {
+    text-align: center;
+    margin-bottom: var(--spacing-xxl);
+}
+
+.page-header h1 {
+    font-size: var(--font-size-xxl);
+    color: var(--text-color);
+    margin-bottom: var(--spacing-sm);
+}
+
+.page-subtitle {
+    color: var(--text-light);
+    font-size: var(--font-size-lg);
+}
+
+/* Search Section */
+.search-section {
+    margin-bottom: var(--spacing-xxl);
+}
+
+.search-container {
+    position: relative;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.search-input-wrapper {
+    position: relative;
+}
+
+.search-input {
+    width: 100%;
+    padding: var(--spacing-md) var(--spacing-md) var(--spacing-md) 3rem;
+    font-size: var(--font-size-base);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--white);
+    transition: border-color var(--transition-base), box-shadow var(--transition-base);
+    box-sizing: border-box;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(53, 122, 189, 0.1);
+}
+
+.search-icon {
+    position: absolute;
+    left: var(--spacing-md);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    color: var(--text-lighter);
+    pointer-events: none;
+}
+
+/* Search Results */
+.search-results {
+    position: absolute;
+    top: calc(100% + var(--spacing-sm));
+    left: 0;
+    right: 0;
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow-lg);
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.search-result-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+    text-decoration: none;
+    color: var(--text-color);
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-result-item:hover {
+    background-color: var(--bg-color);
+}
+
+.result-info {
+    flex: 1;
+}
+
+.result-name {
+    font-weight: 600;
+    margin-bottom: var(--spacing-xs);
+}
+
+.result-meta {
+    font-size: var(--font-size-sm);
+    color: var(--text-light);
+}
+
+.no-results {
+    padding: var(--spacing-lg);
+    text-align: center;
+    color: var(--text-light);
+}
+
+.search-loading {
+    padding: var(--spacing-lg);
+    text-align: center;
+    color: var(--text-light);
+}
+
+/* Leaderboards Section */
+.leaderboards-section {
+    text-align: center;
+}
+
+.leaderboards-section h2 {
+    font-size: var(--font-size-xl);
+    color: var(--text-color);
+    margin-bottom: var(--spacing-lg);
+}
+
+.leaderboard-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--spacing-lg);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.leaderboard-card {
+    position: relative;
+    background: var(--white);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-xl);
+    text-decoration: none;
+    color: var(--text-color);
+    transition: all var(--transition-base);
+    overflow: hidden;
+}
+
+.leaderboard-card:hover {
+    border-color: var(--primary-color);
+    box-shadow: var(--box-shadow-hover);
+    transform: translateY(-2px);
+}
+
+.leaderboard-icon {
+    font-size: 3rem;
+    margin-bottom: var(--spacing-md);
+}
+
+.leaderboard-card h3 {
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-color);
+}
+
+.leaderboard-card p {
+    color: var(--text-light);
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.card-arrow {
+    display: inline-block;
+    font-size: var(--font-size-lg);
+    color: var(--primary-color);
+    transition: transform var(--transition-base);
+}
+
+.leaderboard-card:hover .card-arrow {
+    transform: translateX(4px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        padding: var(--spacing-lg) var(--spacing-md);
+    }
+
+    .page-header h1 {
+        font-size: var(--font-size-xl);
+    }
+
+    .leaderboard-cards {
+        grid-template-columns: 1fr;
+    }
+}

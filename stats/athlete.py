@@ -160,6 +160,13 @@ class Athlete:
         self.run_change_1yr: float = 0.0
         self.transition_change_1yr: float = 0.0
 
+        # Rankings 
+        self.overall_rank: int = -1
+        self.swim_rank: int = -1
+        self.bike_rank: int = -1
+        self.run_rank: int = -1
+        self.transition_rank: int = -1
+
         # Rating history
         self.rating_history: List[AthleteRating] = []
         

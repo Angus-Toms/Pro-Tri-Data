@@ -31,5 +31,4 @@ secrets.json
 
 /static/athlete_imgs
 /static/data
-/stats/data/female_short 
-/stats/data/male_short
+/stats/data
