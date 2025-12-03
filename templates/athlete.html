@@ -22,8 +22,10 @@
                 </span>
                 <span class="info-divider">•</span>
                 <span class="info-text">{{ athlete.country_full }}</span>
-                <span class="info-divider">•</span>
-                <span class="info-text">Born {{ athlete.year_of_birth|int }}</span>
+                {% if athlete.year_of_birth != 0 %}
+                    <span class="info-divider">•</span>
+                    <span class="info-text">Born {{ athlete.year_of_birth|int }}</span>
+                {% endif %}
                 <span class="info-divider">•</span>
                 <span class="info-text">ID: {{ athlete.athlete_id }}</span>
             </div>
@@ -456,47 +458,47 @@
 {% endblock %}
 
 {% block extra_js %}
-    <!-- Historical ratings chart -->
-    <script id="ratings-chart-data" type="application/json">
-        {{ ratings_chart | tojson }}
-    </script>
+<!-- Historical ratings chart -->
+<script id="ratings-chart-data" type="application/json">
+    {{ ratings_chart | tojson }}
+</script>
 
-    <!-- Overall % Behind Leader chart -->
-    <script id="overall-pct-behind-chart-data" type="application/json">
-        {{ overall_pct_behind_chart | tojson }}
-    </script>
+<!-- Overall % Behind Leader chart -->
+<script id="overall-pct-behind-chart-data" type="application/json">
+    {{ overall_pct_behind_chart | tojson }}
+</script>
 
-    <!-- Swim % Behind Leader chart -->
-    <script id="swim-pct-behind-chart-data" type="application/json">
-        {{ swim_pct_behind_chart | tojson }}
-    </script>
+<!-- Swim % Behind Leader chart -->
+<script id="swim-pct-behind-chart-data" type="application/json">
+    {{ swim_pct_behind_chart | tojson }}
+</script>
 
-    <!-- Bike % Behind Leader chart -->
-    <script id="bike-pct-behind-chart-data" type="application/json">
-        {{ bike_pct_behind_chart | tojson }}
-    </script>
+<!-- Bike % Behind Leader chart -->
+<script id="bike-pct-behind-chart-data" type="application/json">
+    {{ bike_pct_behind_chart | tojson }}
+</script>
 
-    <!-- Run % Behind Leader chart -->
-    <script id="run-pct-behind-chart-data" type="application/json">
-        {{ run_pct_behind_chart | tojson }}
-    </script>
+<!-- Run % Behind Leader chart -->
+<script id="run-pct-behind-chart-data" type="application/json">
+    {{ run_pct_behind_chart | tojson }}
+</script>
 
-    <!-- Swim Times chart -->
-    <script id="swim-times-chart-data" type="application/json">
-        {{ swim_times_chart | tojson }}
-    </script>
+<!-- Swim Times chart -->
+<script id="swim-times-chart-data" type="application/json">
+    {{ swim_times_chart | tojson }}
+</script>
 
-    <!-- Bike Times chart -->
-    <script id="bike-times-chart-data" type="application/json">
-        {{ bike_times_chart | tojson }}
-    </script>
+<!-- Bike Times chart -->
+<script id="bike-times-chart-data" type="application/json">
+    {{ bike_times_chart | tojson }}
+</script>
 
-    <!-- Run Times chart -->
-    <script id="run-times-chart-data" type="application/json">
-        {{ run_times_chart | tojson }}
-    </script>
+<!-- Run Times chart -->
+<script id="run-times-chart-data" type="application/json">
+    {{ run_times_chart | tojson }}
+</script>
 
-    <!-- Load JS -->
-    <script src="{{ url_for('static', path='js/utils.js') }}"></script>
-    <script src="{{ url_for('static', path='js/athlete.js') }}"></script>
+<!-- Load JS -->
+<script src="{{ url_for('static', path='js/utils.js') }}"></script>
+<script src="{{ url_for('static', path='js/athlete.js') }}"></script>
 {% endblock %}

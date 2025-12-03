@@ -49,3 +49,70 @@ race_id,athlete_id,swim,t1,bike,t2,run,overall,notes
 307376,102389,00:11:38,00:00:23,00:35:08,00:00:27,00:16:42,01:04:18,Anastasia Sgibneva overall recalculated from splits
 307376,102387,00:11:35,00:00:25,00:35:14,00:00:27,00:17:40,01:05:21,Tatiana Lihtorovich overall recalculated from splits
 307376,106532,00:11:43,00:00:25,00:35:33,00:00:21,00:18:21,01:06:23,Nadezhda Klenina overall recalculated from splits
+2784,14217,00:25:07,00:00:00,00:00:00,00:00:00,00:00:00,02:09:33,Carmen Ochoa has 1:43 run split; overall remains correct. TODO: Recalc run
+2784,6515,00:00:00,00:00:00,00:00:00,00:00:00,00:00:00,02:09:47,Gail Laurence has 2:09 run split; overall remains correct. TODO: Recalc run
+2706,10188,00:21:44,00:00:52,00:00:00,00:00:52,00:34:57,01:58:52,Isabelle Turcotte-Baird has 01:00 bike split; overall remains corect. TODO: Recalc bike
+3320,7832,00:09:54,00:02:44,00:00:00,00:02:16,00:22:15,01:38:15,Laisse Stephanie Sousa has 01:01 bike split; overall remains correct. TODO: Recalc bike
+327467,5370,00:00:00,00:00:30,01:10:49,00:00:29,00:38:59,02:10:51,Beatrice Lanza has 00:01 swim split; overall remains correct. TODO: Recalc swim
+2087,8616,00:23:22,00:00:00,00:00:00,00:01:03,00:39:00,02:14:08,Kelly Couch has 01:40 run split; overall remains correct. TODO: Recalc bike
+2830,9717,00:21:44,00:00:00,00:00:00,00:00:00,00:00:00,02:08:14,Justine Whipple has 01:46 run split; overall remains correct
+5685,18758,00:13:01,00:00:29,00:32:38,00:00:24,00:00:00,01:48:36,Jip Veelenturf has 01:01 run split; overall remains correct. TODO: Recalc run
+8183,44627,00:00:00,00:00:00,00:00:00,00:00:00,00:51:23,02:28:25,Zoya Kasheeva has nonsensical splits other than run and overall; othes removed for consistency
+8183,41579,00:00:00,00:00:00,00:00:00,00:00:00,00:52:51,02:29:51,Ece Calp has nonsensical splits other than run and overall; others removed for consistency
+265574,58811,00:09:36,00:00:00,00:00:00,00:00:00,00:19:02,01:06:25,Andrea Berenice Gutierrez Gonzalez bike time is split across T1 and bike; both removed for consistency
+265574,57824,00:09:48,00:00:00,00:00:00,00:00:00,00:19:08,01:06:31,Vanesa De La Torre bike time is split across T1 and bike; both removed for consistency
+265574,73426,00:09:09,00:00:00,00:00:00,00:00:00,00:20:06,01:07:32,Lizeth Rueda Santos bike time is split across T1 and bike; both removed for consistency
+265574,80418,00:09:46,00:00:00,00:00:00,00:00:00,00:22:59,01:10:55,Sandra Ruiz bike time is split across T1 and bike; both removed for consistency
+259502,57823,00:00:00,00:00:00,00:00:00,00:00:00,00:00:00,01:06:38,Valeria Antuna has 01:07 run split; removed for constistency
+264780,47782,00:00:00,00:00:00,00:00:00,00:00:00,00:00:00,02:05:20,Luisa Baptista has 02:05 run split; removed for consistency
+264796,47782,00:00:00,00:00:00,00:00:00,00:00:00,00:00:00,02:05:20,Luisa Baptista has 02:05 run split; removed for consistency
+264797,73283,00:00:00,00:00:00,00:00:00,00:00:00,00:00:00,1:03:40,Veronique Demers has 01:04 run split; removed for consistency
+270907,6963,00:19:52,00:00:21,00:00:00,00:00:23,00:34:38,01:56:31,Irina Abysova has incorrect bike time; removed for consistency. TODO: Recalc bike
+270907,9852,00:19:51,00:00:20,00:00:00,00:00:20,00:35:08,01:57:01,Alexandra Razarenova has incorrect bike time; removed for consistency. TODO: Recalc bike
+270907,14196,00:19:56,00:00:20,00:00:00,00:00:20,00:35:31,01:57:23,Mariya Shorets has incorrect bike time; removed for consistency. TODO: Recalc bike
+270907,46579,00:19:12,00:00:23,00:00:00,00:00:20,00:35:49,01:57:43,Anastasia Abrosimova has incorrect bike time; removed for consistency. TODO: Recalc bike
+270907,75637,00:19:58,00:00:22,00:00:00,00:00:23,00:36:46,01:58:40,Liubov Polyanskaya has incorrect bike time; removed for consistency. TODO: Recalc bike
+270907,17984,00:20:38,00:00:24,00:00:00,00:00:22,00:33:44,01:59:21,Arina Shulgina has incorrect bike time; removed for consistency. TODO: Recalc bike
+270907,110113,00:19:52,00:00:20,00:00:00,00:00:21,00:38:43,02:00:37,Inna Tutukina has incorrect bike time; removed for consistency. TODO: Recalc bike
+270907,9819,00:20:40,00:00:25,00:00:00,00:00:23,00:36:21,02:01:57,Anna Burova has incorrect bike time; removed for consistency. TODO: Recalc bike
+270907,9817,00:20:45,00:00:26,00:00:00,00:00:35,00:40:18,02:06:15,Olga Dmitrieva has incorrect bike time; removed for consistency. TODO: Recalc bike
+270907,49078,00:19:10,00:00:27,00:00:00,00:00:22,00:36:56,01:58:53,Anastasia Gorbunova has incorrect bike time; removed for consistency. TODO: Recalc bike
+270907,29844,00:20:37,00:00:24,00:00:00,00:00:27,00:36:38,02:02:21,Anastasia Polyanskaya Protasenya has incorrect bike time; removed for consistency. TODO: Recalc bike
+270907,29843,00:20:40,00:00:20,00:00:00,00:00:26,00:38:36,02:04:19,Olga Agapova has incorrect bike time; removed for consistency. TODO: Recalc bike
+270907,70468,00:19:57,00:00:22,00:00:00,00:00:26,00:40:11,02:05:56,Maria Molyarova has incorrect bike time; removed for consistency. TODO: Recalc bike
+270907,26398,00:20:41,00:00:24,00:00:00,00:00:25,00:41:08,02:06:47,Anastasiya Vasilyeva has incorrect bike time; removed for consistency. TODO: Recalc bike
+270907,50029,00:21:23,00:00:23,00:00:00,00:00:25,00:39:00,02:07:24,Elena Lokhmanova has incorrect bike time; removed for consistency. TODO: Recalc bike
+270907,76350,00:22:43,00:00:48,00:00:00,00:01:06,00:39:45,02:10:35,Oxana Kucherenko has incorrect bike time; removed for consistency. TODO: Recalc bike
+282479,80108,00:27:52,00:01:27,00:00:00,00:00:44,00:43:18,02:30:52,Martina Olcheski-Bell has incorrect bike time; removed for consistency. TODO: Recalc bike
+282479,49937,00:31:43,00:00:49,00:00:00,00:00:50,00:42:53,02:31:19,Julia Hawley has incorrect bike time; removed for consistency. TODO: Recalc bike
+282479,89044,00:30:49,00:00:55,00:00:00,00:00:37,00:43:19,02:33:38,Kristen Palmer has incorrect bike time; removed for consistency. TODO: Recalc bike
+282479,77484,00:26:01,00:01:05,00:00:00,00:00:27,00:53:03,02:39:40,Belinda Castree has incorrect bike time; removed for consistency. TODO: Recalc bike
+282479,89421,00:36:16,00:01:07,00:00:00,00:00:57,00:48:32,02:52:23,Kandis Matthews has incorrect bike time; removed for consistency. TODO: Recalc bike
+282479,102884,00:36:10,00:01:15,00:00:00,00:01:02,00:50:04,02:59:32,Christine Patton has incorrect bike time; removed for consistency. TODO: Recalc bike
+282479,99924,00:38:13,00:01:25,00:00:00,00:00:57,00:49:59,03:00:19,Sarah Farrar has incorrect bike time; removed for consistency. TODO: Recalc bike
+282479,102885,00:37:50,00:01:05,00:00:00,00:00:46,00:51:55,03:09:39,Jennie Lightbourne has incorrect bike time; removed for consistency. TODO: Recalc bike
+308981,110592,00:21:50,00:00:00,01:39:20,00:00:00,00:00:00,03:05:44,Jen Andrews has 01:04 run split; removed for consistency. TODO: Recalc run 
+308984,111021,00:16:16,00:00:00,00:00:00,00:00:00,00:35:08,02:04:05,Amber Stevens has a 01:13 bike split; removed for consistency. TODO: Recalc bike
+282703,96584,00:09:23,00:00:29,00:39:40,00:00:00,00:00,01:10:24,Grace Hobbs run time is split across T2 and run; both removed for consistency
+282134,102648,00:00:00,00:00:00,00:00:00,00:00:00,00:00:00,01:20:03,Camille Watteyna has nonsensical splits; all removed for consistency
+280617,80730,00:00:00,00:00:00,00:00:00,00:00:00,00:00:00,01:03:28,Elizabeth Stannard has run split of 01:03; removed for consistency
+280711,81062,00:13:23,00:00:34,00:00:00,00:00:00,00:23:28,01:15:43,Anna Wilkinson run time is split across T2 and run; both removed for consistency
+309042,101280,00:26:03,00:00:52,00:00:00,00:00:37,00:48:01,02:33:03,Jenna Ross has incorrect bike split; overall remains correct. TODO: Recalc bike
+309042,111062,00:22:09,00:00:25,00:00:00,00:00:29,00:55:26,02:35:09,Alex Bovell has incorrect bike split; overall remains correct. TODO: Recalc bike
+309042,111063,00:36:26,00:01:17,00:00:00,00:01:30,01:00:42,03:06:58,Gina Hart has incorrect bike split; overall remains correct. TODO: Recalc bike
+309042,111064,00:31:21,00:01:53,00:00:00,00:03:00,01:08:44,03:19:36,Janelle Zakour has incorrect bike split; overall remains correct. TODO: Recalc bike
+309042,111065,00:38:28,00:01:56,00:00:00,00:02:12,01:07:33,03:22:15,Cherise Stauble has incorrect bike split; overall remains correct. TODO: Recalc bike
+309042,111066,00:38:29,00:01:54,00:00:00,00:02:11,01:07:32,03:22:15,Jacqueline Sabga has incorrect bike split; overall remains correct. TODO: Recalc bike
+309042,111067,00:33:06,00:00:48,00:00:00,00:00:59,01:12:03,03:25:12,Ruth Rudden has incorrect bike split; overall remains correct. TODO: Recalc bike
+309042,111068,00:41:19,00:01:36,00:00:00,00:01:07,01:11:53,03:36:13,Aliya Drakes has incorrect bike split; overall remains correct. TODO: Recalc bike
+309574,101296,00:21:33,00:00:57,00:00:00,00:00:41,00:00:38:52,02:05:33,Stefanie Gouveia has bike split of 01:04. TODO: Recalc bike
+310497,73284,00:23:02,00:00:33,00:00:00,00:00:44,00:45:49,02:16:50,Hannah Cutajar has incorrect bike split; overall remains correct. TODO: Reclac bike
+310497,83248,00:23:41,00:00:39,00:00:00,00:00:53,00:47:37,02:24:23,Margaret Seguna has incorrect bike split; overall remains correct. TODO: Reclac bike
+310497,105294,00:25:10,00:00:31,00:00:00,00:00:53,00:54:07,02:26:22,Michelle Vella Wood has incorrect bike split; overall remains correct. TODO: Reclac bike
+310497,95464,00:26:37,00:00:32,00:00:00,00:00:52,00:48:12,02:28:34,Lara Buttigieg has incorrect bike split; overall remains correct. TODO: Reclac bike
+310497,102321,00:30:32,00:01:39,00:00:00,00:01:12,00:47:53,02:48:15,Felicienne Mercieca has incorrect bike split; overall remains correct. TODO: Reclac bike
+310497,111610,00:29:56,00:01:23,00:00:00,00:00:59,00:46:32,02:55:16,Karen Amato has incorrect bike split; overall remains correct. TODO: Reclac bike
+310497,29810,00:30:56,00:01:13,00:00:00,00:01:17,00:00:00,02:57:23,Suzanna Farrugia has short bike and run split; both removed for consistency
+310497,111606,00:38:24,00:01:03,00:00:00,00:01:02,00:00:00,03:07:53,Claire Azzopardi has short bike and run split; both removed for consistency
+310497,91696,00:26:46,00:01:43,00:00:00,00:01:21,00:00:00,03:15:42,Marian Belsten has short bike and run split; both removed for consistency
+310497,111611,00:34:48,00:02:03,00:00:00,00:01:25,00:00:00,03:17:13,Nanette Farrugia has short bike and run split; both removed for consistency

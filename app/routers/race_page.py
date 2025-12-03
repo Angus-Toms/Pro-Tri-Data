@@ -43,12 +43,95 @@ def load_race(race_id: int) -> Race:
 def load_race_cached(race_id: int) -> Race:
     return load_race(race_id)
 
+def get_race_standards(race: Race) -> dict:
+    """ Format race standards """
+    return {
+        "overall": 123, # format_rating(race.overall_standard),
+        "swim": 123, # format_rating(race.swim_standard),
+        "bike": 123, # format_rating(race.bike_standard),
+        "run": 123, # format_rating(race.run_standard),
+        "transition": 123, #format_rating(race.transition_standard)
+    }
+
+def get_best_performances(race: Race) -> dict:
+    """ Format best individual performances (changes) plus athlete names """
+    athlete_lookup: dict = get_athlete_lookup()
+    return {
+        "overall_change": format_rating_change(race.overall_increase),
+        "overall_athlete_name": athlete_lookup.get(race.overall_increase_athlete_id, {}).get("name", ""),
+        "swim_change": format_rating_change(race.swim_increase),
+        "swim_athlete_name": athlete_lookup.get(race.swim_increase_athlete_id, {}).get("name", ""),
+        "bike_change": format_rating_change(race.bike_increase),
+        "bike_athlete_name": athlete_lookup.get(race.bike_increase_athlete_id, {}).get("name", ""),
+        "run_change": format_rating_change(race.run_increase),
+        "run_athlete_name": athlete_lookup.get(race.run_increase_athlete_id, {}).get("name", ""),
+        "transition_change": format_rating_change(race.transition_increase),
+        "transition_athlete_name": athlete_lookup.get(race.transition_increase_athlete_id, {}).get("name", "")
+    }
+    
+def get_histogram_chart(race: Race) -> dict:
+    """
+    Prepare histogram data for Chart.js visualization.
+    Returns separate datasets for each discipline with labels and counts.
+    """
+    # Define colors for each discipline
+    discipline_colors = {
+        "overall": {"background": "#357ABD"},
+        "swim": {"background": "#4CAF50"},
+        "bike": {"background": "#FF9800"},
+        "run": {"background": "#E91E63"},
+        "t1": {"background": "#9C27B0"},
+        "t2": {"background": "#673AB7"}
+    }
+    
+    # Define display names
+    discipline_names = {
+        "overall": "Overall",
+        "swim": "Swim",
+        "bike": "Bike",
+        "run": "Run",
+        "t1": "Transition 1",
+        "t2": "Transition 2"
+    }
+    
+    histograms: dict = race.get_time_histograms(20) # histograms has format returned by np.histogram
+    chart_data = {}
+    
+    for discipline, (counts, bin_edges) in histograms.items():
+        # Calculate bin centers (midpoints) as numeric values
+        bin_centers = [(bin_edges[i] + bin_edges[i+1]) / 2 for i in range(len(counts))]
+        bin_labels = []
+        for i in range(len(bin_edges) - 1):
+            if round(bin_edges[i+1]) - round(bin_edges[i]) <= 1:
+                bin_labels.append(f"{format_time(round(bin_edges[i]))}")
+            else:
+                start_label = format_time(int(bin_edges[i]))
+                end_label = format_time(int(bin_edges[i+1]))
+                bin_labels.append(f"{start_label} - {end_label}")
+        
+        chart_data[discipline] = {
+            "labels": bin_centers,
+            "datasets": [
+                {
+                    "label": discipline_names[discipline],
+                    "data": [
+                        {"x": center, "y": int(count), "label": label}
+                        for center, count, label in zip(bin_centers, counts, bin_labels)
+                    ],
+                    "backgroundColor": discipline_colors[discipline]["background"],
+                    "borderWidth": 0,
+                    "barPercentage": 1.0
+                }
+            ]
+        }
+    
+    return chart_data
+
 @router.get("/race/{race_id}", response_class = HTMLResponse)
 async def get_race(request: Request, race_id: int):
     """
     Prepare race information for display as HTML.
     """
-    start = time.time()
     race: Race = load_race_cached(race_id)
     
     # Build athlete data
@@ -108,8 +191,10 @@ async def get_race(request: Request, race_id: int):
             "transition_change": format_rating_change(rating.transition_change),
         })
         
-    end = time.time()
-    print(f"Formatted race in {end - start:.2f} seconds")
+    race_standards: dict = get_race_standards(race)
+    best_performances: dict = get_best_performances(race)
+    
+    histogram_charts: dict = get_histogram_chart(race)
         
     return templates.TemplateResponse(
         "race.html",
@@ -117,8 +202,16 @@ async def get_race(request: Request, race_id: int):
             "request": request,
             "active_page": "races",
             "race": race,
+            "race_standards": race_standards,
+            "best_performances": best_performances,
             "splits_data": splits_data,
-            "ratings_data": ratings_data
+            "ratings_data": ratings_data,
+            "overall_hist_chart": histogram_charts["overall"],
+            "swim_hist_chart": histogram_charts["swim"],
+            "bike_hist_chart": histogram_charts["bike"],
+            "run_hist_chart": histogram_charts["run"],
+            "t1_hist_chart": histogram_charts["t1"],
+            "t2_hist_chart": histogram_charts["t2"]
         }
     )
     

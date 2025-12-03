@@ -388,7 +388,6 @@ def get_ratings_chart(athlete: Athlete, race_lookup: dict) -> dict:
     race_dates = ratings_df['race_date'].dt.strftime('%Y-%m-%d').tolist()
     
     return {
-        # "race_names": race_names,
         "datasets": [
             {
                 "label": "Overall Rating",

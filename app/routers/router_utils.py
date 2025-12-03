@@ -10,7 +10,7 @@ def format_time(seconds: int) -> str:
     if hours > 0:
         return f"{hours}:{mins:02d}:{secs:02d}"
     else:
-        return f"{mins}:{secs:02d}"
+        return f"{mins:02d}:{secs:02d}"
  
 def format_time_behind(seconds_behind: int) -> str:
     if seconds_behind is None:
@@ -30,6 +30,13 @@ def format_rating_change(change: float) -> dict:
     """ 
     Format rating change to str and provide css-class based on cardinality
     """
+    # For races, returned when there is no split data for particular leg
+    if change == float('-inf'): return {
+        "formatted_str": "",
+        "css_class": "no-data"
+    }
+    
+    
     if change == 0: return {
         "formatted_str": "",
         "css_class": "rating-neutral"

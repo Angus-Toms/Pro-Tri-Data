@@ -26,7 +26,9 @@ from config import (
     MALE_SHORT_DIR,
     CORRECTIONS,
     ATHLETE_LOOKUP,
-    RACE_LOOKUP
+    RACE_LOOKUP,
+    WARNINGS,
+    IGNORED_RACES
 )
 
 pd.set_option('display.max_columns', None)
@@ -42,45 +44,45 @@ class TriathlonELOSystem:
     """
     ELO rating system for triathlon athletes using Athlete objects.
     """
-    def __init__(self, k_factor: float, race_guide_fname: Path, race_dir: Path):
+    def __init__(self, 
+                 k_factor: float, 
+                 race_guide_file: Path, 
+                 race_dir: Path,
+                 corrections_file: Path = CORRECTIONS,
+                 ignored_file: Path = IGNORED_RACES
+        ):
         """
         Initialize the ELO system.
         
         Args:
             k_factor: ELO K-factor for rating adjustment magnitude
-            race_guide_fname: Path to CSV file with key race info 
+            race_guide_file: Path to CSV file with key race info 
             race_dir: Directory containing race CSVs
+            corrections_file: Path to csv containing manual race corrections
+            ignored_file: Path to csv containing races to be ignored from calculations
         """
         self.scale: float = 46175.8
         self.k_factor: float = k_factor
         self.athletes: Dict[int, Athlete] = {}  
         self.races: Dict[int, Race] = {}
-        self.progs: pd.DataFrame = pd.read_csv(race_guide_fname)
+        self.progs: pd.DataFrame = pd.read_csv(race_guide_file)
         self.race_dir: Path = race_dir
         
-        # Don't like this being here but not sure where to put this otherwise
-        self.corrections_df = pd.read_csv(CORRECTIONS, header = 0)
+        # Load manual corrections from file
+        self.corrections_df = pd.read_csv(corrections_file, header = 0)
         self.correction_race_ids = set(self.corrections_df['race_id'])
+        
+        # Load races to be ignored from file
+        self.ignored_df = pd.read_csv(ignored_file, header = 0)
+        self.ignored_race_ids = set(self.ignored_df['race_id'])
         
     def process_all_races(self) -> None:
         race_count = len(self.progs)
         print(f"Found {race_count} races to process.")
-        
-        ignored_race_ids = set([
-            4308,
-            4443,
-            4430,
-            4488,
-            546816,
-            4498,
-            321800,
-            585505,
-            676509
-        ])
                 
         race_count = len(self.progs)
         for _, row in tqdm(enumerate(self.progs.itertuples()), total = race_count, desc = "Processing races", unit = "race"):
-            if row.prog_id in ignored_race_ids:
+            if row.prog_id in self.ignored_race_ids:
                 tqdm.write(f"Skipping ignored race ID: {row.prog_id}")
                 continue
             
@@ -107,10 +109,12 @@ class TriathlonELOSystem:
             race_df = self.load_race_data(file_path)
             race_df = self.prepare_race_data(race_df)
             
+            race: Race = self.races[race_id] # TODO: Move race init to here, populate in make_race as usual but pass race to corrections method so we can store 
+            
             if race_id in self.correction_race_ids:
                 # Find corrections to be applied to this race
                 corrections = self.corrections_df[self.corrections_df['race_id'] == race_id]
-                race_df = self.make_corrections(race_df, corrections)
+                race_df = self.make_corrections(race, race_df, corrections)
             
             if len(race_df) < 2:
                 tqdm.write(f"<2 results in {file_path}, skipping.")
@@ -328,6 +332,17 @@ class TriathlonELOSystem:
             id1 = athlete_ids[i]
             ratings1, times1 = athlete_data[id1]
             
+            # Test for dangerously short times
+            for disc in range(4):
+                discs = ["overall", "swim","bike", "run"]
+                if times1[disc] != 0 and times1[disc] < 180:
+                    warnings_df = pd.read_csv(WARNINGS, header = 0)
+                    warnings_df.loc[len(warnings_df)] = {
+                        "athlete_id": id1,
+                        "discipline": discs[disc]
+                    }
+                    warnings_df.to_csv(WARNINGS, index = False)
+            
             for j in range(i + 1, num_athletes):
                 id2 = athlete_ids[j]
                 ratings2, times2 = athlete_data[id2]
@@ -445,13 +460,13 @@ class TriathlonELOSystem:
     def time_to_seconds(self, time_str: str) -> float:
         """
         Convert various time string formats to seconds.
-        Returns None for DNF/DQ/LAP, float('inf') for invalid/missing times.
+        Returns 0 for DNF/DNS/DQ/LAP, float('inf') for invalid/missing times.
         """
         try:
             # Older events include empty string splits, treat as 0 and they won't
             # be included in later ELO calculations
-            # For DNF/DQ/LAP, return 0
-            if time_str in set(['None', '', 'DNF', 'DQ', 'LAP']):
+            # For DNF/DNS/DQ/LAP/NC, also return 0 to ignore from later calcs
+            if time_str in set(['None', '', 'DNF', 'DQ', 'LAP', 'NC']):
                 return 0
             
             if pd.isna(time_str):
@@ -489,6 +504,10 @@ class TriathlonELOSystem:
     def set_1yr_change(self) -> None:
         for _, athlete in self.athletes.items():
             athlete.get_1yr_changes()
+      
+    def perform_race_postprocessing(self) -> None:
+        for _, race in self.races.items():
+            race.get_discipline_standards()  
             
     def make_leaderboard(self, leaderboard_path: str) -> None:
         """ 
@@ -574,33 +593,35 @@ class TriathlonELOSystem:
                 athlete.transition_rank = athlete_ranks.get("transition_rank", -1)
 
 def main():
-    female_short_elo = TriathlonELOSystem(k_factor = 24, race_guide_fname = FEMALE_SHORT_EVENTS, race_dir = FEMALE_SHORT_DIR)
+    female_short_elo = TriathlonELOSystem(k_factor = 18, race_guide_file = FEMALE_SHORT_EVENTS, race_dir = FEMALE_SHORT_DIR)
     female_short_elo.process_all_races()
-    female_short_elo.set_athlete_active_status()
+    female_short_elo.perform_athlete_postprocessing()
+    female_short_elo.perform_race_postprocessing()
     female_short_elo.make_leaderboard(FEMALE_SHORT_LEADERBOARD)
     female_short_elo.save_athlete_data(ATHLETES_DIR)
     female_short_elo.save_race_data(RACES_DIR)
     
-    male_short_elo = TriathlonELOSystem(k_factor = 24, race_guide_fname = MALE_SHORT_EVENTS, race_dir = MALE_SHORT_DIR)
-    male_short_elo.process_all_races()
-    male_short_elo.set_athlete_active_status()
-    male_short_elo.make_leaderboard(MALE_SHORT_LEADERBOARD)
-    male_short_elo.save_athlete_data(ATHLETES_DIR)
-    male_short_elo.save_race_data(RACES_DIR)
+    # male_short_elo = TriathlonELOSystem(k_factor = 18, race_guide_file = MALE_SHORT_EVENTS, race_dir = MALE_SHORT_DIR)
+    # male_short_elo.process_all_races()
+    # male_short_elo.perform_athlete_postprocessing()
+    # male_short_elo.perform_race_postprocessing()
+    # male_short_elo.make_leaderboard(MALE_SHORT_LEADERBOARD)
+    # male_short_elo.save_athlete_data(ATHLETES_DIR)
+    # male_short_elo.save_race_data(RACES_DIR)
     
-    athlete_count = len(female_short_elo.athletes) + len(male_short_elo.athletes)
-    print(f"Total athletes processed: {athlete_count}")
+    # athlete_count = len(female_short_elo.athletes) + len(male_short_elo.athletes)
+    # print(f"Total athletes processed: {athlete_count}")
     
-    race_count = len(female_short_elo.races) + len(male_short_elo.races)
-    print(f"Total races processed: {race_count}")
+    # race_count = len(female_short_elo.races) + len(male_short_elo.races)
+    # print(f"Total races processed: {race_count}")
     
-    # # Rebuild athlete lookup after all athletes have been updated
-    make_athlete_lookup()
-    # Rebuild race lookups
-    make_race_lookup(
-        event_guides = [FEMALE_SHORT_EVENTS, MALE_SHORT_EVENTS],
-        output_path = RACE_LOOKUP
-    )
+    # # # Rebuild athlete lookup after all athletes have been updated
+    # make_athlete_lookup()
+    # # Rebuild race lookups
+    # make_race_lookup(
+    #     event_guides = [FEMALE_SHORT_EVENTS, MALE_SHORT_EVENTS],
+    #     output_path = RACE_LOOKUP
+    # )
 
 if __name__ == "__main__":
     main()

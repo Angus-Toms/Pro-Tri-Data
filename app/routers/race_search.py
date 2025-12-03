@@ -22,9 +22,6 @@ async def races_landing(request: Request):
 @router.get("/races/search")
 async def search_races(q: str = ""):
     """API endpoint for race search"""
-    import time 
-    start = time.time()
-
     try:
         if not q or len(q.strip()) < 2:
             return JSONResponse([])
@@ -62,8 +59,6 @@ async def search_races(q: str = ""):
         for r in results:
             r.pop('date_sort', None)
 
-        end = time.time()
-        print(f"Race search for '{q}' returned {len(results)} results in {end - start:.4f} seconds")
         return JSONResponse(results)
         
     except Exception as e:

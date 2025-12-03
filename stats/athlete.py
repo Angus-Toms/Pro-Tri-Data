@@ -29,7 +29,8 @@ def get_short_country_and_emoji(full_name: str) -> Tuple[str, str]:
         "Syria": ("SYR", "🇸🇾"),
         "Macau, China": ("MAC", "🇲🇴"),
         "Venezuela": ("VEN", "🇻🇪"),
-        "Chinese Taipei": ("TPE", "🇹🇼")
+        "Chinese Taipei": ("TPE", "🇹🇼"),
+        "Virgin Islands": ("ISV", "🇻🇮")
     }
     
     if full_name in special_cases.keys():
@@ -293,7 +294,8 @@ class Athlete:
         """
         Convert race results to a DataFrame.
         """
-        data = [asdict(result) for result in self.race_results[::-1]] # Reverse so most recent events first
+        data = [asdict(result) for result in self.race_results]
+        data = sorted(data, key = lambda x: x["race_date"], reverse = True) # Most recent events first
         return pd.DataFrame(data)
     
     def get_ratings_df(self) -> pd.DataFrame:
@@ -419,4 +421,3 @@ class Athlete:
         self.bike_change_1yr = self.bike_rating - past_bike
         self.run_change_1yr = self.run_rating - past_run
         self.transition_change_1yr = self.transition_rating - past_transition
-

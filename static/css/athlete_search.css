@@ -54,7 +54,7 @@
 .search-input:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(53, 122, 189, 0.1);
+    box-shadow: var(--box-shadow-hover);
 }
 
 .search-icon {
@@ -164,11 +164,6 @@
     border-color: var(--primary-color);
     box-shadow: var(--box-shadow-hover);
     transform: translateY(-2px);
-}
-
-.leaderboard-icon {
-    font-size: 3rem;
-    margin-bottom: var(--spacing-md);
 }
 
 .leaderboard-card h3 {

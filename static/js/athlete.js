@@ -27,13 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-function getJSON(id) {
-    const el = document.getElementById(id);
-    return el ? JSON.parse(el.textContent) : null;
-}
-
-// TODO: Make function for new Chart ?
-
 // Ratings chart ---------------------------------------------------------------
 const ratingsCtx = document.getElementById('ratings-chart-canvas');
 const ratingsChartData = getJSON('ratings-chart-data');
@@ -95,9 +88,6 @@ new Chart(ratingsCtx, {
 const overallPctBehindCtx = document.getElementById('overall-pct-behind-chart-canvas');
 const overallPctBehindData = getJSON('overall-pct-behind-chart-data');
 
-console.log('Canvas element:', overallPctBehindCtx);
-console.log('Data:', overallPctBehindData);
-
 new Chart(overallPctBehindCtx, {
     type: 'line',
     data: overallPctBehindData,
@@ -127,7 +117,7 @@ new Chart(overallPctBehindCtx, {
                         ];
                     },
                     label: function(context) {
-                        return ' ' + context.parsed.y + '%'; // TODO: Add time here?
+                        return ' ' + context.parsed.y + '%';
                     }
                 }
             }

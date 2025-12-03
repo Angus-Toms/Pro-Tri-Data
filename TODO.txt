@@ -2,13 +2,19 @@ Data format for site APIs:
 - [X] Fix double data and rating NaNs
 - [X] Move race lookup construct to elo.py
 - [X] Add men and womens leaderboard and clean up filtering UI
-- [ ] Add athlete search by name
-- [ ] Add race search by name 
+- [X] Add athlete search by name
+- [X] Add race search by name 
 - [X] Clean up ignored files handling
 - [X] Ensure stripping of location names
 - [ ] Add more race info - QOF, hists etc.
-- [ ] Add best performances section to athlete page
+- [X] Add best performances section to race page
 - [ ] Add athlete comparisons
 - [X] Catch -inf in single best performances
 - [X] Add 1 year changes and formatting
 - [ ] Capitalise all words in venue and location download, probably refactor whole data_access.py
+- [X] Fix 'Born 0' on Athlete page
+- [ ] Fast image loading, either lazy load image size or static caching thingy. (Or all the above)
+- [ ] Histogram labelling on small times? T1/T2
+- [ ] Start maintaining ignored race list
+- [ ] Add program to athlete resuls table
+- [ ] Redo data access to check event id rather then prog (i.e. no request for seen events) 

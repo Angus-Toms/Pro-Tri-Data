@@ -33,7 +33,7 @@ async def search_athletes(q: str = ""):
         # Search through athletes
         results = []
         for athlete_id, athlete_data in athlete_lookup.items():
-            if query in athlete_data["name"].lower():
+            if query in athlete_data["name"].lower() or query in str(athlete_id):
                 results.append({
                     'athlete_id': athlete_id,
                     'name': athlete_data["name"],

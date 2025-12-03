@@ -64,32 +64,15 @@
     box-shadow: var(--box-shadow-lg);
     text-align: center;
     transition: all var(--transition-base);
-    border: 2px solid transparent;
+    border: 2px solid var(--border-color);
     position: relative;
     overflow: hidden;
 }
 
-.info-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    /* background: linear-gradient(90deg, var(--primary-color), var(--secondary-color)); */
-    background-color: var(--primary-color);
-    transform: scaleX(0);
-    transition: transform var(--transition-base);
-}
-
 .info-card:hover {
-    transform: translateY(-8px);
-    box-shadow: var(--box-shadow-lg);
     border-color: var(--primary-color);
-}
-
-.info-card:hover::before {
-    transform: scaleX(1);
+    transform: translateY(-2px);
+    box-shadow: var(--box-shadow-hover);
 }
 
 .info-card h2 {
@@ -123,8 +106,8 @@
 
 .btn:hover {
     background-color: var(--primary-hover);
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(53, 122, 189, 0.4);
+    transform: translateY(-2px);
+    box-shadow: var(--box-shadow-hover);
 }
 
 .btn-secondary {

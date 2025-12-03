@@ -23,6 +23,96 @@
     </div>
 </div>
 
+<!-- Race standards and Best Performances -->
+<div class="ratings-overview">
+    <div class="ratings-section">
+        <h3 class="ratings-section-title">Race Standards</h3>
+        <div class="ratings-grid">
+            <div class="rating-box">
+                <div class="rating-discipline">Overall</div>
+                <div class="rating-number">{{ race_standards.overall }}</div>
+            </div>
+            <div class="rating-box">
+                <div class="rating-discipline">Swim</div>
+                <div class="rating-number">{{ race_standards.swim }}</div>
+            </div>
+            <div class="rating-box">
+                <div class="rating-discipline">Bike</div>
+                <div class="rating-number">{{ race_standards.bike }}</div>
+            </div>
+            <div class="rating-box">
+                <div class="rating-discipline">Run</div>
+                <div class="rating-number">{{ race_standards.run }}</div>
+            </div>
+            <div class="rating-box">
+                <div class="rating-discipline">Transition</div>
+                <div class="rating-number">{{ race_standards.transition }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="ratings-section">
+        <h3 class="ratings-section-title">Best Performances</h3>
+        <div class="ratings-grid">
+            <div class="rating-box">
+                <div class="rating-discipline">Overall</div>
+                <div class="rating-number {{ best_performances.overall_change.css_class }}">{{ best_performances.overall_change.formatted_str }}</div>
+                {% if best_performances.overall_athlete_name %}    
+                    <div class="rating-race">
+                        <a href="/athlete/{{ race.overall_increase_athlete_id }}" class="small-link">
+                            {{ best_performances.overall_athlete_name }}
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="rating-box">
+                <div class="rating-discipline">Swim</div>
+                <div class="rating-number {{ best_performances.swim_change.css_class }}">{{ best_performances.swim_change.formatted_str }}</div>
+                {% if best_performances.swim_athlete_name %}
+                    <div class="rating-race">
+                        <a href="/athlete/{{ race.swim_increase_athlete_id }}" class="small-link">
+                            {{ best_performances.swim_athlete_name }}
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="rating-box">
+                <div class="rating-discipline">Bike</div>
+                <div class="rating-number {{ best_performances.bike_change.css_class }}">{{ best_performances.bike_change.formatted_str }}</div>
+                {% if best_performances.bike_athlete_name %}
+                    <div class="rating-race">
+                        <a href="/athlete/{{ race.bike_increase_athlete_id }}" class="small-link">
+                            {{ best_performances.bike_athlete_name }}
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="rating-box">
+                <div class="rating-discipline">Run</div>
+                <div class="rating-number {{ best_performances.run_change.css_class }}">{{ best_performances.run_change.formatted_str }}</div>
+                {% if best_performances.run_athlete_name %}
+                    <div class="rating-race">
+                        <a href="/athlete/{{ race.run_increase_athlete_id }}" class="small-link">
+                            {{ best_performances.run_athlete_name }}
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="rating-box">
+                <div class="rating-discipline">Transition</div>
+                <div class="rating-number {{ best_performances.transition_change.css_class }}">{{ best_performances.transition_change.formatted_str }}</div>
+                {% if best_performances.transition_athlete_name %}
+                    <div class="rating-race">
+                        <a href="/athlete/{{ race.transition_increase_athlete_id }}" class="small-link">
+                            {{ best_performances.transition_athlete_name }}
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Results Table -->
 <div class="data-table collapsible-card">
     <h3>
@@ -205,10 +295,89 @@
         </table>
     </div>
 </div>
+
+
+
+<!-- Time Distribution Histograms -->
+<div class="data-table collapsible-card">
+    <h3>
+        Time Distributions
+        <span class="collapse-toggle" onclick="toggleCollapse(this)">−</span>
+    </h3>
+    <div class="collapsible-content">
+        <div class="charts-grid">
+            <div class="mini-chart">
+                <h4>Overall Times</h4>
+                <div class="chart-container-compact">
+                    <canvas id="overall-times-canvas"></canvas>
+                </div>
+            </div>
+            <div class="mini-chart">
+                <h4>Swim Times</h4>
+                <div class="chart-container-compact">
+                    <canvas id="swim-times-canvas"></canvas>
+                </div>
+            </div>
+            <div class="mini-chart">
+                <h4>Bike Times</h4>
+                <div class="chart-container-compact">
+                    <canvas id="bike-times-canvas"></canvas>
+                </div>
+            </div>
+            <div class="mini-chart">
+                <h4>Run Times</h4>
+                <div class="chart-container-compact">
+                    <canvas id="run-times-canvas"></canvas>
+                </div>
+            </div>
+            <div class="mini-chart">
+                <h4>T1 Times</h4>
+                <div class="chart-container-compact">
+                    <canvas id="t1-times-canvas"></canvas>
+                </div>
+            </div>
+            <div class="mini-chart">
+                <h4>T2 Times</h4>
+                <div class="chart-container-compact">
+                    <canvas id="t2-times-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
+<!-- Overall histogram -->
+<script id="overall-hist-data" type="application/json">
+    {{ overall_hist_chart | tojson }}
+</script>
+
+<!-- Swim histogram -->
+<script id="swim-hist-data" type="application/json">
+    {{ swim_hist_chart | tojson }}
+</script>
+
+<!-- Bike histogram -->
+<script id="bike-hist-data" type="application/json">
+    {{ bike_hist_chart | tojson }}
+</script>
+
+<!-- Run histogram -->
+<script id="run-hist-data" type="application/json">
+    {{ run_hist_chart | tojson }}
+</script>
+
+<!-- T1 histogram -->
+<script id="t1-hist-data" type="application/json">
+    {{ t1_hist_chart | tojson }}
+</script>
+
+<!-- T2 histogram -->
+<script id="t2-hist-data" type="application/json">
+    {{ t2_hist_chart | tojson }}
+</script>
+
 <script src="{{ url_for('static', path='js/utils.js') }}"></script>
 <script src="{{ url_for('static', path='js/race.js') }}"></script>
 {% endblock %}
-

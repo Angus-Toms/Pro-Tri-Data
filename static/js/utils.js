@@ -8,9 +8,9 @@ function formatTime(seconds) {
     
     if (hours > 0) {
         return `${sign}${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    } else {
-        return `${sign}${minutes}:${secs.toString().padStart(2, '0')}`;
-    }
+    } 
+    
+    return `${sign}${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
 function toggleCollapse(toggle) {
@@ -80,4 +80,9 @@ function sortTable(table, column, asc = true) {
     
     // Reappend rows in sorted order
     rows.forEach(row => tbody.appendChild(row));
+}
+
+function getJSON(id) {
+    const el = document.getElementById(id);
+    return el ? JSON.parse(el.textContent) : null;
 }
