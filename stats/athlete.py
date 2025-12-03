@@ -399,6 +399,12 @@ class Athlete:
         today = datetime.now()
         yr_ago = today.replace(year = today.year - 1)
 
+        if not self.rating_history:
+            return 
+        
+        if self.rating_history[-1].race_date < yr_ago:
+            return
+
         # Find the oldest race in the last year
         # 0 change if no races completed in last year
         past_overall = 0.0
@@ -406,6 +412,7 @@ class Athlete:
         past_bike = 0.0
         past_run = 0.0
         past_transition = 0.0
+
         for rating in reversed(self.rating_history):
             if rating.race_date < yr_ago:
                 break 

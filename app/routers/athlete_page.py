@@ -47,7 +47,7 @@ def load_athlete_cached(athlete_id: int) -> Athlete:
 
 def format_ranking(rank: int) -> str:
     """ Format global ranking """
-    return f"#{rank:,} worldwide" if rank > 0 else "No Ranking"
+    return f"#{rank} all time" if rank > 0 else "No Ranking"
 
 def format_1yr_rating_change(change: float) -> dict:
     """

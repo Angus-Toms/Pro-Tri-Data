@@ -557,7 +557,7 @@ class TriathlonELOSystem:
         ranks = defaultdict(dict)
         for discipline, rankings in rankings_by_discipline.items():
             for rank, (athlete_id, _) in enumerate(sorted(rankings, key = lambda x: x[1], reverse = True), 1):
-                ranks[athlete_id][f"{discipline}_rank"] = rank
+                ranks[athlete_id][f"{discipline}_rank"] = rank 
             
         with open(leaderboard_path, 'wb') as f:
             pickle.dump(leaderboard_data, f)
@@ -593,21 +593,19 @@ class TriathlonELOSystem:
                 athlete.transition_rank = athlete_ranks.get("transition_rank", -1)
 
 def main():
-    female_short_elo = TriathlonELOSystem(k_factor = 18, race_guide_file = FEMALE_SHORT_EVENTS, race_dir = FEMALE_SHORT_DIR)
+    female_short_elo = TriathlonELOSystem(k_factor = 16, race_guide_fname = FEMALE_SHORT_EVENTS, race_dir = FEMALE_SHORT_DIR)
     female_short_elo.process_all_races()
     female_short_elo.perform_athlete_postprocessing()
-    female_short_elo.perform_race_postprocessing()
     female_short_elo.make_leaderboard(FEMALE_SHORT_LEADERBOARD)
     female_short_elo.save_athlete_data(ATHLETES_DIR)
     female_short_elo.save_race_data(RACES_DIR)
     
-    # male_short_elo = TriathlonELOSystem(k_factor = 18, race_guide_file = MALE_SHORT_EVENTS, race_dir = MALE_SHORT_DIR)
-    # male_short_elo.process_all_races()
-    # male_short_elo.perform_athlete_postprocessing()
-    # male_short_elo.perform_race_postprocessing()
-    # male_short_elo.make_leaderboard(MALE_SHORT_LEADERBOARD)
-    # male_short_elo.save_athlete_data(ATHLETES_DIR)
-    # male_short_elo.save_race_data(RACES_DIR)
+    male_short_elo = TriathlonELOSystem(k_factor = 16, race_guide_fname = MALE_SHORT_EVENTS, race_dir = MALE_SHORT_DIR)
+    male_short_elo.process_all_races()
+    male_short_elo.perform_athlete_postprocessing()
+    male_short_elo.make_leaderboard(MALE_SHORT_LEADERBOARD)
+    male_short_elo.save_athlete_data(ATHLETES_DIR)
+    male_short_elo.save_race_data(RACES_DIR)
     
     # athlete_count = len(female_short_elo.athletes) + len(male_short_elo.athletes)
     # print(f"Total athletes processed: {athlete_count}")
