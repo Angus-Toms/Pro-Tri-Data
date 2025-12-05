@@ -26,7 +26,7 @@
 <!-- Race standards and Best Performances -->
 <div class="ratings-overview">
     <div class="ratings-section">
-        <h3 class="ratings-section-title">Race Standards</h3>
+        <h3 class="card-title">Race Standards</h3>
         <div class="ratings-grid">
             <div class="rating-box">
                 <div class="rating-discipline">Overall</div>
@@ -52,7 +52,7 @@
     </div>
 
     <div class="ratings-section">
-        <h3 class="ratings-section-title">Best Performances</h3>
+        <h3 class="card-title">Best Performances</h3>
         <div class="ratings-grid">
             <div class="rating-box">
                 <div class="rating-discipline">Overall</div>
@@ -115,7 +115,7 @@
 
 <!-- Results Table -->
 <div class="data-table collapsible-card">
-    <h3>
+    <h3 class="card-title">
         Race Results & Times
         <span class="collapse-toggle" onclick="toggleCollapse(this)">−</span>
     </h3>
@@ -211,7 +211,7 @@
 
 <!-- Ratings Table -->
 <div class="data-table collapsible-card">
-    <h3>
+    <h3 class="card-title">
         Ratings & Changes
         <span class="collapse-toggle" onclick="toggleCollapse(this)">−</span>
     </h3>
@@ -296,11 +296,9 @@
     </div>
 </div>
 
-
-
 <!-- Time Distribution Histograms -->
 <div class="data-table collapsible-card">
-    <h3>
+    <h3 class="card-title">
         Time Distributions
         <span class="collapse-toggle" onclick="toggleCollapse(this)">−</span>
     </h3>
@@ -345,37 +343,86 @@
         </div>
     </div>
 </div>
+
+<!-- Rating distribution histograms -->
+<div class="data-table collapsible-card">
+    <h3>
+        Rating Distributions
+        <span class="collapse-toggle" onclick="toggleCollapse(this)">−</span>
+    </h3>
+    <div class="collapsible-content">
+        <div class="charts-grid">
+            <div class="mini-chart full-width">
+                <h4>Overall Ratings</h4>
+                <div class="chart-container-compact">
+                    <canvas id="overall-ratings-canvas"></canvas>
+                </div>
+            </div>
+            <div class="mini-chart">
+                <h4>Swim Ratings</h4>
+                <div class="chart-container-compact">
+                    <canvas id="swim-ratings-canvas"></canvas>
+                </div>
+            </div>
+            <div class="mini-chart">
+                <h4>Bike Ratings</h4>
+                <div class="chart-container-compact">
+                    <canvas id="bike-ratings-canvas"></canvas>
+                </div>
+            </div>
+            <div class="mini-chart">
+                <h4>Run Ratings</h4>
+                <div class="chart-container-compact">
+                    <canvas id="run-ratings-canvas"></canvas>
+                </div>
+            </div>
+            <div class="mini-chart">
+                <h4>Transition Ratings</h4>
+                <div class="chart-container-compact">
+                    <canvas id="transition-ratings-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
-<!-- Overall histogram -->
-<script id="overall-hist-data" type="application/json">
-    {{ overall_hist_chart | tojson }}
+<!-- Time histograms -->
+<script id="overall-time-hist-data" type="application/json">
+    {{ overall_time_hist | tojson }}
+</script>
+<script id="swim-time-hist-data" type="application/json">
+    {{ swim_time_hist | tojson }}
+</script>
+<script id="bike-time-hist-data" type="application/json">
+    {{ bike_time_hist | tojson }}
+</script>
+<script id="run-time-hist-data" type="application/json">
+    {{ run_time_hist | tojson }}
+</script>
+<script id="t1-time-hist-data" type="application/json">
+    {{ t1_time_hist | tojson }}
+</script>
+<script id="t2-time-hist-data" type="application/json">
+    {{ t2_time_hist | tojson }}
 </script>
 
-<!-- Swim histogram -->
-<script id="swim-hist-data" type="application/json">
-    {{ swim_hist_chart | tojson }}
+<!-- Rating histograms -->
+<script id="overall-ratings-hist-data" type="application/json">
+    {{ overall_rating_hist | tojson }}
 </script>
-
-<!-- Bike histogram -->
-<script id="bike-hist-data" type="application/json">
-    {{ bike_hist_chart | tojson }}
+<script id="swim-ratings-hist-data" type="application/json">
+    {{ swim_rating_hist | tojson }}
 </script>
-
-<!-- Run histogram -->
-<script id="run-hist-data" type="application/json">
-    {{ run_hist_chart | tojson }}
+<script id="bike-ratings-hist-data" type="application/json">
+    {{ bike_rating_hist | tojson }}
 </script>
-
-<!-- T1 histogram -->
-<script id="t1-hist-data" type="application/json">
-    {{ t1_hist_chart | tojson }}
+<script id="run-ratings-hist-data" type="application/json">
+    {{ run_rating_hist | tojson }}
 </script>
-
-<!-- T2 histogram -->
-<script id="t2-hist-data" type="application/json">
-    {{ t2_hist_chart | tojson }}
+<script id="transition-ratings-hist-data" type="application/json">
+    {{ transition_rating_hist | tojson }}
 </script>
 
 <script src="{{ url_for('static', path='js/utils.js') }}"></script>

@@ -42,8 +42,8 @@ async def search_athletes(q: str = ""):
                     'year_of_birth': athlete_data.get("year_of_birth", "")
                 })
                 
-                # Limit to 10 results
-                if len(results) >= 10:
+                # Limit to 20 results
+                if len(results) >= 20:
                     break
         
         

@@ -36,7 +36,6 @@ def format_rating_change(change: float) -> dict:
         "css_class": "no-data"
     }
     
-    
     if change == 0: return {
         "formatted_str": "",
         "css_class": "rating-neutral"

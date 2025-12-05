@@ -25,7 +25,7 @@ class RenameUnpickler(pickle.Unpickler):
         if module == 'athlete':
             module = 'stats.athlete'
         return super().find_class(module, name)
-
+    
 def load_athlete(athlete_id: int) -> Athlete:
     """ Load athlete data from pickle file """
     file_path = ATHLETES_DIR / f"{athlete_id}.pkl"

@@ -58,7 +58,7 @@
 
 <div class="ratings-overview">
     <div class="ratings-section">
-        <h3 class="ratings-section-title">Current Ratings</h3>
+        <h3 class="card-title">Current Ratings</h3>
         <div class="ratings-grid">
             <div class="rating-box">
                 <div class="rating-discipline">Overall</div>
@@ -104,7 +104,7 @@
     </div>
 
     <div class="ratings-section">
-        <h3 class="ratings-section-title">Peak Ratings</h3>
+        <h3 class="card-title">Peak Ratings</h3>
         <div class="ratings-grid">
             <div class="rating-box highlight">
                 <div class="rating-discipline">Overall</div>
@@ -155,7 +155,7 @@
     </div>
 
     <div class="ratings-section">
-        <h3 class="ratings-section-title">Best Single Performances</h3>
+        <h3 class="card-title">Best Single Performances</h3>
         <div class="ratings-grid">
             <div class="rating-box best">
                 <div class="rating-discipline">Overall</div>
@@ -217,7 +217,7 @@
 </div>
 
 <div class="data-table collapsible-card results-table">
-    <h3>
+    <h3 class="card-title">
         Race Results
         <span class="collapse-toggle" onclick="toggleCollapse(this)">−</span>
     </h3>
@@ -301,7 +301,7 @@
 </div>
 
 <div class="data-table collapsible-card rating-table">
-    <h3>
+    <h3 class="card-title">
         Rating History
         <span class="collapse-toggle" onclick="toggleCollapse(this)">−</span>
     </h3>
@@ -329,7 +329,7 @@
                                     {{ rating.race_title }}
                                 </a>
                             </td>
-                            <td class="position-cell {{ 'position-gold' if rating.position == '1' else ('position-silver' if rating.position == '2' else ('position-bronze' if rating.position == '3' else ('position-dnf' if rating.position in ['DNF', 'DQ', 'LAP'] else ''))) }}" data-value="{{ rating.position }}">
+                            <td class="position-cell {{ 'position-gold' if rating.position == '1' else ('position-silver' if rating.position == '2' else ('position-bronze' if rating.position == '3' else ('position-dnf' if rating.position in ['DNF', 'DQ', 'LAP', 'NC'] else ''))) }}" data-value="{{ rating.position }}">
                                 {{ rating.position }}
                             </td>
                             <td class="overall-time" data-value="{{ rating.overall_rating }}">
@@ -385,7 +385,7 @@
 </div>
 
 <div class="collapsible-card">
-    <h3>
+    <h3 class="card-title">
     Historical Performance Ratings
     <span class="collapse-toggle" onclick="toggleCollapse(this)">−</span>
     </h3>
@@ -397,7 +397,7 @@
 </div>
 
 <div class="chart-section collapsible-card">
-    <h3>
+    <h3 class="card-title">
     % Behind Leader
     <span class="collapse-toggle" onclick="toggleCollapse(this)">−</span>
     </h3>
@@ -430,7 +430,7 @@
 </div>
 
 <div class="chart-section collapsible-card">
-    <h3>
+    <h3 class="card-title">
     Split Times
     <span class="collapse-toggle" onclick="toggleCollapse(this)">−</span>
     </h3>

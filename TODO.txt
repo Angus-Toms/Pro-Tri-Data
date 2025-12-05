@@ -6,7 +6,7 @@ Data format for site APIs:
 - [X] Add race search by name 
 - [X] Clean up ignored files handling
 - [X] Ensure stripping of location names
-- [ ] Add more race info - QOF, hists etc.
+- [X] Add more race info - QOF, hists etc.
 - [X] Add best performances section to race page
 - [ ] Add athlete comparisons
 - [X] Catch -inf in single best performances
@@ -18,3 +18,8 @@ Data format for site APIs:
 - [ ] Start maintaining ignored race list
 - [ ] Add program to athlete resuls table
 - [ ] Redo data access to check event id rather then prog (i.e. no request for seen events) 
+- [ ] Events leaderboard, will need a new cache
+- [ ] Remove histograms if no splits
+- [ ] "Hot" athletes leaderboard
+- [ ] Previous nationalities for athletes
+- [ ] Add Enum for active page 

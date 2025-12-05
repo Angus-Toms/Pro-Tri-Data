@@ -1,6 +1,8 @@
 from functools import lru_cache, partial
 import pickle
 
+from stats.athlete import Athlete
+
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import pandas as pd
@@ -46,7 +48,7 @@ def get_athlete_lookup():
         end = time.time()
         print(f"Loaded athlete lookup in {end - start:.2f} seconds")
         return data
-    
+
 def process_single_athlete(athlete_file):
     """ Process a single athlete file and return the lookup data. """
     with open(athlete_file, "rb") as f:
@@ -131,9 +133,8 @@ def process_single_race_guide(race_guide: Path):
     return partial_lookup
   
 def make_race_lookup(event_guides: List[Path], output_path: Path):
-    """Parallel race lookup creation."""
+    """ Parallel race lookup creation. """
     race_lookup = {}
-    guide_count = len(event_guides)
 
     with ProcessPoolExecutor() as executor:
         futures = {

@@ -46,11 +46,11 @@ def load_race_cached(race_id: int) -> Race:
 def get_race_standards(race: Race) -> dict:
     """ Format race standards """
     return {
-        "overall": 123, # format_rating(race.overall_standard),
-        "swim": 123, # format_rating(race.swim_standard),
-        "bike": 123, # format_rating(race.bike_standard),
-        "run": 123, # format_rating(race.run_standard),
-        "transition": 123, #format_rating(race.transition_standard)
+        "overall": format_rating(race.overall_standard),
+        "swim": format_rating(race.swim_standard),
+        "bike": format_rating(race.bike_standard),
+        "run": format_rating(race.run_standard),
+        "transition": format_rating(race.transition_standard)
     }
 
 def get_best_performances(race: Race) -> dict:
@@ -69,36 +69,29 @@ def get_best_performances(race: Race) -> dict:
         "transition_athlete_name": athlete_lookup.get(race.transition_increase_athlete_id, {}).get("name", "")
     }
     
-def get_histogram_chart(race: Race) -> dict:
+def get_time_histograms(race: Race) -> dict:
     """
     Prepare histogram data for Chart.js visualization.
     Returns separate datasets for each discipline with labels and counts.
     """
-    # Define colors for each discipline
-    discipline_colors = {
-        "overall": {"background": "#357ABD"},
-        "swim": {"background": "#4CAF50"},
-        "bike": {"background": "#FF9800"},
-        "run": {"background": "#E91E63"},
-        "t1": {"background": "#9C27B0"},
-        "t2": {"background": "#673AB7"}
-    }
-    
-    # Define display names
-    discipline_names = {
-        "overall": "Overall",
-        "swim": "Swim",
-        "bike": "Bike",
-        "run": "Run",
-        "t1": "Transition 1",
-        "t2": "Transition 2"
+    discipline_details = {
+        "overall": {"background": "#357ABD", "display_name": "Overall"},
+        "swim": {"background": "#4CAF50", "display_name": "Swim"},
+        "bike": {"background": "#FF9800", "display_name": "Bike"},
+        "run": {"background": "#E91E63", "display_name": "Run"},
+        "t1": {"background": "#9C27B0", "display_name": "Transition 1"},
+        "t2": {"background": "#673AB7", "display_name": "Transition 2"}
     }
     
     histograms: dict = race.get_time_histograms(20) # histograms has format returned by np.histogram
     chart_data = {}
     
     for discipline, (counts, bin_edges) in histograms.items():
-        # Calculate bin centers (midpoints) as numeric values
+        if len(counts) == 0:
+            chart_data[discipline] = {}
+            continue
+        
+        # Calculate bin centers (midpoints)
         bin_centers = [(bin_edges[i] + bin_edges[i+1]) / 2 for i in range(len(counts))]
         bin_labels = []
         for i in range(len(bin_edges) - 1):
@@ -113,12 +106,54 @@ def get_histogram_chart(race: Race) -> dict:
             "labels": bin_centers,
             "datasets": [
                 {
-                    "label": discipline_names[discipline],
+                    "label": discipline_details[discipline]["display_name"],
                     "data": [
                         {"x": center, "y": int(count), "label": label}
                         for center, count, label in zip(bin_centers, counts, bin_labels)
                     ],
-                    "backgroundColor": discipline_colors[discipline]["background"],
+                    "backgroundColor": discipline_details[discipline]["background"],
+                    "borderWidth": 0,
+                    "barPercentage": 1.0
+                }
+            ]
+        }
+    
+    return chart_data
+
+def get_rating_histograms(race: Race) -> dict:
+    """
+    Prepare histogram data for Chart.js visualization.
+    Return seperate datasets for each discipline with labels and counts.
+    """
+    discipline_details = {
+        "overall": {"background": "#357ABD"},
+        "swim": {"background": "#4CAF50"},
+        "bike": {"background": "#FF9800"},
+        "run": {"background": "#E91E63"},
+        "transition": {"background": "#9C27B0"},
+    }
+
+    histograms: dict = race.get_rating_histograms(20)
+    chart_data = {}
+
+    for discipline, (counts, bin_edges) in histograms.items():
+        bin_centers = [(bin_edges[i] + bin_edges[i+1]) / 2 for i in range(len(counts))]
+        bin_labels = []
+        for i in range(len(bin_edges) - 1):
+            bin_labels.append(
+                f"{int(bin_edges[i])} - {int(bin_edges[i+1])}"
+            )
+        
+        chart_data[discipline] = {
+            "labels": bin_centers,
+            "datasets": [
+                {
+                    "label": discipline.capitalize(),
+                    "data": [
+                        {"x": center, "y": int(count), "label": label}
+                        for center, count, label in zip(bin_centers, counts, bin_labels)
+                    ],
+                    "backgroundColor": discipline_details[discipline]["background"],
                     "borderWidth": 0,
                     "barPercentage": 1.0
                 }
@@ -194,7 +229,8 @@ async def get_race(request: Request, race_id: int):
     race_standards: dict = get_race_standards(race)
     best_performances: dict = get_best_performances(race)
     
-    histogram_charts: dict = get_histogram_chart(race)
+    time_histograms: dict = get_time_histograms(race)
+    rating_histograms: dict = get_rating_histograms(race)
         
     return templates.TemplateResponse(
         "race.html",
@@ -206,12 +242,17 @@ async def get_race(request: Request, race_id: int):
             "best_performances": best_performances,
             "splits_data": splits_data,
             "ratings_data": ratings_data,
-            "overall_hist_chart": histogram_charts["overall"],
-            "swim_hist_chart": histogram_charts["swim"],
-            "bike_hist_chart": histogram_charts["bike"],
-            "run_hist_chart": histogram_charts["run"],
-            "t1_hist_chart": histogram_charts["t1"],
-            "t2_hist_chart": histogram_charts["t2"]
+            "overall_time_hist": time_histograms["overall"],
+            "swim_time_hist": time_histograms["swim"],
+            "bike_time_hist": time_histograms["bike"],
+            "run_time_hist": time_histograms["run"],
+            "t1_time_hist": time_histograms["t1"],
+            "t2_time_hist": time_histograms["t2"],
+            "overall_rating_hist": rating_histograms["overall"],
+            "swim_rating_hist": rating_histograms["swim"],
+            "bike_rating_hist": rating_histograms["bike"],
+            "run_rating_hist": rating_histograms["run"],
+            "transition_rating_hist": rating_histograms["transition"]
         }
     )
     

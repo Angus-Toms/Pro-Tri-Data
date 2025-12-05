@@ -101,6 +101,10 @@ class TriathlonELOSystem:
                 self.process_single_race(fname, row)
             else:
                 tqdm.write(f"Warning: {fname} does not exist, skipping")
+
+        # Post-processing
+        self.perform_athlete_postprocessing()
+        self.perform_race_postprocessing()
                 
     def process_single_race(self, file_path: str, prog_row) -> None:
         try:
@@ -109,12 +113,10 @@ class TriathlonELOSystem:
             race_df = self.load_race_data(file_path)
             race_df = self.prepare_race_data(race_df)
             
-            race: Race = self.races[race_id] # TODO: Move race init to here, populate in make_race as usual but pass race to corrections method so we can store 
-            
             if race_id in self.correction_race_ids:
                 # Find corrections to be applied to this race
                 corrections = self.corrections_df[self.corrections_df['race_id'] == race_id]
-                race_df = self.make_corrections(race, race_df, corrections)
+                race_df = self.make_corrections(race_df, corrections)
             
             if len(race_df) < 2:
                 tqdm.write(f"<2 results in {file_path}, skipping.")
@@ -593,33 +595,31 @@ class TriathlonELOSystem:
                 athlete.transition_rank = athlete_ranks.get("transition_rank", -1)
 
 def main():
-    female_short_elo = TriathlonELOSystem(k_factor = 16, race_guide_fname = FEMALE_SHORT_EVENTS, race_dir = FEMALE_SHORT_DIR)
+    female_short_elo = TriathlonELOSystem(k_factor = 16, race_guide_file = FEMALE_SHORT_EVENTS, race_dir = FEMALE_SHORT_DIR)
     female_short_elo.process_all_races()
-    female_short_elo.perform_athlete_postprocessing()
     female_short_elo.make_leaderboard(FEMALE_SHORT_LEADERBOARD)
     female_short_elo.save_athlete_data(ATHLETES_DIR)
     female_short_elo.save_race_data(RACES_DIR)
     
-    male_short_elo = TriathlonELOSystem(k_factor = 16, race_guide_fname = MALE_SHORT_EVENTS, race_dir = MALE_SHORT_DIR)
+    male_short_elo = TriathlonELOSystem(k_factor = 16, race_guide_file = MALE_SHORT_EVENTS, race_dir = MALE_SHORT_DIR)
     male_short_elo.process_all_races()
-    male_short_elo.perform_athlete_postprocessing()
     male_short_elo.make_leaderboard(MALE_SHORT_LEADERBOARD)
     male_short_elo.save_athlete_data(ATHLETES_DIR)
     male_short_elo.save_race_data(RACES_DIR)
     
-    # athlete_count = len(female_short_elo.athletes) + len(male_short_elo.athletes)
-    # print(f"Total athletes processed: {athlete_count}")
+    athlete_count = len(female_short_elo.athletes) + len(male_short_elo.athletes)
+    print(f"Total athletes processed: {athlete_count}")
     
-    # race_count = len(female_short_elo.races) + len(male_short_elo.races)
-    # print(f"Total races processed: {race_count}")
+    race_count = len(female_short_elo.races) + len(male_short_elo.races)
+    print(f"Total races processed: {race_count}")
     
-    # # # Rebuild athlete lookup after all athletes have been updated
-    # make_athlete_lookup()
-    # # Rebuild race lookups
-    # make_race_lookup(
-    #     event_guides = [FEMALE_SHORT_EVENTS, MALE_SHORT_EVENTS],
-    #     output_path = RACE_LOOKUP
-    # )
+    # # Rebuild athlete lookup after all athletes have been updated
+    make_athlete_lookup()
+    # Rebuild race lookups
+    make_race_lookup(
+        event_guides = [FEMALE_SHORT_EVENTS, MALE_SHORT_EVENTS],
+        output_path = RACE_LOOKUP
+    )
 
 if __name__ == "__main__":
     main()

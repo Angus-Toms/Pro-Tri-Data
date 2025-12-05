@@ -58,12 +58,6 @@ function displayResults(results) {
     searchResults.innerHTML = html;
 }
 
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
 // Close search results when clicking outside
 document.addEventListener('click', function(event) {
     if (!event.target.closest('.search-container')) {

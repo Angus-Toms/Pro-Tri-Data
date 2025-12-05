@@ -86,3 +86,9 @@ function getJSON(id) {
     const el = document.getElementById(id);
     return el ? JSON.parse(el.textContent) : null;
 }
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}

@@ -168,23 +168,28 @@ class Race:
             self.transition_increase_athlete_id = athlete_id    
             
     def get_discipline_standards(self) -> None:
-        """Set standards based on top 10 highest-rated athletes per discipline"""
+        """ Set standards based on top 10 highest-rated athletes per discipline """
         
         # Get top 10 athletes by overall rating
         top_overall = sorted(self.ratings, key = lambda x: x.overall_rating, reverse = True)[:10]
-        self.overall_standard = sum(r.overall_rating for r in top_overall) / len(top_overall)
+        if len(top_overall) > 0:
+            self.overall_standard = sum(r.overall_rating for r in top_overall) / len(top_overall)
         
         top_swim = sorted(self.ratings, key = lambda x: x.swim_rating, reverse = True)[:10]
-        self.swim_standard = sum(r.swim_rating for r in top_swim) / len(top_swim)
+        if len(top_swim) > 0:
+            self.swim_standard = sum(r.swim_rating for r in top_swim) / len(top_swim)
         
         top_bike = sorted(self.ratings, key = lambda x: x.bike_rating, reverse = True)[:10]
-        self.bike_standard = sum(r.bike_rating for r in top_bike) / len(top_bike)
+        if len(top_bike) > 0:
+            self.bike_standard = sum(r.bike_rating for r in top_bike) / len(top_bike)
         
         top_run = sorted(self.ratings, key = lambda x: x.run_rating, reverse = True)[:10]
-        self.run_standard = sum(r.run_rating for r in top_run) / len(top_run)
+        if len(top_run) > 0:
+            self.run_standard = sum(r.run_rating for r in top_run) / len(top_run)
         
         top_transition = sorted(self.ratings, key = lambda x: x.transition_rating, reverse = True)[:10]
-        self.transition_standard = sum(r.transition_rating for r in top_transition) / len(top_transition)
+        if len(top_transition) > 0:
+            self.transition_standard = sum(r.transition_rating for r in top_transition) / len(top_transition)
       
     def get_times_df(self) -> pd.DataFrame:
         """ Return splits as dataframe, convert 0s (no split time) to NaNs for processing """
@@ -200,6 +205,20 @@ class Race:
             }
             for r in self.results
         ])  
+    
+    def get_ratings_df(self) -> pd.DataFrame:
+        """ Return ratings as dataframe """
+        return pd.DataFrame([
+            {
+                "athlete_id": r.athlete_id,
+                "overall_rating": r.overall_rating,
+                "swim_rating": r.swim_rating,
+                "bike_rating": r.bike_rating,
+                "run_rating": r.run_rating,
+                "transition_rating": r.transition_rating
+            }
+            for r in self.ratings
+        ])
         
     def get_mean_times(self) -> dict:
         """ Calculates mean times for each discipline. """
@@ -221,11 +240,24 @@ class Race:
         times_df = self.get_times_df()
         
         return {
-            "overall": np.histogram(times_df['overall_s'].dropna(), bins=bins),
-            "swim": np.histogram(times_df['swim_s'].dropna(), bins=bins),
-            "bike": np.histogram(times_df['bike_s'].dropna(), bins=bins),
-            "run": np.histogram(times_df['run_s'].dropna(), bins=bins),
-            "t1": np.histogram(times_df['t1_s'].dropna(), bins=bins),
-            "t2": np.histogram(times_df['t2_s'].dropna(), bins=bins)
+            "overall": np.histogram(times_df['overall_s'].dropna(), bins = bins),
+            "swim": np.histogram(times_df['swim_s'].dropna(), bins = bins),
+            "bike": np.histogram(times_df['bike_s'].dropna(), bins = bins),
+            "run": np.histogram(times_df['run_s'].dropna(), bins = bins),
+            "t1": np.histogram(times_df['t1_s'].dropna(), bins = bins),
+            "t2": np.histogram(times_df['t2_s'].dropna(), bins = bins)
         }
                 
+    def get_rating_histograms(self, bins: int = 10) -> dict:
+        """
+        Prepare rating histograms for each discipline.
+        """
+        ratings_df = self.get_ratings_df()
+        
+        return {
+            "overall": np.histogram(ratings_df['overall_rating'].dropna(), bins = 30),
+            "swim": np.histogram(ratings_df['swim_rating'].dropna(), bins = bins),
+            "bike": np.histogram(ratings_df['bike_rating'].dropna(), bins = bins),
+            "run": np.histogram(ratings_df['run_rating'].dropna(), bins = bins),
+            "transition": np.histogram(ratings_df['transition_rating'].dropna(), bins = bins),
+        }

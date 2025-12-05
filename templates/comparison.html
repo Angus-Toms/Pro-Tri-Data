@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Athletes - Search & Leaderboards{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/comparison.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <h1 style="text-align: center; color: var(--text-color); margin-bottom: 2rem;">
+        Compare Athletes
+    </h1>
+
+    <div class="search-container">
+        <div class="search-box">
+            <h3>Athlete 1</h3>
+            <div class="search-input-wrapper">
+                <input 
+                    type="text" 
+                    id="search1" 
+                    class="search-input" 
+                    placeholder="Search athlete name..."
+                    autocomplete="off"
+                >
+                <div id="results1" class="search-results"></div>
+            </div>
+            <div id="selected1" class="selected-athlete"></div>
+        </div>
+
+        <div class="search-box">
+            <h3>Athlete 2</h3>
+            <div class="search-input-wrapper">
+                <input 
+                    type="text" 
+                    id="search2" 
+                    class="search-input" 
+                    placeholder="Search athlete name..."
+                    autocomplete="off"
+                >
+                <div id="results2" class="search-results"></div>
+            </div>
+            <div id="selected2" class="selected-athlete"></div>
+        </div>
+    </div>
+
+    <div class="compare-button-container">
+        <button id="compareBtn" class="compare-button" disabled>
+            Compare Athletes
+        </button>
+    </div>
+
+    <div id="errorMsg" class="error-message"></div>
+    <div id="loading" class="loading">Loading comparison data...</div>
+
+    <div id="comparisonResults" class="comparison-results">
+        <!-- Results will be loaded here via HTMX/fetch -->
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', path='js/utils.js')}}"></script>
+<script src="{{ url_for('static', path='js/comparison.js') }}"></script>
+{% endblock %}    
