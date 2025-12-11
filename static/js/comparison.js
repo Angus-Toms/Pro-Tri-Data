@@ -2,6 +2,7 @@ let selectedAthletes = {
     athlete1: null,
     athlete2: null
 };
+let comparisonGraphsLoaded = false;
 
 // Debounce function for search
 function debounce(func, wait) {
@@ -21,6 +22,7 @@ function initSearch(searchId, resultsId, selectedId, athleteKey) {
     const searchInput = document.getElementById(searchId);
     const resultsDiv = document.getElementById(resultsId);
     const selectedDiv = document.getElementById(selectedId);
+    const searchWrapper = searchInput.closest('.search-input-wrapper');
 
     const performSearch = debounce(async (query) => {
         if (query.length < 2) {
@@ -37,13 +39,14 @@ function initSearch(searchId, resultsId, selectedId, athleteKey) {
                     <div class="search-result-item"
                         data-id="${athlete.athlete_id}" 
                         data-name="${athlete.name}" 
-                        data-country-emoji="${athlete.country}"
+                        data-country-emoji="${athlete.country_emoji}"
+                        data-country-name="${athlete.country_name}"
                         data-country-alpha3="${athlete.country_alpha3}"
                         data-yob="${athlete.year_of_birth || ''}">
                         <div class="result-info">
                             <div class="result-name">${escapeHtml(athlete.name)}</div>
                             <div class="result-meta">
-                                ${athlete.country} ${escapeHtml(athlete.country_alpha3)}
+                                ${athlete.country_emoji} ${escapeHtml(athlete.country_alpha3)}
                                 ${athlete.year_of_birth ? ` • ${athlete.year_of_birth}` : ''}
                             </div>
                         </div>
@@ -58,9 +61,10 @@ function initSearch(searchId, resultsId, selectedId, athleteKey) {
                             id: parseInt(item.dataset.id),
                             name: item.dataset.name,
                             country_emoji: item.dataset.countryEmoji,
+                            country_name: item.dataset.countryName,
                             country_alpha3: item.dataset.countryAlpha3,
                             year_of_birth: item.dataset.yob
-                        }, searchInput, resultsDiv, selectedDiv);
+                        }, searchInput, resultsDiv, selectedDiv, searchWrapper);
                     });
                 });
             } else {
@@ -84,22 +88,58 @@ function initSearch(searchId, resultsId, selectedId, athleteKey) {
     });
 }
 
-function selectAthlete(athleteKey, athlete, searchInput, resultsDiv, selectedDiv) {
+function selectAthlete(athleteKey, athlete, searchInput, resultsDiv, selectedDiv, searchWrapper) {
     /* Store the selected athlete and build the athlete display card under the search box */
     selectedAthletes[athleteKey] = athlete;
     
-    searchInput.value = athlete.name;
+    searchInput.value = '';
     resultsDiv.classList.remove('active');
+    if (searchWrapper) {
+        searchWrapper.classList.add('hidden');
+    }
     
+    const imgSrc = `/static/athlete_imgs/${athlete.id}.jpg`;
+    const defaultImgSrc = `/static/default_user.jpg`
     selectedDiv.innerHTML = `
-        <div class="selected-athlete-name">${athlete.country_emoji} ${athlete.name}</div>
-        <div class="selected-athlete-info">
-            ${athlete.year_of_birth ? `Born: ${athlete.year_of_birth}` : ''}
+        <button class="selected-athlete-remove" aria-label="Clear selection">&times;</button>
+
+        <div class="selected-athlete-container">
+            <img 
+                class="selected-athlete-img"
+                src="${imgSrc}"
+                onerror="${defaultImgSrc}"
+                alt="${athlete.name}"
+            >
+
+            <div class="selected-athlete-text">
+                <div class="selected-athlete-name">${athlete.name} ${athlete.country_emoji}</div>
+                <div class="selected-athlete-info">
+                    ${athlete.country_name} ${athlete.year_of_birth ? `YOB: ${athlete.year_of_birth}` : ''}
+                </div>
+            </div>
         </div>
     `;
+
     selectedDiv.classList.add('selected-athlete');
     selectedDiv.classList.add('active');
+    const removeButton = selectedDiv.querySelector('.selected-athlete-remove');
+    removeButton.addEventListener('click', () => {
+        clearSelectedAthlete(athleteKey, searchInput, selectedDiv, searchWrapper);
+    });
 
+    updateCompareButton();
+}
+
+/* --- --- */
+function clearSelectedAthlete(athleteKey, searchInput, selectedDiv, searchWrapper) {
+    selectedAthletes[athleteKey] = null;
+    selectedDiv.classList.remove('active');
+    selectedDiv.innerHTML = '';
+    if (searchWrapper) {
+        searchWrapper.classList.remove('hidden');
+    }
+    searchInput.value = '';
+    searchInput.focus();
     updateCompareButton();
 }
 
@@ -152,12 +192,23 @@ async function performComparison() {
 
 // --- Load comparison charts dynamically from their js ---
 function loadComparisonResultsJs() {
+    if (comparisonGraphsLoaded) {
+        // If script already loaded, just re-init graphs, don't re-add the whole script
+        initOverallChart();
+        initSwimChart();
+        initBikeChart();
+        initRunChart();
+        initTransitionChart();  
+        return;
+    }
+    
     const script = document.createElement("script");
     script.src = "/static/js/comparison_results.js";
     document.body.appendChild(script);
 
     // Initialise all rating graphs
     script.onload = () => {
+        comparisonGraphsLoaded = true;
         initOverallChart();
         initSwimChart();
         initBikeChart();

@@ -37,6 +37,7 @@ async def search_athletes(q: str = ""):
                 results.append({
                     'athlete_id': athlete_id,
                     'name': athlete_data["name"],
+                    'rating': athlete_data["rating"],
                     'country': athlete_data["country_emoji"],
                     'country_alpha3': athlete_data["country_alpha3"],
                     'year_of_birth': athlete_data.get("year_of_birth", "")
@@ -46,9 +47,8 @@ async def search_athletes(q: str = ""):
                 if len(results) >= 20:
                     break
         
-        
-        # Sort by name
-        results.sort(key=lambda x: x['name'])
+        # Sort by rating, fast athletes will probably be more popular
+        results.sort(key=lambda x: x['rating'], reverse = True)
         
         return JSONResponse(results)
         

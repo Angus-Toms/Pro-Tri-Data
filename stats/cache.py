@@ -55,8 +55,10 @@ def process_single_athlete(athlete_file):
         athlete_data = pickle.load(f)
         return athlete_data.athlete_id, {
             "name": athlete_data.name,
+            "rating": athlete_data.overall_rating, # Save overall rating so results can be filtered
             "country_alpha3": athlete_data.country_alpha3,
             "country_emoji": athlete_data.country_emoji,
+            "country_name": athlete_data.country_full,
             "year_of_birth": athlete_data.year_of_birth,
         }    
     

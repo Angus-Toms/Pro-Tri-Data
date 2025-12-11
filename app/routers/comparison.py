@@ -130,7 +130,9 @@ async def search_athletes_for_compare(q: str = ""):
                 results.append({
                     'athlete_id': athlete_id,
                     'name': athlete_data["name"],
-                    'country': athlete_data["country_emoji"],
+                    'rating': athlete_data["rating"],
+                    'country_emoji': athlete_data["country_emoji"],
+                    'country_name': athlete_data["country_name"],
                     'country_alpha3': athlete_data["country_alpha3"],
                     'year_of_birth': athlete_data.get("year_of_birth", "")
                 })
@@ -139,8 +141,8 @@ async def search_athletes_for_compare(q: str = ""):
                 if len(results) >= 20:
                     break
         
-        # Sort by name
-        results.sort(key = lambda x: x['name'])
+        # Sort by rating, faster athletes will probably more popular
+        results.sort(key = lambda x: x['rating'], reverse = True)
         
         return JSONResponse(results)
         
@@ -155,18 +157,6 @@ def get_basic_h2h_data(athlete: Athlete) -> Dict:
         "country": athlete.country_emoji,
         "country_alpha3": athlete.country_alpha3,
         "year_of_birth": athlete.year_of_birth,
-        "ratings": {
-            "overall": format_rating(athlete.overall_rating),
-            "overall_change_1yr": format_1yr_rating_change(athlete.overall_change_1yr),
-            "swim": format_rating(athlete.swim_rating),
-            "swim_change_1yr": format_1yr_rating_change(athlete.swim_change_1yr),
-            "bike": format_rating(athlete.bike_rating),
-            "bike_change_1yr": format_1yr_rating_change(athlete.bike_change_1yr),
-            "run": format_rating(athlete.run_rating),
-            "run_change_1yr": format_1yr_rating_change(athlete.run_change_1yr),
-            "transition": format_rating(athlete.transition_rating),
-            "transition_change_1yr": format_1yr_rating_change(athlete.transition_change_1yr)
-        },
         "stats": {
             "total_races": athlete.race_starts,
             "podiums": athlete.podium_count,
@@ -215,6 +205,47 @@ def get_h2h_race_results(athlete1: Athlete, athlete2: Athlete) -> List[Dict]:
     head_to_head.sort(key = lambda x: x["race_date"], reverse = True)
 
     return head_to_head
+
+def get_h2h_ratings(athlete1: Athlete, athlete2: Athlete) -> Dict:
+    """ """
+    return [
+        {
+            "label": "Overall",
+            "rating1": format_rating(athlete1.overall_rating),
+            "rating2": format_rating(athlete2.overall_rating),
+            "change1": format_1yr_rating_change(athlete1.overall_change_1yr),
+            "change2": format_1yr_rating_change(athlete2.overall_change_1yr)
+        },
+        {
+            "label": "Swim",
+            "rating1": format_rating(athlete1.swim_rating),
+            "rating2": format_rating(athlete2.swim_rating),
+            "change1": format_1yr_rating_change(athlete1.swim_change_1yr),
+            "change2": format_1yr_rating_change(athlete2.swim_change_1yr)
+        },
+        {
+            "label": "Bike",
+            "rating1": format_rating(athlete1.bike_rating),
+            "rating2": format_rating(athlete2.bike_rating),
+            "change1": format_1yr_rating_change(athlete1.bike_change_1yr),
+            "change2": format_1yr_rating_change(athlete2.bike_change_1yr)
+        },
+        {
+            "label": "Run",
+            "rating1": format_rating(athlete1.run_rating),
+            "rating2": format_rating(athlete2.run_rating),
+            "change1": format_1yr_rating_change(athlete1.run_change_1yr),
+            "change2": format_1yr_rating_change(athlete2.run_change_1yr)
+        },
+        {
+            "label": "Transition",
+            "rating1": format_rating(athlete1.transition_rating),
+            "rating2": format_rating(athlete2.transition_rating),
+            "change1": format_1yr_rating_change(athlete1.transition_change_1yr),
+            "change2": format_1yr_rating_change(athlete2.transition_change_1yr)
+        }
+    ]
+
 
 def get_h2h_rating_chart(athlete1: Athlete, athlete2: Athlete, race_lookup: Dict) -> Dict:
     """ Generate h2h rating chart.js graph data for two athletes. """
@@ -300,6 +331,7 @@ async def get_comparison_html(request: Request, athlete1_id: int, athlete2_id: i
 
         # Get head-to-head race results and calculate H2H wins
         head_to_head = get_h2h_race_results(athlete1, athlete2)
+        head_to_head_ratings = get_h2h_ratings(athlete1, athlete2)
 
         for race in head_to_head:
             if race["athlete1_time"]["css_class"] == "h2h-winner":
@@ -318,6 +350,7 @@ async def get_comparison_html(request: Request, athlete1_id: int, athlete2_id: i
                 "athlete1": athlete1_data,
                 "athlete2": athlete2_data,
                 "head_to_head": head_to_head,
+                "head_to_head_ratings": head_to_head_ratings,
                 "overall_ratings_chart": h2h_ratings_chart["overall"],
                 "swim_ratings_chart": h2h_ratings_chart["swim"],
                 "bike_ratings_chart": h2h_ratings_chart["bike"],
