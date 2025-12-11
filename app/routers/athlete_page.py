@@ -122,7 +122,7 @@ def get_race_history(athlete: Athlete, race_lookup: dict) -> List[dict]:
             "race_id": result.race_id,
             "race_title": race_title,
             "race_date": result.race_date, # Format in template to allow for sorting by numeric date
-            "position": str(result.position),
+            "position": result.position,
             "overall": format_time(result.overall_s),
             "overall_behind": format_time_behind(result.overall_behind_s) if result.overall_behind_s is not None else "",
             "swim": format_time(result.swim_s),

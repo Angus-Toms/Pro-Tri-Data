@@ -1,0 +1,64 @@
+{% for athlete in athletes %}
+<div class="athlete-card {{ 'rank-' ~ athlete.rank if athlete.rank <= 3 else '' }}">
+    <div class="rank-badge {{ 'rank-' ~ athlete.rank ~ '-text' if athlete.rank <= 3 else '' }}">#{{athlete.rank}}</div>
+    <div class="athlete-card-content">
+        <div class="athlete-main-info">
+            <img src="{{ request.url_for('static', path='athlete_imgs/' ~ athlete['athlete_id'] ~ '.jpg') if athlete['profile_img_exists'] else request.url_for('static', path='default_user.jpg') }}" 
+                 alt="{{ athlete.name }}" 
+                 loading="lazy"
+                 class="athlete-profile-img">
+
+            <div class="athlete-details">
+                <h2 class="athlete-name">{{ athlete.name }} {{ athlete.country_emoji }}</h2>
+                <div class="athlete-meta">
+                    <span class="meta-item">{{ athlete.country_full }}</span>
+                    {% if athlete.year_of_birth > 0 %}
+                    <span class="meta-item"><strong>YOB:</strong> {{ athlete.year_of_birth }}</span>
+                    {% endif %}
+                    <span class="meta-item"><strong>Races:</strong> {{ athlete.race_starts }}</span>
+                    <span class="meta-item"><strong>Wins:</strong> {{ athlete.win_count }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="athlete-ratings">
+            <div class="rating-item">
+                <span class="rating-label">Overall</span>
+                <span class="rating-value {% if rating_type == 'overall' %}rating-highlight{% endif %}">
+                    {{ athlete.overall_rating }}
+                </span>
+            </div>
+            <div class="rating-item">
+                <span class="rating-label">Swim</span>
+                <span class="rating-value {% if rating_type == 'swim' %}rating-highlight{% endif %}">
+                    {{ athlete.swim_rating }}
+                </span>
+            </div>
+            <div class="rating-item">
+                <span class="rating-label">Bike</span>
+                <span class="rating-value {% if rating_type == 'bike' %}rating-highlight{% endif %}">
+                    {{ athlete.bike_rating }}
+                </span>
+            </div>
+            <div class="rating-item">
+                <span class="rating-label">Run</span>
+                <span class="rating-value {% if rating_type == 'run' %}rating-highlight{% endif %}">
+                    {{ athlete.run_rating }}
+                </span>
+            </div>
+            <div class="rating-item">
+                <span class="rating-label">Transition</span>
+                <span class="rating-value {% if rating_type == 'transition' %}rating-highlight{% endif %}">
+                    {{ athlete.transition_rating }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <a href="/athlete/{{ athlete.athlete_id }}" class="athlete-card-link">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+    </a>
+</div>
+{% endfor %}

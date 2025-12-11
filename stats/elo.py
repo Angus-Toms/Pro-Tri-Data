@@ -144,6 +144,9 @@ class TriathlonELOSystem:
         """ Load and do initial cleaning from CSV """
         race_df = pd.read_csv(
             file_path,
+            dtype = {
+                "position": "string"
+            },
             keep_default_na = False,
             na_values = [],
             low_memory = False
@@ -198,7 +201,7 @@ class TriathlonELOSystem:
             (race_df['run_s'] != float('inf')) &
             (race_df['transition_s'] != float('inf'))
         ]
-        
+
         return race_df
     
     def make_corrections(self, race_df: pd.DataFrame, corrections: pd.DataFrame) -> pd.DataFrame:
@@ -519,6 +522,7 @@ class TriathlonELOSystem:
         Args:
             leaderboard_path: Path to save leaderboard pickle
         """
+        # TODO: Make this a df? Lots of sorting and filtering done upon access, probably easier
         leaderboard_data = {}
         
         for athlete_id, athlete in self.athletes.items():

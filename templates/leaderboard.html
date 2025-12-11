@@ -59,13 +59,17 @@
         <div class="filter-section">
             <h3>Filter By</h3>
             <div class="filter-row">
+
                 <div class="filter-group">
                     <label for="country">Country:</label>
                     <select name="country" id="country">
-                        <option value="all" {% if country == 'all' %}selected{% endif %}>All Countries</option>
-                        <option value="GBR" {% if country == 'GBR' %}selected{% endif %}>Great Britain</option>
-                        <option value="FRA" {% if country == 'FRA' %}selected{% endif %}>France</option>
-                        <option value="USA" {% if country == 'USA' %}selected{% endif %}>United States</option>
+                        <!-- Default country value is blank -->
+                        <option value="all" {% if country == "all" %}selected{% endif %}>All Countries</option> 
+                        
+                        <!-- Add all countries from latest country list-->
+                        {% for c in all_countries %}
+                            <option value="{{ c }}" {% if country == c %}selected{% endif %}>{{ c }}</option>                      
+                        {% endfor %}
                     </select>
                 </div>
 
@@ -110,6 +114,7 @@
             <div class="athlete-main-info">
                 <img src="{{ request.url_for('static', path='athlete_imgs/' ~ athlete['athlete_id'] ~ '.jpg') if athlete['profile_img_exists'] else request.url_for('static', path='default_user.jpg') }}" 
                      alt="{{ athlete.name }}" 
+                     loading="lazy"
                      class="athlete-profile-img">
                 
                 <div class="athlete-details">
@@ -176,6 +181,11 @@
     {% endfor %}
 </div>
 
+<!-- Button to load next athletes -->
+<div class="load-more-container">
+    <button id="loadMoreBtn" class="btn">Load More</button>
+</div>
+
 {% if not athletes %}
 <div class="no-results">
     <p>No athletes found matching your filters.</p>
@@ -185,4 +195,5 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{{ url_for('static', path='js/leaderboard.js') }}"></script>
 {% endblock %}

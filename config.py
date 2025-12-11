@@ -6,14 +6,18 @@ ROOT_DIR = Path(__file__).parent.resolve()
 # Data served to site in static
 STATIC_DIR = ROOT_DIR / "static"
 DATA_DIR = STATIC_DIR / "data"
+
 ATHLETES_DIR = DATA_DIR / "athletes"
 ATHLETE_LOOKUP = DATA_DIR / "athlete_lookup.pkl"
 ATHLETE_IMG_DIR = STATIC_DIR / "athlete_imgs"
+
 FEMALE_SHORT_LEADERBOARD = DATA_DIR / "female_short_leaderboard.pkl"
 MALE_SHORT_LEADERBOARD = DATA_DIR / "male_short_leaderboard.pkl"
 
 RACES_DIR = DATA_DIR / "races"
 RACE_LOOKUP = DATA_DIR / "race_lookup.pkl"
+
+COUNTRY_LIST = DATA_DIR / "countries.pkl"
 
 # Raw data used to learn ELO 
 SOURCE_DIR = ROOT_DIR / "stats" / "data"

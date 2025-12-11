@@ -327,6 +327,19 @@
 }
 
 /* ============================================
+   LOAD MORE BUTTON
+   ============================================ */
+.load-more-container {
+    text-align: center;
+    margin: 2rem 0;
+}
+
+#loadMoreBtn {
+    padding: 0.8rem 2rem;
+    cursor: pointer;
+}
+
+/* ============================================
    DUAL RANGE SLIDER
    ============================================ */
 .filter-group-wide {

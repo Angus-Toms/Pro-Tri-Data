@@ -344,7 +344,7 @@ async def get_comparison_html(request: Request, athlete1_id: int, athlete2_id: i
 
         # Render the comparison results template
         return templates.TemplateResponse(
-            "comparison_results.html",
+            "partials/comparison_results.html",
             {
                 "request": request,
                 "athlete1": athlete1_data,

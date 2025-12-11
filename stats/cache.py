@@ -1,18 +1,16 @@
 from functools import lru_cache, partial
 import pickle
 
-from stats.athlete import Athlete
-
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import pandas as pd
 from pathlib import Path
 import sys
 import re
-
 from typing import List
 
 sys.path.append(str(Path(__file__).parent.parent))
+from stats.athlete import Athlete
 
 from config import (
     FEMALE_SHORT_LEADERBOARD, 
@@ -21,7 +19,8 @@ from config import (
     MALE_SHORT_EVENTS,
     RACE_LOOKUP,
     ATHLETES_DIR,
-    ATHLETE_LOOKUP
+    ATHLETE_LOOKUP,
+    COUNTRY_LIST
 )
 
 @lru_cache(maxsize=1)
@@ -41,13 +40,13 @@ def get_race_lookup():
     
 @lru_cache(maxsize=1)
 def get_athlete_lookup():
-    import time
-    start = time.time()
     with open(ATHLETE_LOOKUP, "rb") as f:
-        data = pickle.load(f)
-        end = time.time()
-        print(f"Loaded athlete lookup in {end - start:.2f} seconds")
-        return data
+        return pickle.load(f)
+
+@lru_cache(maxsize=1)
+def get_country_list():
+    with open(COUNTRY_LIST, "rb") as f:
+        return pickle.load(f)
 
 def process_single_athlete(athlete_file):
     """ Process a single athlete file and return the lookup data. """
@@ -80,8 +79,23 @@ def make_athlete_lookup():
     with open(ATHLETE_LOOKUP, "wb") as f:
         pickle.dump(athlete_lookup, f)
     
+    # Make country list from all saved athletes
+    make_country_list(athlete_lookup)
+
     print(f"\nSaved athlete lookup with {len(athlete_lookup)} entries.")
   
+def make_country_list(athlete_lookup: dict) -> List[str]:
+    """ Returns list of all countries for leaderboard filtering """
+    countries = set()
+
+    for _, v in athlete_lookup.items():
+        countries.add(v["country_name"])
+
+    with open(COUNTRY_LIST, "wb") as f:
+        pickle.dump(countries, f)
+
+    print(f"Made country list with {len(countries)} countries")
+
 def process_single_race_guide(race_guide: Path):
     """Process a single event guide CSV and return partial race lookup."""
     skip_words = {
@@ -144,7 +158,7 @@ def make_race_lookup(event_guides: List[Path], output_path: Path):
             for guide in event_guides
         }
 
-        for i, future in enumerate(as_completed(futures), 1):
+        for _, future in enumerate(as_completed(futures), 1):
             partial_lookup = future.result()
             race_lookup.update(partial_lookup)
 

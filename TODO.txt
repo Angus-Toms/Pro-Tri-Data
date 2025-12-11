@@ -13,14 +13,18 @@ Data format for site APIs:
 - [X] Add 1 year changes and formatting
 - [ ] Capitalise all words in venue and location download, probably refactor whole data_access.py
 - [X] Fix 'Born 0' on Athlete page
-- [ ] Fast image loading, either lazy load image size or static caching thingy. (Or all the above)
+- [X] Fast image loading, either lazy load image size or static caching thingy. (Or all the above)
 - [X] Histogram labelling on small times? T1/T2
 - [X] Start maintaining ignored race list
+- [ ] Add all countries to leaderboard filtering
 - [ ] Add program to athlete results table
 - [ ] Redo data access to check event id rather then prog (i.e. no request for seen events) 
 - [ ] Events leaderboard, will need a new cache
 - [ ] Remove histograms if no splits
 - [ ] "Hot" athletes leaderboard
+- [ ] Limit comparisons to gender
+
+Later:
 - [ ] Previous nationalities for athletes
 - [ ] Add Enum for active page 
 - [ ] Add colors for graphs to config (or somewhere else)

@@ -27,7 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-
 // Overall time histogram ------------------------------------------------------
 const overallTimesCtx = document.getElementById('overall-times-canvas');
 const overallTimesData = getJSON('overall-time-hist-data');
