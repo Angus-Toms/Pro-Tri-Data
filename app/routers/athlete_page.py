@@ -10,7 +10,7 @@ from stats.cache import get_race_lookup
 
 from config import ATHLETES_DIR
 
-from app.routers.router_utils import format_time, format_time_behind, format_rating_change
+from app.routers.router_utils import format_time, format_time_behind, format_rating_change, format_1yr_rating_change
 
 from fastapi import HTTPException, Request, APIRouter
 from fastapi.responses import HTMLResponse
@@ -48,27 +48,6 @@ def load_athlete_cached(athlete_id: int) -> Athlete:
 def format_ranking(rank: int) -> str:
     """ Format global ranking """
     return f"#{rank} all time" if rank > 0 else "No Ranking"
-
-def format_1yr_rating_change(change: float) -> dict:
-    """
-    Format 1 year rating change, different to standard formatting to catch zero changes
-    """
-    if change == 0:
-        return {
-            "formatted_str": "▲0 last year",
-            "css_class": "neutral"
-        }
-    
-    if change > 0:
-        return {
-            "formatted_str": f"▲{change:.1f} last year",
-            "css_class": "positive"
-        }
-    
-    return {
-        "formatted_str": f"▼{-change:.1f} last year",
-        "css_class": "negative"
-    }
 
 def get_current_ratings(athlete: Athlete) -> dict:
     return {
@@ -379,7 +358,7 @@ def get_ratings_chart(athlete: Athlete, race_lookup: dict) -> dict:
     # Get race IDs and look up race names
     race_ids = ratings_df['race_id'].tolist()
     race_names = [
-        race_lookup.get(race_id, ['', ''])[1] for race_id in race_ids
+        race_lookup.get(rid, ['', ''])[1] for rid in race_ids
     ]
     # Ensure race_date is a datetime series before using .dt accessor
     # TODO: Check, this was being weird

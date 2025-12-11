@@ -1,5 +1,4 @@
 import pickle
-import time
 from functools import lru_cache
 
 from config import RACES_DIR

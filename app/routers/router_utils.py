@@ -51,3 +51,24 @@ def format_rating_change(change: float) -> dict:
         "formatted_str": f"▼{-change:.1f}",
         "css_class": "rating-decrease"
     }
+
+def format_1yr_rating_change(change: float) -> dict:
+    """
+    Format 1 year rating change, different to standard formatting to catch zero changes
+    """
+    if change == 0:
+        return {
+            "formatted_str": "▲0 last year",
+            "css_class": "neutral"
+        }
+    
+    if change > 0:
+        return {
+            "formatted_str": f"▲{change:.1f} last year",
+            "css_class": "positive"
+        }
+    
+    return {
+        "formatted_str": f"▼{-change:.1f} last year",
+        "css_class": "negative"
+    }

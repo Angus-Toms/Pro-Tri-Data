@@ -138,7 +138,7 @@
                 {% if splits_data %}
                     {% for athlete in splits_data %}
                     <tr>
-                        <td class="position-cell {{'position-gold' if athlete.position == '1' else 'position-silver' if athlete.position == '2' else 'position-bronze' if athlete.position == '3' else 'position-dnf' if athlete.position in ['DNF', 'DQ', 'LAP'] else ''}}" data-value="{{ athlete.position }}">
+                        <td class="position-col position-cell {{'position-gold' if athlete.position == '1' else 'position-silver' if athlete.position == '2' else 'position-bronze' if athlete.position == '3' else 'position-dnf' if athlete.position in ['DNF', 'DQ', 'LAP'] else ''}}" data-value="{{ athlete.position }}">
                             {{ athlete.position }}
                         </td>
                         <td class="athlete-col" data-value="{{ athlete.name }}">
@@ -297,7 +297,7 @@
 </div>
 
 <!-- Time Distribution Histograms -->
-<div class="data-table collapsible-card">
+<div class="collapsible-card">
     <h3 class="card-title">
         Time Distributions
         <span class="collapse-toggle" onclick="toggleCollapse(this)">−</span>
@@ -345,8 +345,8 @@
 </div>
 
 <!-- Rating distribution histograms -->
-<div class="data-table collapsible-card">
-    <h3>
+<div class="collapsible-card">
+    <h3 class="card-title">
         Rating Distributions
         <span class="collapse-toggle" onclick="toggleCollapse(this)">−</span>
     </h3>

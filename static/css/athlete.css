@@ -154,36 +154,10 @@
 /* ============================================
    HISTORICAL TABLES
    ============================================ */
-/* Results + splits table ------------ */
-/* Date column */
-.results-table .date-col {
-    width: 110px;
-}
-
-/* Race name column */
-.results-table .race-col {
-    width: 300px;
-}
-
-/* Position column */
-.results-table .position-col {
-    width: 90px;
-}
 
 /* Time columns - auto width to fill remaining space */
 .results-table .time-col {
     width: calc((100% - 500px) / 6);
-}
-
-/* Ratings + change table ------------ */
-/* Date column */
-.rating-table .date-col {
-    width: 110px;
-}
-
-/* Race name column */
-.rating-table .race-col {
-    width: 300px;
 }
 
 /* Position column */

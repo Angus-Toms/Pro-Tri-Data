@@ -119,8 +119,4 @@
     .charts-grid {
         grid-template-columns: 1fr;
     }
-    
-    .chart-container-compact {
-        height: 250px; /* Slightly taller on mobile for better readability */
-    }
 }
