@@ -147,6 +147,10 @@ html, body {
     color: var(--white);
 }
 
+.nav-link.active:hover {
+    background-color: var(--primary-hover);
+}
+
 /* ============================================
    FOOTER
    ============================================ */

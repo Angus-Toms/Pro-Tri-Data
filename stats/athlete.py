@@ -428,3 +428,28 @@ class Athlete:
         self.bike_change_1yr = self.bike_rating - past_bike
         self.run_change_1yr = self.run_rating - past_run
         self.transition_change_1yr = self.transition_rating - past_transition
+
+    def to_leaderboard_df(self) -> dict:
+        """ Returns info stored in leaderboard df """
+        return {
+            "athlete_id": self.athlete_id,
+            "profile_img_exists": self.profile_img != '',
+            "name": self.name,
+            "country_full": self.country_full,
+            "country_alpha3": self.country_alpha3,
+            "country_emoji": self.country_emoji,
+            "year_of_birth": self.year_of_birth,
+            "overall_rating": round(self.overall_rating),
+            "swim_rating": round(self.swim_rating),
+            "bike_rating": round(self.bike_rating),
+            "run_rating": round(self.run_rating),
+            "transition_rating": round(self.transition_rating),
+            "overall_change": self.overall_change_1yr,
+            "swim_change": self.swim_change_1yr,
+            "bike_change": self.bike_change_1yr,
+            "run_change": self.run_change_1yr,
+            "transition_change": self.transition_change_1yr,
+            "race_starts": self.race_starts,
+            "win_count": self.win_count,
+            "active": self.active
+        }

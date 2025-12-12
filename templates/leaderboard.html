@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Leaderboard - Triathlon Stats{% endblock %}
+{% block title %}Leaderboard - Pro Tri Data{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="/static/css/leaderboard.css">
@@ -14,44 +14,64 @@
 
 <div class="filters-card">
     <form method="get" action="/leaderboard" class="filters-form">
+        
+        <!-- Gender filter -->
         <div class="filter-section">
             <h3>Gender</h3>
-            <div class="filter-row">
-                <div class="filter-group">
-                    <label>
-                        <input type="radio" name="gender" value="female" 
-                            {% if gender == 'female' %}checked{% endif %}>
-                        Women
-                    </label>
-                    <label>
-                        <input type="radio" name="gender" value="male" 
-                            {% if gender == 'male' %}checked{% endif %}>
-                        Men
-                    </label>
-                </div>
+            <div class="radio-buttons">
+                <input type="radio" name="gender" value="female" id="gender-female"
+                    {% if gender == 'female' %}checked{% endif %}>
+                <label for="gender-female" class="radio-btn">Female</label>
+
+                <input type="radio" name="gender" value="male" id="gender-male"
+                    {% if gender == 'male' %}checked{% endif %}>
+                <label for="gender-male" class="radio-btn">Male</label>
             </div>
         </div>
 
         <div class="filter-section">
             <h3>Sort By</h3>
             <div class="filter-row">
+
+                <!-- Discipline sorting -->
                 <div class="filter-group">
-                    <label for="rating_type">Discipline:</label>
-                    <select name="rating_type" id="rating_type">
-                        <option value="overall" {% if rating_type == 'overall' %}selected{% endif %}>Overall</option>
-                        <option value="swim" {% if rating_type == 'swim' %}selected{% endif %}>Swim</option>
-                        <option value="bike" {% if rating_type == 'bike' %}selected{% endif %}>Bike</option>
-                        <option value="run" {% if rating_type == 'run' %}selected{% endif %}>Run</option>
-                        <option value="transition" {% if rating_type == 'transition' %}selected{% endif %}>Transition</option>
-                    </select>
+                    <label>Discipline:</label>
+                    <div class="radio-buttons">
+                        <!-- Overall -->
+                        <input type="radio" name="disc" value="overall" id="disc-overall"
+                            {% if disc == "overall" %}checked{% endif %}>
+                        <label for="disc-overall" class="radio-btn">Overall</label>
+                        <!-- Swim -->
+                        <input type="radio" name="disc" value="swim" id="disc-swim"
+                            {% if disc == "swim" %}checked{% endif %}>
+                        <label for="disc-swim" class="radio-btn">Swim</label>
+                        <!-- Bike -->
+                        <input type="radio" name="disc" value="bike" id="disc-bike"
+                            {% if disc == "bike" %}checked{% endif %}>
+                        <label for="disc-bike" class="radio-btn">Bike</label>
+                        <!-- Run -->
+                        <input type="radio" name="disc" value="run" id="disc-run"
+                            {% if disc == "run" %}checked{% endif %}>
+                        <label for="disc-run" class="radio-btn">Run</label>
+                        <!-- Transition -->
+                        <input type="radio" name="disc" value="transition" id="disc-transition"
+                            {% if disc == "transition" %}checked{% endif %}>
+                        <label for="disc-transition" class="radio-btn">Transition</label>
+                    </div>
                 </div>
                 
+                <!-- Ordering: top vs hot -->
                 <div class="filter-group">
-                    <label for="order">Order:</label>
-                    <select name="order" id="order">
-                        <option value="desc" {% if order == 'desc' %}selected{% endif %}>Highest First</option>
-                        <option value="asc" {% if order == 'asc' %}selected{% endif %}>Lowest First</option>
-                    </select>
+                    <label>Order:</label>
+                    <div class="radio-buttons">
+                        <input type="radio" name="order" value="top" id="order-top"
+                            {% if order == 'top' %}checked{% endif %}>
+                        <label for="order-top" class="radio-btn">Top</label>
+
+                        <input type="radio" name="order" value="hot" id="order-hot"
+                            {% if order == 'hot' %}checked{% endif %}>
+                        <label for="order-hot" class="radio-btn">Hot</label>
+                    </div>
                 </div>
             </div>
         </div>
@@ -138,38 +158,76 @@
                 </div>
             </div>
 
+            {% if order == "top" %}
+            <!-- Top ordering, display all time ratings -->
             <div class="athlete-ratings">
                 <div class="rating-item">
                     <span class="rating-label">Overall</span>
-                    <span class="rating-value {% if rating_type == 'overall' %}rating-highlight{% endif %}">
+                    <span class="rating-value {% if disc == 'overall' %}rating-highlight{% endif %}">
                         {{ athlete.overall_rating }}
                     </span>
                 </div>
                 <div class="rating-item">
                     <span class="rating-label">Swim</span>
-                    <span class="rating-value {% if rating_type == 'swim' %}rating-highlight{% endif %}">
+                    <span class="rating-value {% if disc == 'swim' %}rating-highlight{% endif %}">
                         {{ athlete.swim_rating }}
                     </span>
                 </div>
                 <div class="rating-item">
                     <span class="rating-label">Bike</span>
-                    <span class="rating-value {% if rating_type == 'bike' %}rating-highlight{% endif %}">
+                    <span class="rating-value {% if disc == 'bike' %}rating-highlight{% endif %}">
                         {{ athlete.bike_rating }}
                     </span>
                 </div>
                 <div class="rating-item">
                     <span class="rating-label">Run</span>
-                    <span class="rating-value {% if rating_type == 'run' %}rating-highlight{% endif %}">
+                    <span class="rating-value {% if disc == 'run' %}rating-highlight{% endif %}">
                         {{ athlete.run_rating }}
                     </span>
                 </div>
                 <div class="rating-item">
                     <span class="rating-label">Transition</span>
-                    <span class="rating-value {% if rating_type == 'transition' %}rating-highlight{% endif %}">
+                    <span class="rating-value {% if disc == 'transition' %}rating-highlight{% endif %}">
                         {{ athlete.transition_rating }}
                     </span>
                 </div>
             </div>
+
+            {% elif order == "hot" %}
+            <!-- Hot ordering, display rating changes with formatted strings and set css classes -->
+            <div class="athlete-ratings">
+                <div class="rating-item">
+                    <span class="rating-label">Overall</span>
+                    <span class="rating-value {{ athlete.overall_change.css_class }} {{ 'rating-highlight' if disc == 'overall' }}">
+                        {{ athlete.overall_change.formatted_str }}
+                    </span>
+                </div>
+                <div class="rating-item">
+                    <span class="rating-label">Swim</span>
+                    <span class="rating-value {{ athlete.swim_change.css_class }} {{ 'rating-highlight' if disc == 'swim' }}">
+                        {{ athlete.swim_change.formatted_str }}
+                    </span>
+                </div>
+                <div class="rating-item">
+                    <span class="rating-label">Bike</span>
+                    <span class="rating-value {{ athlete.bike_change.css_class }} {{ 'rating-highlight' if disc == 'bike' }}">
+                        {{ athlete.bike_change.formatted_str }}
+                    </span>
+                </div>
+                <div class="rating-item">
+                    <span class="rating-label">Run</span>
+                    <span class="rating-value {{ athlete.run_change.css_class }} {{ 'rating-highlight' if disc == 'run' }}">
+                        {{ athlete.run_change.formatted_str }}
+                    </span>
+                </div>
+                <div class="rating-item">
+                    <span class="rating-label">Transition</span>
+                    <span class="rating-value {{ athlete.transition_change.css_class }} {{ 'rating-highlight' if disc == 'transition' }}">
+                        {{ athlete.transition_change.formatted_str }}
+                    </span>
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         <a href="/athlete/{{ athlete.athlete_id }}" class="athlete-card-link">
@@ -181,10 +239,12 @@
     {% endfor %}
 </div>
 
-<!-- Button to load next athletes -->
+<!-- Button to load next athletes, only show if there are more athletes to load -->
+{% if athletes|length == 50 %}
 <div class="load-more-container">
     <button id="loadMoreBtn" class="btn">Load More</button>
 </div>
+{% endif %}
 
 {% if not athletes %}
 <div class="no-results">

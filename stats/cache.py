@@ -24,12 +24,12 @@ from config import (
 )
 
 @lru_cache(maxsize=1)
-def get_female_short_leaderboard():
+def get_female_short_leaderboard() -> pd.DataFrame:
     with open(FEMALE_SHORT_LEADERBOARD, "rb") as f:
         return pickle.load(f)
     
 @lru_cache(maxsize=1)
-def get_male_short_leaderboard():
+def get_male_short_leaderboard() -> pd.DataFrame:
     with open(MALE_SHORT_LEADERBOARD, "rb") as f:
         return pickle.load(f)
     

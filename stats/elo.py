@@ -522,81 +522,58 @@ class TriathlonELOSystem:
         Args:
             leaderboard_path: Path to save leaderboard pickle
         """
-        # TODO: Make this a df? Lots of sorting and filtering done upon access, probably easier
-        leaderboard_data = {}
-        
-        for athlete_id, athlete in self.athletes.items():
-            leaderboard_data[athlete.athlete_id] = {
-                "athlete_id": athlete.athlete_id,
-                "profile_img_exists": athlete.profile_img != '',
-                "name": athlete.name,
-                "country_full": athlete.country_full,
-                "country_alpha3": athlete.country_alpha3,
-                "country_emoji": athlete.country_emoji,
-                "year_of_birth": athlete.year_of_birth,
-                "overall_rating": round(athlete.overall_rating),
-                "swim_rating": round(athlete.swim_rating),
-                "bike_rating": round(athlete.bike_rating),
-                "run_rating": round(athlete.run_rating),
-                "transition_rating": round(athlete.transition_rating),
-                "race_starts": athlete.race_starts,
-                "win_count": athlete.win_count,
-                "active": athlete.active
-            }
+        # Make df from key athlete data
+        leaderboard_df: pd.DataFrame = pd.DataFrame([a.to_leaderboard_df() for a in self.athletes.values()])
             
         # Find leaderboard postitions for each discipline
-        rankings_by_discipline = {
-            "overall": [],
-            "swim": [],
-            "bike": [],
-            "run": [],
-            "transition": []
-        }
+        if not leaderboard_df.empty:
+            rating_rank_map = {
+                "overall_rating": "overall_rank",
+                "swim_rating": "swim_rank",
+                "bike_rating": "bike_rank",
+                "run_rating": "run_rank",
+                "transition_rating": "transition_rank",
+            }
+            change_rank_map = {
+                "overall_change": "overall_change_rank",
+                "swim_change": "swim_change_rank",
+                "bike_change": "bike_change_rank",
+                "run_change": "run_change_rank",
+                "transition_change": "transition_change_rank",
+            }
+
+            for source_col, rank_col in {**rating_rank_map, **change_rank_map}.items():
+                leaderboard_df[rank_col] = (
+                    leaderboard_df[source_col]
+                    .rank(method = "min", ascending = False)
+                    .astype(int)
+                )
+
+            leaderboard_df = leaderboard_df.set_index("athlete_id")
         
-        for athlete_id, athlete in self.athletes.items():
-            rankings_by_discipline["overall"].append((athlete_id, athlete.overall_rating))
-            rankings_by_discipline["swim"].append((athlete_id, athlete.swim_rating))
-            rankings_by_discipline["bike"].append((athlete_id, athlete.bike_rating))
-            rankings_by_discipline["run"].append((athlete_id, athlete.run_rating))
-            rankings_by_discipline["transition"].append((athlete_id, athlete.transition_rating))
-            
-        ranks = defaultdict(dict)
-        for discipline, rankings in rankings_by_discipline.items():
-            for rank, (athlete_id, _) in enumerate(sorted(rankings, key = lambda x: x[1], reverse = True), 1):
-                ranks[athlete_id][f"{discipline}_rank"] = rank 
-            
         with open(leaderboard_path, 'wb') as f:
-            pickle.dump(leaderboard_data, f)
+            pickle.dump(leaderboard_df, f)
             
         print(f"Saved leaderboard to {leaderboard_path}")
 
-        # Save ranks to Athlete objects
-        self.save_ranks_to_athletes(ranks)
+        # Save ranks directly to Athlete objects as well
+        self.save_ranks_to_athletes(leaderboard_df)
 
-    def save_ranks_to_athletes(self, ranks: Dict[int, Dict[str, int]]) -> None:
+    def save_ranks_to_athletes(self, leaderboard: pd.DataFrame) -> None:
         """ 
         Save rankings directly to Athlete objects for fast access 
         
         Args:
-            ranks: Dict mapping athlete_id to dict of rankings per discipline. Example format:
-            {
-                athlete_id: {
-                    "overall_rank": int,
-                    "swim_rank": int,
-                    "bike_rank": int,
-                    "run_rank": int,
-                    "transition_rank": int
-                },
-                ...
+            ranks: DataFrame of all leadboard data
         """
-        for athlete_id, athlete_ranks in ranks.items():
-            athlete = self.athletes.get(athlete_id, None)
+        for row in leaderboard.itertuples():
+            athlete = self.athletes.get(row.athlete_id, None)
             if athlete is not None:
-                athlete.overall_rank = athlete_ranks.get("overall_rank", -1)
-                athlete.swim_rank = athlete_ranks.get("swim_rank", -1)
-                athlete.bike_rank = athlete_ranks.get("bike_rank", -1)
-                athlete.run_rank = athlete_ranks.get("run_rank", -1)
-                athlete.transition_rank = athlete_ranks.get("transition_rank", -1)
+                athlete.overall_rank = row.overall_rank
+                athlete.swim_rank = row.swim_rank
+                athlete.bike_rank = row.bike_rank 
+                athlete.run_rank = row.run_rank 
+                athlete.transition_rank = row.transition_rank
 
 def main():
     female_short_elo = TriathlonELOSystem(k_factor = 16, race_guide_file = FEMALE_SHORT_EVENTS, race_dir = FEMALE_SHORT_DIR)
