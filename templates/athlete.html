@@ -9,6 +9,8 @@
 {%block content %}
 <div class="athlete-hero">
     <div class="athlete-hero-main">
+
+        <!-- Key info: image, name, YOB, country etc. -->
         <img
             src="{{ url_for('static', path = 'athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') if athlete.profile_img else url_for('static', path='default_user.jpg') }}"
             alt="{{ athlete.name }}"
@@ -29,6 +31,36 @@
                 <span class="info-divider">•</span>
                 <span class="info-text">ID: {{ athlete.athlete_id }}</span>
             </div>
+        </div>
+        
+        <!-- Notable Results on the right side -->
+        <div class="notable-results-section">
+            <h3 class="notable-results-title">Notable Results</h3>
+            {% if notable_results %}
+                <div class="notable-results-list">
+                    {% for result in notable_results %}
+                        <div class="notable-result-item">
+                            <div class="notable-result-header">
+                                <span class="notable-result-description">{{ result.description }}</span>
+                                {% if result.races|length > 1 %}
+                                    <button class="notable-result-toggle" onclick="toggleRaces(this)">
+                                        <span class="toggle-icon">▼</span>
+                                    </button>
+                                {% endif %}
+                            </div>
+                            <div class="notable-result-races {{ 'multiple' if result.races|length > 1 else 'single' }} {{ 'collapsed' if result.races|length > 1 else '' }}">
+                                {% for race in result.races %}
+                                    <a href="/race/{{race.race_id}}" class="notable-result-race-link">
+                                        {{ race.race_name }}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="no-notable-results">No notable results yet</p>
+            {% endif %}
         </div>
     </div>
     
@@ -227,6 +259,7 @@
                 <tr>
                     <th class="sortable date-col" data-sort="date">Date</th>
                     <th class="sortable race-col" data-sort="string">Race</th>
+                    <th class="sortable program-col" data-sort="string">Program</th>
                     <th class="sortable position-col" data-sort="position">Position</th>
                     <th class="sortable time-col" data-sort="time">Overall</th>
                     <th class="sortable time-col" data-sort="time">Swim</th>
@@ -248,6 +281,9 @@
                                 <a href="/race/{{ race.race_id }}" class="link">
                                     {{ race.race_title }}
                                 </a>
+                            </td>
+                            <td class="program-col" data-value="{{ race.race }}">
+                                {{ race.program }}
                             </td>
                             <td class="position-cell {{ 'position-gold' if race.position == '1' else ('position-silver' if race.position == '2' else ('position-bronze' if race.position == '3' else ('position-dnf' if race.position in ['DNF', 'DQ', 'LAP'] else ''))) }}" data-value="{{ race.position }}">
                                 {{ race.position }}
@@ -311,6 +347,7 @@
                 <tr>
                     <th class="sortable date-col" data-sort="date">Date</th>
                     <th class="sortable race-col" data-sort="race-id">Race</th>
+                    <th class="sortable program-col" data-sort="string">Program</th>
                     <th class="sortable position-col" data-sort="position">Position</th>
                     <th class="sortable rating-col" data-sort="rating">Overall</th>
                     <th class="sortable rating-col" data-sort="rating">Swim</th>
@@ -329,6 +366,7 @@
                                     {{ rating.race_title }}
                                 </a>
                             </td>
+                            <td data-value="{{ rating.race_program }}">{{ rating.race_program }}</td>
                             <td class="position-cell {{ 'position-gold' if rating.position == '1' else ('position-silver' if rating.position == '2' else ('position-bronze' if rating.position == '3' else ('position-dnf' if rating.position in ['DNF', 'DQ', 'LAP', 'NC'] else ''))) }}" data-value="{{ rating.position }}">
                                 {{ rating.position }}
                             </td>
@@ -402,28 +440,30 @@
     <span class="collapse-toggle" onclick="toggleCollapse(this)">−</span>
     </h3>
     <div class="collapsible-content">
-        <div>
-            <h4>Overall % Behind Leader</h4>
-            <div class="chart-container-compact">
-                <canvas id="overall-pct-behind-chart-canvas"></canvas>
+        <div class="charts-grid">
+            <div class="mini-chart">
+                <h4>Overall % Behind Leader</h4>
+                <div class="chart-container-compact">
+                    <canvas id="overall-pct-behind-chart-canvas"></canvas>
+                </div>
             </div>
-        </div>
-        <div>
-            <h4>Swim % Behind Leader</h4>
-            <div class="chart-container-compact">
-                <canvas id="swim-pct-behind-chart-canvas"></canvas>
+            <div class="mini-chart">
+                <h4>Swim % Behind Leader</h4>
+                <div class="chart-container-compact">
+                    <canvas id="swim-pct-behind-chart-canvas"></canvas>
+                </div>
             </div>
-        </div>
-        <div>
-            <h4>Bike % Behind Leader</h4>
-            <div class="chart-container-compact">
-                <canvas id="bike-pct-behind-chart-canvas"></canvas>
+            <div class="mini-chart">
+                <h4>Bike % Behind Leader</h4>
+                <div class="chart-container-compact">
+                    <canvas id="bike-pct-behind-chart-canvas"></canvas>
+                </div>
             </div>
-        </div>
-        <div>
-            <h4>Run % Behind Leader</h4>
-            <div class="chart-container-compact">
-                <canvas id="run-pct-behind-chart-canvas"></canvas>
+            <div class="mini-chart">
+                <h4>Run % Behind Leader</h4>
+                <div class="chart-container-compact">
+                    <canvas id="run-pct-behind-chart-canvas"></canvas>
+                </div>
             </div>
         </div>
     </div>
@@ -435,29 +475,42 @@
     <span class="collapse-toggle" onclick="toggleCollapse(this)">−</span>
     </h3>
     <div class="collapsible-content">
-        <div class="mini-chart">
-            <h4>Swim Times</h4>
-            <div class="chart-container-compact">
-                <canvas id="swim-times-chart-canvas"></canvas>
+        <div class="charts-grid">
+            <div class="mini-chart full-width">
+                <h4>Run Times</h4>
+                <div class="chart-container-compact">
+                    <canvas id="run-times-chart-canvas"></canvas>
+                </div>
             </div>
-        </div>
-        <div class="mini-chart">
-            <h4>Bike Times</h4>
-            <div class="chart-container-compact">
-                <canvas id="bike-times-chart-canvas"></canvas>
+            <div class="mini-chart">
+                <h4>Swim Times</h4>
+                <div class="chart-container-compact">
+                    <canvas id="swim-times-chart-canvas"></canvas>
+                </div>
             </div>
-        </div>
-        <div class="mini-chart">
-            <h4>Run Times</h4>
-            <div class="chart-container-compact">
-                <canvas id="run-times-chart-canvas"></canvas>
+            <div class="mini-chart">
+                <h4>Bike Times</h4>
+                <div class="chart-container-compact">
+                    <canvas id="bike-times-chart-canvas"></canvas>
+                </div>
             </div>
-        </div>
+        </div> 
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+<script>
+function toggleRaces(button) {
+    const item = button.closest('.notable-result-item');
+    const racesDiv = item.querySelector('.notable-result-races');
+    const icon = button.querySelector('.toggle-icon');
+    
+    racesDiv.classList.toggle('collapsed');
+    icon.textContent = racesDiv.classList.contains('collapsed') ? '▼' : '▲';
+}
+</script>
+
 <!-- Historical ratings chart -->
 <script id="ratings-chart-data" type="application/json">
     {{ ratings_chart | tojson }}

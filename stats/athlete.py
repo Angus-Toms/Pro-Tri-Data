@@ -1,7 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 import sys
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from dataclasses import dataclass, asdict
 
 import pandas as pd
@@ -15,7 +15,8 @@ sys.path.insert(0, str(root_dir))
 from config import (
     ATHLETE_IMG_DIR,
     ELITE_START_RATING,
-    AG_START_RATING
+    AG_START_RATING,
+    RACE_CATEGORY_OFFSETS
 )
 
 def get_short_country_and_emoji(full_name: str) -> Tuple[str, str]:
@@ -30,7 +31,8 @@ def get_short_country_and_emoji(full_name: str) -> Tuple[str, str]:
         "Macau, China": ("MAC", "🇲🇴"),
         "Venezuela": ("VEN", "🇻🇪"),
         "Chinese Taipei": ("TPE", "🇹🇼"),
-        "Virgin Islands": ("ISV", "🇻🇮")
+        "Virgin Islands": ("ISV", "🇻🇮"),
+        "Tahiti": ("PYF", "🇵🇫")
     }
     
     if full_name in special_cases.keys():
@@ -40,6 +42,78 @@ def get_short_country_and_emoji(full_name: str) -> Tuple[str, str]:
     if country is None:
         return ("UNK", "🏳️")
     return (country.alpha_3, country.flag)
+
+@dataclass(slots=True)
+class NotableResult:
+    """ 
+    Represents a noticable race result. 
+    Use adjusted position for ranking, lower is better.
+    """
+    race_id: int 
+    cat_id: int # Single category (take most prestigous if multiplt)
+    position: int # Actual finish position 
+    adjusted_position: int # Position + offset for particular tier of racing
+
+def check_for_notable_result(race_id: int, race_name: str, position: str, cat_ids: List[int]) -> Optional[NotableResult]:
+    """
+    Returns a NotableResult object for a given result where possible.
+
+    race_id: int - ID of race
+    race_name: str - Race name, needed to test for details of events e.g. detecting olympics
+    position: str - Position, str as may be DNF/DQ/NC
+    cat_ids: List[int] - Categories of this event
+    """
+    # TODO: Include prog names in this to test for Junior/U23 events
+    try:
+        pos = int(position)
+    except (ValueError, AttributeError):
+        return None # DNF/DQ/LAP don't give a notable result
+    cat_ids = set(cat_ids)
+
+    # --- AG events --- 
+    # AG events don't qualify for notable result. TODO: Fix in future
+    if 483 in cat_ids:
+        return None
+
+    adjusted = 999999
+    return_cat_id = -1
+    # --- Olympic Games ---
+    if 343 in cat_ids:
+        if "olympic" in race_name.lower():
+            return_cat_id = 343
+            adjusted = pos + RACE_CATEGORY_OFFSETS[343]["offset"]
+        # Pan-American, European Games etc. are tagged as major games, convert these to conti champs
+        else:
+            cat_ids.remove(343) # Declass as major games
+            cat_ids.add(340)
+        
+    # --- Conti Champs ---
+    elif 340 in cat_ids:
+        return_cat_id = 340
+        adjusted = pos + RACE_CATEGORY_OFFSETS[340]["offset"]
+
+    # --- World Champs / WTCS Finals ---
+    elif 624 in cat_ids or 348 in cat_ids:
+        return_cat_id = 624
+        adjusted = pos + RACE_CATEGORY_OFFSETS[624]["offset"]
+    
+    # --- WTCS ---
+    elif 351 in cat_ids:
+        return_cat_id = 351
+        adjusted = pos + RACE_CATEGORY_OFFSETS[351]["offset"]
+    
+    # --- World Cup ---
+    elif 349 in cat_ids:
+        return_cat_id = 349
+        adjusted = pos + RACE_CATEGORY_OFFSETS[349]["offset"]
+
+    # --- Conti Cup ---
+    elif 341 in cat_ids:
+        return_cat_id = 341
+        adjusted = pos + RACE_CATEGORY_OFFSETS[341]["offset"]
+
+    return NotableResult(race_id, return_cat_id, pos, adjusted)
+
 
 @dataclass(slots=True)
 class RaceResult:
@@ -174,6 +248,8 @@ class Athlete:
         # Times 
         self.race_results: List[RaceResult] = []
 
+        self.notable_results: List[NotableResult] = []
+
         self.try_get_profile_img()
         
     def try_get_profile_img(self) -> None:
@@ -218,6 +294,7 @@ class Athlete:
         self,
         race_id: int,
         race_date: datetime,
+        race_name: str,
         position: str,
         overall_s: int,
         swim_s: int,
@@ -225,16 +302,21 @@ class Athlete:
         run_s: int,
         t1_s: int,
         t2_s: int,
+        cat_ids: List[int],
         fastest_overall_s: int,
         fastest_swim_s: int,
         fastest_bike_s: int,
         fastest_run_s: int,
         fastest_t1_s: int,
-        fastest_t2_s: int,
+        fastest_t2_s: int
     ) -> None:
         self.race_starts += 1
-        
-        # Update notable results                
+        # Check for notable results
+        result = check_for_notable_result(race_id, race_name, position, cat_ids)
+        if result is not None:
+            self.notable_results.append(result)
+
+        # Check for podiums              
         try:
             pos_int = int(position)
             if pos_int == 1:

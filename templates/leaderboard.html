@@ -115,9 +115,9 @@
             </div>
         </div>
 
-        <div class="filter-actions">
-            <button type="submit" class="btn">Apply Filters</button>
-            <a href="/leaderboard" class="btn btn-secondary">Reset</a>
+        <div class="search-buttons">
+            <a href="/leaderboard" class="btn">Reset Filters</a>
+            <button type="submit" class="btn">Search</button>
         </div>
     </form>
 </div>
@@ -132,7 +132,7 @@
         <div class="rank-badge {{ 'rank-' ~ athlete.rank ~ '-text' if athlete.rank <= 3 else '' }}">#{{athlete.rank}}</div>
         <div class="athlete-card-content">
             <div class="athlete-main-info">
-                <img src="{{ request.url_for('static', path='athlete_imgs/' ~ athlete['athlete_id'] ~ '.jpg') if athlete['profile_img_exists'] else request.url_for('static', path='default_user.jpg') }}" 
+                <img src="{{ url_for('static', path = 'athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') if athlete.profile_img_exists else url_for('static', path = 'default_user.jpg') }}" 
                      alt="{{ athlete.name }}" 
                      loading="lazy"
                      class="athlete-profile-img">

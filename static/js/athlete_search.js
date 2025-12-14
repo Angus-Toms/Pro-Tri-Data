@@ -10,7 +10,7 @@ searchInput.addEventListener('input', function() {
     clearTimeout(searchTimeout);
     
     // Hide results if query is too short
-    if (query.length < 2) {
+    if (query.length < 3) {
         searchResults.style.display = 'none';
         return;
     }

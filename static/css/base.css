@@ -172,28 +172,6 @@ html, body {
 }
 
 /* ============================================
-   RESPONSIVE DESIGN
-   ============================================ */
-@media (max-width: 768px) {
-    .header-container {
-        flex-direction: column;
-        gap: var(--spacing-md);
-        padding: var(--spacing-md) var(--spacing-lg);
-    }
-    
-    .main-nav {
-        width: 100%;
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-    
-    .page-container {
-        width: 95%;
-        padding: var(--spacing-md) 0;
-    }
-}
-
-/* ============================================
    COLLAPSIBLE SECTIONS
    ============================================ */
 .card-title {
@@ -409,6 +387,14 @@ th.sortable.desc::after {
     font-weight: bold;
 }
 
+/* Box containing rating and rating change to the right */
+.rating-cell {
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+    align-items: center;
+}
+
 /* ============================================
    CHARTS
    ============================================ */
@@ -447,6 +433,14 @@ th.sortable.desc::after {
     height: 100% !important;
 }
 
+/* 2 col grid for less important graphs */
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    width: 100%;
+}
+
 .mini-chart {
     margin-bottom: 1.5rem;
     min-width: 0; /* Prevent grid blowout */
@@ -472,15 +466,20 @@ th.sortable.desc::after {
    TABLE WIDTHS
    ============================================ */
 .date-col {
-    width: 110px;
+    width: 90px;
 }
 
 .race-col {
-    width: 300px;
+    width: 250px;
+}
+
+.program-col {
+    width: 90px;
+    
 }
 
 .position-col {
-    width: 90px;
+    width: 70px;
 }
 
 /* ============================================
@@ -545,4 +544,38 @@ th.sortable.desc::after {
 
 .small-link:active {
     color: var(--primary-hover);
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+@media (max-width: 1024px) {
+    /* Move rating changes under ratings on thinner displays */
+    .rating-cell {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 768px) {
+    .header-container {
+        flex-direction: column;
+        gap: var(--spacing-md);
+        padding: var(--spacing-md) var(--spacing-lg);
+    }
+    
+    .main-nav {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .page-container {
+        width: 95%;
+        padding: var(--spacing-md) 0;
+    }
+
+    /* Move to single column graph grid */
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
 }

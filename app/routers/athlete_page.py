@@ -1,6 +1,7 @@
 import pickle
 from functools import lru_cache
-from typing import List
+from typing import List, Dict, Tuple
+from collections import defaultdict
 import pandas as pd
 import time
 import numpy as np
@@ -48,6 +49,82 @@ def load_athlete_cached(athlete_id: int) -> Athlete:
 def format_ranking(rank: int) -> str:
     """ Format global ranking """
     return f"#{rank} all time" if rank > 0 else "No Ranking"
+
+def format_ordinal(n: int) -> str:
+    """ Convert int position to ordinal string """
+    if 10 <= n % 100 <= 20:
+        suffix = "th"
+    else:
+        suffix = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suffix}"
+
+def format_position_text(position: int, cat_id: int) -> str:
+    """ 
+    Format a result position based on a race tier. 
+
+    Example output:
+    - "Olympic Gold"
+    - "World Champion"
+    - "3rd at WTCS" 
+    """
+    # --- Special formatting for olympics --- 
+    if cat_id == 343:
+        if position == 1: return "Olympic Champion"
+        if position == 2: return "Olympic Silver"
+        if position == 3: return "Olympic Bronze"
+        return f"{format_ordinal(position)} at Olympic Games"
+    
+    # --- Special formatting for WC ---
+    if cat_id == 624:
+        if position == 1: return "World Champion"
+        if position == 2: return "World Championships Silver"
+        if position == 3: return "World Championships Bronze"
+        return f"{format_ordinal(position)} at World Championships"
+    
+    # --- Special formatting for conti champs --- 
+    if cat_id == 340:
+        if position == 1: return "Continental Champion"
+        if position == 2: return "Continental Championships Silver"
+        if position == 3: return "Continental Championships Bronze"
+        return f"{format_ordinal(position)} at Continental Championships"
+    
+    # --- WTCS / WC / CC ---
+    display_name = { 351: "WTCS", 349: "World Cup", 341: "Continental Cup" }.get(cat_id, "Race")
+    if position == 1:
+        return f"{display_name} win"
+    return f"{format_ordinal(position)} at {display_name}"
+
+def format_notable_results(athlete: Athlete, race_lookup: dict) -> List[dict]:
+    """ """
+    if not athlete.notable_results: return []
+
+    # Get top results by adjusted position
+    top_results = sorted(athlete.notable_results, key = lambda x: x.adjusted_position)[:10]
+
+    # Group results by description text
+    # Key is description, value is list of (race_id, race_name) tuple
+    grouped: Dict[str, List[Tuple[int, str]]] = defaultdict(list)
+
+    # Generate descriptions and race handles for top results
+    for result in top_results:
+        race_info = race_lookup.get(result.race_id, [])
+        race_handle = race_info[2] if len(race_info) > 1 else f"Race {result.race_id}"
+
+        description = format_position_text(result.position, result.cat_id)
+        grouped[description].append((result.race_id, race_handle))
+
+    # Collapse duplicate results
+    output = []
+    for description, race_list in grouped.items():
+        count = len(race_list)
+        description = f"{count}x {description}" if count > 1 else description
+            
+        output.append({
+            "description": description,
+            "races": [{"race_id": rid, "race_name": rname} for rid, rname in race_list]
+        })
+
+    return output
 
 def get_current_ratings(athlete: Athlete) -> dict:
     return {
@@ -117,11 +194,13 @@ def get_race_history(athlete: Athlete, race_lookup: dict) -> List[dict]:
     formatted_splits = []
     for result in sorted(athlete.race_results, key = lambda x : x.race_date, reverse = True):
         race_title = race_lookup.get(int(result.race_id), ['', ''])[1]
+        race_program = race_lookup.get(int(result.race_id), ['', '', '', '', '', ''])[4]
 
         formatted_splits.append({
             "race_id": result.race_id,
             "race_title": race_title,
             "race_date": result.race_date, # Format in template to allow for sorting by numeric date
+            "program": race_program,
             "position": result.position,
             "overall": format_time(result.overall_s),
             "overall_behind": format_time_behind(result.overall_behind_s) if result.overall_behind_s is not None else "",
@@ -146,11 +225,13 @@ def get_rating_history(athlete: Athlete, race_lookup: dict) -> List[dict]:
     
     for result, rating in zip(results, ratings):
         race_title = race_lookup.get(int(rating.race_id), ['', ''])[1]
-        
+        race_program = race_lookup.get(int(rating.race_id), ['', '', '', '', ''])[4]
+
         formatted_ratings.append({
             "race_id": rating.race_id,
             "race_date": rating.race_date, # Format in template to allow for sorting by numeric date
             "race_title": race_title,
+            "race_program": race_program,
             "position": result.position,
             "overall_rating": round(rating.overall_rating),
             "swim_rating": round(rating.swim_rating),
@@ -455,6 +536,10 @@ async def get_athlete(request: Request, athlete_id: int):
     
     race_lookup: dict = get_race_lookup()
 
+    # Format notable results
+    notable_results = format_notable_results(athlete, race_lookup)
+
+    # Details for key rating cards
     current_ratings = get_current_ratings(athlete)
     rating_changes_1yr = get_rating_changes_1yr(athlete)
     rating_peaks = get_best_ratings(athlete, race_lookup)
@@ -480,6 +565,7 @@ async def get_athlete(request: Request, athlete_id: int):
             "request": request, 
             "active_page": "athletes",
             "athlete": athlete,
+            "notable_results": notable_results,
             "current_ratings": current_ratings,
             "rating_changes_1yr": rating_changes_1yr,
             "rating_peaks": rating_peaks,

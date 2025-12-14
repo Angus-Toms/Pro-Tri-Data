@@ -77,23 +77,9 @@
     width: calc((100% - 370px) / 5);
 }
 
-.rating-cell {
-    display: flex;
-    flex-direction: row;
-    gap: 6px;
-    align-items: center;
-}
-
 .rating-change {
     font-size: 0.75em;
     white-space: nowrap;
-}
-
-.charts-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
-    width: 100%;
 }
 
 /* ============================================
@@ -114,9 +100,5 @@
     
     .time-col, .rating-col {
         font-size: 0.75rem;
-    }
-
-    .charts-grid {
-        grid-template-columns: 1fr;
     }
 }

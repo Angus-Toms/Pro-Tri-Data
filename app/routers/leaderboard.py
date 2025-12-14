@@ -26,7 +26,7 @@ async def leaderboard_more(
     """
     Load next 50 results from leaderboard
     """
-    # Load appropriate leaderboard based on gender
+    # Load appropriate leaderboard based on gender, leaderboard are pre-sorted by overall-rank
     if gender == "male":
         leaderboard_df: pd.DataFrame = get_male_short_leaderboard()
     else:
@@ -66,8 +66,6 @@ async def leaderboard_more(
         for athlete in chunk:
             for d in ["overall", "swim", "bike", "run", "transition"]:
                 athlete[f"{d}_change"] = format_rating_change(athlete[f"{d}_change"])
-
-    print(chunk[0])
 
     return templates.TemplateResponse(
         "partials/more_athlete_leaderboard.html",
@@ -123,7 +121,9 @@ async def leaderboard(
     leaderboard_df["rank"] = range(1, len(leaderboard_df) + 1)
 
     # Convert to dict for FastAPI
-    athletes = leaderboard_df.to_dict(orient = "records")
+    athletes = leaderboard_df.reset_index().to_dict(orient = "records")
+    print(athletes[0])
+
 
     if order == "hot":
             # Format rating changes to correct strings for hot leaderboard

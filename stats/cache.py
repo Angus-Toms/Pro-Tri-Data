@@ -48,6 +48,10 @@ def get_country_list():
     with open(COUNTRY_LIST, "rb") as f:
         return pickle.load(f)
 
+def get_athlete_name(athlete_id: int):
+    lookup: pd.DataFrame = get_athlete_lookup()
+    return lookup.loc[athlete_id, "name"] if athlete_id in lookup.index else None
+
 def process_single_athlete(athlete_file):
     """ Process a single athlete file and return the lookup data. """
     with open(athlete_file, "rb") as f:
@@ -59,7 +63,7 @@ def process_single_athlete(athlete_file):
             "country_emoji": athlete_data.country_emoji,
             "country_name": athlete_data.country_full,
             "year_of_birth": athlete_data.year_of_birth,
-        }    
+        }
     
 def make_athlete_lookup():
     """ Parallel process athlete lookup creation. """
@@ -76,8 +80,13 @@ def make_athlete_lookup():
             athlete_id, data = future.result()
             athlete_lookup[athlete_id] = data
     
+    # Convert to DataFrame for easy handling
+    lookup_df: pd.DataFrame = pd.DataFrame.from_dict(athlete_lookup, orient = "index")
+    lookup_df.index.name = "athlete_id"
+    lookup_df.sort_values(by = "rating", ascending = False, inplace = True) # Pre-sort for fast searches
+
     with open(ATHLETE_LOOKUP, "wb") as f:
-        pickle.dump(athlete_lookup, f)
+        pickle.dump(lookup_df, f)
     
     # Make country list from all saved athletes
     make_country_list(athlete_lookup)

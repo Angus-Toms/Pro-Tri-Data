@@ -1,13 +1,15 @@
 import pickle
 from functools import lru_cache
 
+import pandas as pd
+
 from config import RACES_DIR
 
 from app.routers.router_utils import format_time, format_time_behind, format_rating, format_rating_change
 
 from stats.athlete import Athlete
 from stats.race import Race
-from stats.cache import get_athlete_lookup
+from stats.cache import get_athlete_lookup, get_athlete_name
 
 from fastapi import HTTPException, Request, APIRouter
 from fastapi.responses import HTMLResponse
@@ -54,18 +56,17 @@ def get_race_standards(race: Race) -> dict:
 
 def get_best_performances(race: Race) -> dict:
     """ Format best individual performances (changes) plus athlete names """
-    athlete_lookup: dict = get_athlete_lookup()
     return {
         "overall_change": format_rating_change(race.overall_increase),
-        "overall_athlete_name": athlete_lookup.get(race.overall_increase_athlete_id, {}).get("name", ""),
+        "overall_athlete_name": get_athlete_name(race.overall_increase_athlete_id),
         "swim_change": format_rating_change(race.swim_increase),
-        "swim_athlete_name": athlete_lookup.get(race.swim_increase_athlete_id, {}).get("name", ""),
+        "swim_athlete_name": get_athlete_name(race.swim_increase_athlete_id),
         "bike_change": format_rating_change(race.bike_increase),
-        "bike_athlete_name": athlete_lookup.get(race.bike_increase_athlete_id, {}).get("name", ""),
+        "bike_athlete_name": get_athlete_name(race.bike_increase_athlete_id),
         "run_change": format_rating_change(race.run_increase),
-        "run_athlete_name": athlete_lookup.get(race.run_increase_athlete_id, {}).get("name", ""),
+        "run_athlete_name": get_athlete_name(race.run_increase_athlete_id),
         "transition_change": format_rating_change(race.transition_increase),
-        "transition_athlete_name": athlete_lookup.get(race.transition_increase_athlete_id, {}).get("name", "")
+        "transition_athlete_name": get_athlete_name(race.transition_increase_athlete_id)
     }
     
 def get_time_histograms(race: Race) -> dict:
@@ -169,18 +170,18 @@ async def get_race(request: Request, race_id: int):
     race: Race = load_race_cached(race_id)
     
     # Build athlete data
-    athlete_lookup: dict = get_athlete_lookup()
+    athlete_lookup: pd.DataFrame = get_athlete_lookup()
     athlete_data = {}
     for result in race.results:
         athlete_id = result.athlete_id
-        athlete_info = athlete_lookup.get(athlete_id, {})
+        athlete_info = athlete_lookup.loc[athlete_id]
         athlete_data[athlete_id] = {
             "athlete_id": athlete_id,
-            "name": athlete_info.get("name", "Unknown"),
-            "country_alpha3": athlete_info.get("country_alpha3", "UNK"),
-            "country_emoji": athlete_info.get("country_emoji", "🏳️"),
-            "year_of_birth": athlete_info.get("year_of_birth", None),
-            "age": race.date.year - athlete_info.get("year_of_birth", race.date.year) if athlete_info.get("year_of_birth") else None,
+            "name": athlete_info["name"],
+            "country_alpha3": athlete_info["country_alpha3"],
+            "country_emoji": athlete_info["country_emoji"],
+            "year_of_birth": athlete_info["year_of_birth"],
+            "age": race.date.year - athlete_info["year_of_birth"]
         }
         
     # Build splits data

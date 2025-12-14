@@ -25,7 +25,6 @@ from config import (
     FEMALE_SHORT_DIR,
     MALE_SHORT_DIR,
     CORRECTIONS,
-    ATHLETE_LOOKUP,
     RACE_LOOKUP,
     WARNINGS,
     IGNORED_RACES
@@ -88,6 +87,9 @@ class TriathlonELOSystem:
             
             fname: Path = self.race_dir / f"{row.prog_id}.csv"
             
+            # Load race category IDs
+            cat_ids: List[int] = literal_eval(row.cat_id)
+
             if fname.exists():
                 race: Race = Race(
                     race_id = row.prog_id,
@@ -98,7 +100,7 @@ class TriathlonELOSystem:
                     country = str(row.race_country)
                 )
                 self.races[row.prog_id] = race
-                self.process_single_race(fname, row)
+                self.process_single_race(fname, row, cat_ids)
             else:
                 tqdm.write(f"Warning: {fname} does not exist, skipping")
 
@@ -106,7 +108,7 @@ class TriathlonELOSystem:
         self.perform_athlete_postprocessing()
         self.perform_race_postprocessing()
                 
-    def process_single_race(self, file_path: str, prog_row) -> None:
+    def process_single_race(self, file_path: str, prog_row, cat_ids) -> None:
         try:
             race_id = prog_row.prog_id
             
@@ -125,8 +127,9 @@ class TriathlonELOSystem:
             race_date = datetime.strptime(prog_row.prog_date, '%Y-%m-%d')
             
             # Store race results and get athlete data
-            prog_name = str(prog_row.prog_name) # Pass prog name so we can initialise AG vs. Elites correctly
-            athlete_data = self.make_race_and_athletes(race_df, race_id, race_date, prog_name)
+            prog_name = str(prog_row.prog_name) # Pass prog name so we can initialise AG vs. Elite ratings correctly
+            race_name = str(prog_row.race_title) # Pass race name so we can check for particular special races
+            athlete_data = self.make_race_and_athletes(race_df, race_id, race_date, race_name, prog_name, cat_ids)
             
             # Calculate ELO changes
             elo_changes = self.calculate_elo_changes(athlete_data)
@@ -227,7 +230,7 @@ class TriathlonELOSystem:
         
         return race_df
     
-    def make_race_and_athletes(self, race_df: pd.DataFrame, race_id: int, race_date: datetime, prog_name: str) -> Dict:
+    def make_race_and_athletes(self, race_df: pd.DataFrame, race_id: int, race_date: datetime, race_name: str, prog_name: str, cat_ids: List[int]) -> Dict:
         """
         Store race results and athlete data, return data needed for ELO calculations.
 
@@ -235,7 +238,9 @@ class TriathlonELOSystem:
             race_df: DataFrame of results including athletes, splits, positions and overall times
             race_id: int ID
             race_date: datetime of the race
+            race_name: Full race title, used to test for particular events e.g. Olympics
             prog_name: Name of the program (e.g., "AG" or "Elites") to initialise athletes correctly
+            cat_ids: List of category IDs for this race
 
         Returns:
             athlete_data: Dict mapping athlete_id to (ratings, times) tuples
@@ -270,6 +275,7 @@ class TriathlonELOSystem:
             athlete.add_result(
                 race_id = race_id,
                 race_date = race_date,
+                race_name = race_name,
                 position = row['position'],
                 overall_s = row['overall_s'],
                 swim_s = row['swim_s'],
@@ -277,6 +283,7 @@ class TriathlonELOSystem:
                 run_s = row['run_s'],
                 t1_s = row['t1_s'],
                 t2_s = row['t2_s'],
+                cat_ids = cat_ids,
                 **fastest_splits
             )
             
@@ -550,6 +557,7 @@ class TriathlonELOSystem:
                 )
 
             leaderboard_df = leaderboard_df.set_index("athlete_id")
+            leaderboard_df.sort_values(by = "overall_rank", inplace = True) # Pre-sort so ranks can be accessed on read
         
         with open(leaderboard_path, 'wb') as f:
             pickle.dump(leaderboard_df, f)
@@ -567,7 +575,7 @@ class TriathlonELOSystem:
             ranks: DataFrame of all leadboard data
         """
         for row in leaderboard.itertuples():
-            athlete = self.athletes.get(row.athlete_id, None)
+            athlete = self.athletes.get(row.Index, None) # Index is athlete_id
             if athlete is not None:
                 athlete.overall_rank = row.overall_rank
                 athlete.swim_rank = row.swim_rank
