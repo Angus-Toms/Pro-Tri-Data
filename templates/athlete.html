@@ -35,35 +35,52 @@
         
         <!-- Notable Results on the right side -->
         <div class="notable-results-section">
-            <h3 class="notable-results-title">Notable Results</h3>
             {% if notable_results %}
-                <div class="notable-results-list">
-                    {% for result in notable_results %}
-                        <div class="notable-result-item">
-                            <div class="notable-result-header">
-                                <span class="notable-result-description">{{ result.description }}</span>
-                                {% if result.races|length > 1 %}
-                                    <button class="notable-result-toggle" onclick="toggleRaces(this)">
-                                        <span class="toggle-icon">▼</span>
-                                    </button>
-                                {% endif %}
+            <h3 class="notable-results-title">Notable Results</h3>
+                <div class="notable-results-categories">
+
+                    {% for category, results_by_desc in notable_results.items() %}
+                        {% if results_by_desc %}
+                            <div class="notable-category">
+                                <!-- Category header -->
+                                <div class="notable-category-header" onclick="toggleCategory(this)">
+                                    <span class="notable-category-title">{{ category }}</span>
+                                    <span class="toggle-icon">▼</span>
+                                </div>
+
+                                <!-- Category body -->
+                                <div class="notable-category-body collapsed">
+                                    {% for description, races in results_by_desc.items() %}
+                                        <div class="notable-result-item">
+                                            <div class="notable-result-header">
+                                                <span class="notable-result-description">{{ description }}</span>
+
+                                                {% if races|length > 1 %}
+                                                    <button class="notable-result-toggle" onclick="toggleRaces(this)">
+                                                        <span class="toggle-icon">▼</span>
+                                                    </button>
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="notable-result-races
+                                                {{ 'multiple' if races|length > 1 else 'single' }}
+                                                {{ 'collapsed' if races|length > 1 else '' }}">
+                                                {% for rid, race_name in races %}
+                                                    <a href="/race/{{ rid }}" class="notable-result-race-link">
+                                                        {{ race_name }}
+                                                    </a>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
                             </div>
-                            <div class="notable-result-races {{ 'multiple' if result.races|length > 1 else 'single' }} {{ 'collapsed' if result.races|length > 1 else '' }}">
-                                {% for race in result.races %}
-                                    <a href="/race/{{race.race_id}}" class="notable-result-race-link">
-                                        {{ race.race_name }}
-                                    </a>
-                                {% endfor %}
-                            </div>
-                        </div>
+                        {% endif %}
                     {% endfor %}
                 </div>
-            {% else %}
-                <p class="no-notable-results">No notable results yet</p>
             {% endif %}
         </div>
-    </div>
-    
+
     <div class="athlete-stats-banner">
         <div class="stat-block">
             <div class="stat-number">{{ athlete.race_starts }}</div>
@@ -501,13 +518,11 @@
 
 {% block extra_js %}
 <script>
-function toggleRaces(button) {
-    const item = button.closest('.notable-result-item');
-    const racesDiv = item.querySelector('.notable-result-races');
-    const icon = button.querySelector('.toggle-icon');
-    
-    racesDiv.classList.toggle('collapsed');
-    icon.textContent = racesDiv.classList.contains('collapsed') ? '▼' : '▲';
+// Palmares unfolding
+function toggleCategory(el) {
+    const body = el.nextElementSibling;
+    body.classList.toggle("collapsed");
+    el.querySelector(".toggle-icon").classList.toggle("open");
 }
 </script>
 

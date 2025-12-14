@@ -44,78 +44,6 @@ def get_short_country_and_emoji(full_name: str) -> Tuple[str, str]:
     return (country.alpha_3, country.flag)
 
 @dataclass(slots=True)
-class NotableResult:
-    """ 
-    Represents a noticable race result. 
-    Use adjusted position for ranking, lower is better.
-    """
-    race_id: int 
-    cat_id: int # Single category (take most prestigous if multiplt)
-    position: int # Actual finish position 
-    adjusted_position: int # Position + offset for particular tier of racing
-
-def check_for_notable_result(race_id: int, race_name: str, position: str, cat_ids: List[int]) -> Optional[NotableResult]:
-    """
-    Returns a NotableResult object for a given result where possible.
-
-    race_id: int - ID of race
-    race_name: str - Race name, needed to test for details of events e.g. detecting olympics
-    position: str - Position, str as may be DNF/DQ/NC
-    cat_ids: List[int] - Categories of this event
-    """
-    # TODO: Include prog names in this to test for Junior/U23 events
-    try:
-        pos = int(position)
-    except (ValueError, AttributeError):
-        return None # DNF/DQ/LAP don't give a notable result
-    cat_ids = set(cat_ids)
-
-    # --- AG events --- 
-    # AG events don't qualify for notable result. TODO: Fix in future
-    if 483 in cat_ids:
-        return None
-
-    adjusted = 999999
-    return_cat_id = -1
-    # --- Olympic Games ---
-    if 343 in cat_ids:
-        if "olympic" in race_name.lower():
-            return_cat_id = 343
-            adjusted = pos + RACE_CATEGORY_OFFSETS[343]["offset"]
-        # Pan-American, European Games etc. are tagged as major games, convert these to conti champs
-        else:
-            cat_ids.remove(343) # Declass as major games
-            cat_ids.add(340)
-        
-    # --- Conti Champs ---
-    elif 340 in cat_ids:
-        return_cat_id = 340
-        adjusted = pos + RACE_CATEGORY_OFFSETS[340]["offset"]
-
-    # --- World Champs / WTCS Finals ---
-    elif 624 in cat_ids or 348 in cat_ids:
-        return_cat_id = 624
-        adjusted = pos + RACE_CATEGORY_OFFSETS[624]["offset"]
-    
-    # --- WTCS ---
-    elif 351 in cat_ids:
-        return_cat_id = 351
-        adjusted = pos + RACE_CATEGORY_OFFSETS[351]["offset"]
-    
-    # --- World Cup ---
-    elif 349 in cat_ids:
-        return_cat_id = 349
-        adjusted = pos + RACE_CATEGORY_OFFSETS[349]["offset"]
-
-    # --- Conti Cup ---
-    elif 341 in cat_ids:
-        return_cat_id = 341
-        adjusted = pos + RACE_CATEGORY_OFFSETS[341]["offset"]
-
-    return NotableResult(race_id, return_cat_id, pos, adjusted)
-
-
-@dataclass(slots=True)
 class RaceResult:
     """
     Overall, Swim, bike, run, t1, t2 splits for a particular race
@@ -248,7 +176,12 @@ class Athlete:
         # Times 
         self.race_results: List[RaceResult] = []
 
-        self.notable_results: List[NotableResult] = []
+        # Notable results: List[(race_id, position)]
+        self.notable_results_olympic: List[Tuple[int, str]] = []
+        self.notable_results_world_champs: List[Tuple[int, str]] = []
+        self.notable_results_wtcs: List[Tuple[int, str]] = []
+        self.notable_results_wc: List[Tuple[int, str]] = []
+        self.notable_results_cc: List[Tuple[int, str]] = []
 
         self.try_get_profile_img()
         
@@ -311,11 +244,8 @@ class Athlete:
         fastest_t2_s: int
     ) -> None:
         self.race_starts += 1
-        # Check for notable results
-        result = check_for_notable_result(race_id, race_name, position, cat_ids)
-        if result is not None:
-            self.notable_results.append(result)
 
+        self._check_for_notable_result(race_id, race_name, position, cat_ids)
         # Check for podiums              
         try:
             pos_int = int(position)
@@ -371,6 +301,51 @@ class Athlete:
                 t2_pct_behind = ((t2_s - fastest_t2_s) / fastest_t2_s) if t2_s else None,
             )
         )
+
+    def _check_for_notable_result(self, race_id: int, race_name: str, position: str, cat_ids) -> None:
+        """
+        Check for results at major events and store for palmares
+        """
+        # TODO: Support for AG worlds, conti champs, U23/Junior worlds, junior CC
+        try: 
+            pos = int(position)
+        except (ValueError, AttributeError):
+            return # DNF/DQ/NC not notable
+        
+        cat_ids = set(cat_ids)
+
+        # --- AG events --- 
+        # AG events don't qualify as notable result
+        if 483 in cat_ids: return
+
+        if 343 in cat_ids:
+            if "olympic" in race_name.lower():
+                self.notable_results_olympic.append((race_id, pos))
+                return
+            else:
+                # Pan-American, European Games etc. are tagged as major games, convert these to conti champs
+                cat_ids.remove(343)
+                cat_ids.add(340)
+
+        # --- WTCS Finals / World Champs --- 
+        if 624 in cat_ids or 348 in cat_ids:
+            self.notable_results_world_champs.append((race_id, pos))
+            return 
+        
+        # --- WTCS ---
+        if 351 in cat_ids:
+            self.notable_results_wtcs.append((race_id, pos))
+            return
+
+        # --- WC ---
+        if 349 in cat_ids:
+            self.notable_results_wc.append((race_id, pos))
+            return
+        
+        # --- CC ---
+        if 341 in cat_ids:
+            self.notable_results_cc.append((race_id, pos))
+            return
 
     def get_times_df(self) -> pd.DataFrame:
         """

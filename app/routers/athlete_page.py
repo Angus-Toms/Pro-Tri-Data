@@ -52,79 +52,85 @@ def format_ranking(rank: int) -> str:
 
 def format_ordinal(n: int) -> str:
     """ Convert int position to ordinal string """
+    try:
+        n = int(n)
+    except Exception as e:
+        return "***"
+
     if 10 <= n % 100 <= 20:
         suffix = "th"
     else:
         suffix = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
     return f"{n}{suffix}"
 
-def format_position_text(position: int, cat_id: int) -> str:
-    """ 
-    Format a result position based on a race tier. 
+# TODO: Hacky int-ing for now, remove when reloading and positions are actually int
+def format_olympic_position(position: int) -> str:
+    position = int(position)
+    if position == 1: return "Olympic Champion"
+    if position == 2: return "Olympic Silver"
+    if position == 3: return "Olympic Bronze"
+    return f"{format_ordinal(position)} at Olympic Games"
 
-    Example output:
-    - "Olympic Gold"
-    - "World Champion"
-    - "3rd at WTCS" 
-    """
-    # --- Special formatting for olympics --- 
-    if cat_id == 343:
-        if position == 1: return "Olympic Champion"
-        if position == 2: return "Olympic Silver"
-        if position == 3: return "Olympic Bronze"
-        return f"{format_ordinal(position)} at Olympic Games"
-    
-    # --- Special formatting for WC ---
-    if cat_id == 624:
-        if position == 1: return "World Champion"
-        if position == 2: return "World Championships Silver"
-        if position == 3: return "World Championships Bronze"
-        return f"{format_ordinal(position)} at World Championships"
-    
-    # --- Special formatting for conti champs --- 
-    if cat_id == 340:
-        if position == 1: return "Continental Champion"
-        if position == 2: return "Continental Championships Silver"
-        if position == 3: return "Continental Championships Bronze"
-        return f"{format_ordinal(position)} at Continental Championships"
-    
-    # --- WTCS / WC / CC ---
-    display_name = { 351: "WTCS", 349: "World Cup", 341: "Continental Cup" }.get(cat_id, "Race")
-    if position == 1:
-        return f"{display_name} win"
-    return f"{format_ordinal(position)} at {display_name}"
+def format_world_champs_position(position: int) -> str:
+    position = int(position)
+    if position == 1: return "World Champion"
+    if position == 2: return "World Championships Silver"
+    if position == 3: return "World Championships Bronze"
+    return f"{format_ordinal(position)} at World Championships"
+
+def format_race_position(race_type: str, position: int) -> str:
+    position = int(position)
+    if position == 1: return f"{race_type} Win"
+    return f"{format_ordinal(position)} at {race_type}"
 
 def format_notable_results(athlete: Athlete, race_lookup: dict) -> List[dict]:
     """ """
-    if not athlete.notable_results: return []
+    # --- Group palmares by description text ---
+    # Special formatting for Olympic and World Champs
+    olympic_results = defaultdict(list)
+    for (rid, pos) in sorted(athlete.notable_results_olympic, key = lambda x: x[1]): # Sort by position
+            race_info = race_lookup.get(rid, [])
+            race_handle = race_info[2] if len(race_info) > 1 else f"Race {rid}"
+            description = format_olympic_position(pos)
+            olympic_results[description].append((rid, race_handle))
 
-    # Get top results by adjusted position
-    top_results = sorted(athlete.notable_results, key = lambda x: x.adjusted_position)[:10]
+    world_champs_results = defaultdict(list)
+    for (rid, pos) in sorted(athlete.notable_results_world_champs, key = lambda x: x[1]):
+            race_info = race_lookup.get(rid, [])
+            race_handle = race_info[2] if len(race_info) > 1 else f"Race {rid}"
+            description = format_world_champs_position(pos)
+            world_champs_results[description].append((rid, race_handle))
 
-    # Group results by description text
-    # Key is description, value is list of (race_id, race_name) tuple
-    grouped: Dict[str, List[Tuple[int, str]]] = defaultdict(list)
+    # WTCS, WC, CC formatting
+    wtcs_results = defaultdict(list)
+    for rid, pos in sorted(athlete.notable_results_wtcs, key = lambda x: x[1]):
+        race_info = race_lookup.get(rid, [])
+        race_handle = race_info[2] if len(race_info) > 1 else f"Race {rid}"
+        description = format_race_position("WTCS", pos)
+        wtcs_results[description].append((rid, race_handle))
 
-    # Generate descriptions and race handles for top results
-    for result in top_results:
-        race_info = race_lookup.get(result.race_id, [])
-        race_handle = race_info[2] if len(race_info) > 1 else f"Race {result.race_id}"
+    wc_results = defaultdict(list)
+    for rid, pos in sorted(athlete.notable_results_wc, key = lambda x: x[1]):
+        race_info = race_lookup.get(rid, [])
+        race_handle = race_info[2] if len(race_info) > 1 else f"Race {rid}"
+        description = format_race_position("World Cup", pos)
+        wc_results[description].append((rid, race_handle))
 
-        description = format_position_text(result.position, result.cat_id)
-        grouped[description].append((result.race_id, race_handle))
+    cc_results = defaultdict(list)
+    for rid, pos in sorted(athlete.notable_results_cc, key = lambda x: x[1]):
+        race_info = race_lookup.get(rid, [])
+        race_handle = race_info[2] if len(race_info) > 1 else f"Race {rid}"
+        description = format_race_position("Continental Cup", pos)
+        cc_results[description].append((rid, race_handle))
 
     # Collapse duplicate results
-    output = []
-    for description, race_list in grouped.items():
-        count = len(race_list)
-        description = f"{count}x {description}" if count > 1 else description
-            
-        output.append({
-            "description": description,
-            "races": [{"race_id": rid, "race_name": rname} for rid, rname in race_list]
-        })
-
-    return output
+    return {
+        "Olympics": olympic_results,
+        "World Championships": wc_results,
+        "WTCS": wtcs_results,
+        "World Cup": wc_results,
+        "Continental Cup": cc_results
+    }
 
 def get_current_ratings(athlete: Athlete) -> dict:
     return {
