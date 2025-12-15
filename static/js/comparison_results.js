@@ -1,3 +1,17 @@
+// --- Handle alignment request ---
+function alignChartStarts() {
+    isAligned = !isAligned;
+
+    const button = document.getElementById('align-btn');
+    button.textContent = isAligned ? "Show Actual Dates" : "Align Start Dates";
+    initOverallChart();
+    initSwimChart();
+    initBikeChart();
+    initRunChart();
+    initTransitionChart();
+}
+
+// --- Rating comparison graphs ---
 // Store references to charts, allows for reloading once they've been created
 let overallRatingsChart = null;  
 let swimRatingsChart = null;
@@ -5,11 +19,30 @@ let bikeRatingsChart = null;
 let runRatingsChart = null;
 let transitionRatingsChart = null;
 
+// Track alignment state
+let isAligned = false;
+
+// --- Initialisation functions for all graphs ---
 function initOverallChart() {
     const ctx = document.getElementById('overall-ratings-canvas');
     if (!ctx) return;
 
     const data = getJSON('overall-ratings-data');
+
+    // Align data if needed
+    if (isAligned) {
+        const firstDates = data.datasets.map(dataset => {
+            const dates = dataset.data.map(d => new Date(d.x).getTime());
+            return Math.min(...dates);
+        });
+
+        data.datasets.forEach((dataset, i) => {
+            dataset.data = dataset.data.map(point => ({
+                ...point,
+                x: new Date(point.x).getTime() - firstDates[i]
+            }));
+        });
+    }
 
     if (overallRatingsChart) {
         overallRatingsChart.destroy();
@@ -67,6 +100,21 @@ function initSwimChart() {
 
     const data = getJSON('swim-ratings-data');
 
+    // Align data if needed
+        if (isAligned) {
+            const firstDates = data.datasets.map(dataset => {
+                const dates = dataset.data.map(d => new Date(d.x).getTime());
+                return Math.min(...dates);
+            });
+
+            data.datasets.forEach((dataset, i) => {
+                dataset.data = dataset.data.map(point => ({
+                    ...point,
+                    x: new Date(point.x).getTime() - firstDates[i]
+                }));
+            });
+        }
+
     if (swimRatingsChart) {
         swimRatingsChart.destroy();
     }
@@ -122,6 +170,21 @@ function initBikeChart() {
     if (!ctx) return;
 
     const data = getJSON('bike-ratings-data');
+
+    // Align data if needed
+        if (isAligned) {
+            const firstDates = data.datasets.map(dataset => {
+                const dates = dataset.data.map(d => new Date(d.x).getTime());
+                return Math.min(...dates);
+            });
+
+            data.datasets.forEach((dataset, i) => {
+                dataset.data = dataset.data.map(point => ({
+                    ...point,
+                    x: new Date(point.x).getTime() - firstDates[i]
+                }));
+            });
+        }
 
     if (bikeRatingsChart) {
         bikeRatingsChart.destroy();
@@ -183,6 +246,21 @@ function initRunChart() {
         runRatingsChart.destroy();
     }
 
+    // Align data if needed
+        if (isAligned) {
+            const firstDates = data.datasets.map(dataset => {
+                const dates = dataset.data.map(d => new Date(d.x).getTime());
+                return Math.min(...dates);
+            });
+
+            data.datasets.forEach((dataset, i) => {
+                dataset.data = dataset.data.map(point => ({
+                    ...point,
+                    x: new Date(point.x).getTime() - firstDates[i]
+                }));
+            });
+        }
+
     runRatingsChart = new Chart(ctx, {
         type: 'line',
         data: data,
@@ -234,6 +312,21 @@ function initTransitionChart() {
     if (!ctx) return;
 
     const data = getJSON('transition-ratings-data');
+
+    // Align data if needed
+        if (isAligned) {
+            const firstDates = data.datasets.map(dataset => {
+                const dates = dataset.data.map(d => new Date(d.x).getTime());
+                return Math.min(...dates);
+            });
+
+            data.datasets.forEach((dataset, i) => {
+                dataset.data = dataset.data.map(point => ({
+                    ...point,
+                    x: new Date(point.x).getTime() - firstDates[i]
+                }));
+            });
+        }
 
     if (transitionRatingsChart) {
         transitionRatingsChart.destroy();

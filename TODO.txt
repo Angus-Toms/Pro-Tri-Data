@@ -23,6 +23,7 @@ Data format for site APIs:
 - [ ] Remove histograms if no splits
 - [X] "Hot" athletes leaderboard
 - [ ] Limit comparisons to gender
+- [X] Palmares
 
 Later:
 - [ ] Previous nationalities for athletes

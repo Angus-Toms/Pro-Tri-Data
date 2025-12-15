@@ -510,6 +510,111 @@ th.sortable.desc::after {
     font-weight: 600;
 }
 
+/* ============================================
+    HINT WIDGET STYLES
+    ============================================ */
+.hint-wrapper {
+    position: relative;
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 0.25rem;
+}
+
+.hint-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    font-style: normal;
+    cursor: help;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.hint-icon:hover {
+    background-color: #2a5f99;
+    transform: scale(1.1);
+}
+
+.hint-popup {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    min-width: 200px;
+    max-width: 300px;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--text-color);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.hint-popup.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Arrow pointing down */
+.hint-popup::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: white;
+}
+
+.hint-popup::before {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 7px solid transparent;
+    border-top-color: var(--border-color);
+    margin-top: 1px;
+}
+
+/* For hints that appear on the right (like in headings) */
+.hint-wrapper.hint-right .hint-popup {
+    left: calc(100% + 8px);
+    bottom: 50%;
+    transform: translateY(50%);
+}
+
+.hint-wrapper.hint-right .hint-popup::after {
+    top: 50%;
+    left: -6px;
+    transform: translateY(-50%);
+    border: 6px solid transparent;
+    border-right-color: white;
+}
+
+.hint-wrapper.hint-right .hint-popup::before {
+    top: 50%;
+    left: -7px;
+    transform: translateY(-50%);
+    border: 7px solid transparent;
+    border-right-color: var(--border-color);
+    margin-left: -1px;
+    margin-top: 0;
+}
+
 
 /* ============================================
    OTHER
@@ -577,5 +682,34 @@ th.sortable.desc::after {
     /* Move to single column graph grid */
     .charts-grid {
         grid-template-columns: 1fr;
+    }
+
+    /* Show hints below (instead of to the right) */
+    .hint-popup,
+    .hint-wrapper.hint-right .hint-popup {
+        left: 50%;
+        bottom: auto;
+        top: calc(100% + 8px);
+        transform: translateX(-50%);
+    }
+
+    .hint-popup::after,
+    .hint-wrapper.hint-right .hint-popup::after {
+        top: -6px;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-bottom-color: white;
+    }
+
+    .hint-popup::before,
+    .hint-wrapper.hint-right .hint-popup::before {
+        top: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 7px solid transparent;
+        border-bottom-color: var(--border-color);
+        margin-left: 0;
+        margin-top: 0;
     }
 }

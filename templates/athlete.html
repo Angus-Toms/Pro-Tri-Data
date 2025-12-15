@@ -58,32 +58,32 @@
         <div class="notable-results-section">
         {% if notable_results %}
             <div class="notable-results-header">
-                <span class="notable-results-label">Notable Results</span>
+                <span class="notable-results-label">Palmares</span>
             </div>
             <div class="notable-results-list">
                 {% for result in notable_results %}
-                    {% set primary_race = result.races[0] %}
                     <div class="notable-result-item">
                         <div class="notable-result-line">
                             <span class="notable-result-description">{{ result.description }}</span>
-                            <a href="/race/{{ primary_race.race_id }}" class="notable-result-primary">
-                                {{ primary_race.race_name }}
+                            {% if result.races|length == 1 %}
+                            <a href="/race/{{ result.races[0].race_id }}" class="small-link">
+                                {{ result.races[0].race_name }}
                             </a>
-                            {% if result.races|length > 1 %}
+                            {% else %}
                                 <button
                                     class="notable-result-toggle"
                                     type="button"
                                     aria-expanded="false"
                                     onclick="toggleNotableResults(this, 'notable-races-{{ loop.index }}')"
                                 >
-                                    +{{ result.races|length - 1 }} more
+                                    See All
                                 </button>
                             {% endif %}
                         </div>
                         {% if result.races|length > 1 %}
                             <div id="notable-races-{{ loop.index }}" class="notable-result-dropdown" hidden>
-                                {% for race in result.races[1:] %}
-                                    <a href="/race/{{ race.race_id }}" class="notable-result-dropdown-link">
+                                {% for race in result.races %}
+                                    <a href="/race/{{ race.race_id }}" class="small-link">
                                         {{ race.race_name }}
                                     </a>
                                 {% endfor %}
@@ -196,7 +196,7 @@
     </div>
 
     <div class="ratings-section">
-        <h3 class="card-title">Best Single Performances</h3>
+        <h3 class="card-title">Best Single Performances</h3>          
         <div class="ratings-grid">
             <div class="rating-box best">
                 <div class="rating-discipline">Overall</div>

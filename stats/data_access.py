@@ -156,7 +156,8 @@ class DataFetcher:
         """Removes quotes and capitalizes field value"""
         if pd.isna(value):
             return ""
-        return str(value).replace("'", "").replace('"', "").capitalize()
+        cleaned = str(value).replace("'", "").replace('"', '').strip()
+        return cleaned.title() if cleaned else ""
     
     def _get_event_programs(self, event_id):
         """Fetches programs for a specific event"""
@@ -237,12 +238,12 @@ class DataFetcher:
                     prog_details["race_title"] = event["event_title"]
                     prog_details["race_venue"] = self._clean_field(event.get("event_venue", ""))
                     prog_details["race_country"] = self._clean_field(event.get("event_country", ""))
-                    prog_details["cat_id"] = cat_id
-                    prog_details["cat_name"] = cat_name
+                    prog_details["cat_id"] = str(cat_id)
+                    prog_details["cat_name"] = str(cat_name)
                     
                     # Append and save
                     existing_progs.loc[len(existing_progs)] = prog_details
-                    existing_progs.to_csv(events_file, index=False)
+                    existing_progs.to_csv(events_file, index=False, quoting=1) # Minimal quotes
                     
                     new_count += 1
             

@@ -1,3 +1,29 @@
+// --- Hint popup ---
+function toggleHint(icon) {
+    const popup = icon.nextElementSibling;
+    const isShown = popup.classList.contains('show');
+    
+    // Close all other hints
+    document.querySelectorAll('.hint-popup.show').forEach(p => {
+        p.classList.remove('show');
+    });
+    
+    // Toggle this hint
+    if (!isShown) {
+        popup.classList.add('show');
+    }
+}
+
+// Close hints when clicking outside
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('.hint-wrapper')) {
+        document.querySelectorAll('.hint-popup.show').forEach(popup => {
+            popup.classList.remove('show');
+        });
+    }
+});
+
+// --- Utils ---
 function formatTime(seconds) {
     const absSeconds = Math.abs(seconds);
     const hours = Math.floor(absSeconds / 3600);

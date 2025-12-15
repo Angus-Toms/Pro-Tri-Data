@@ -257,6 +257,49 @@
     color: var(--text-light);
 }
 
+/* ============================================
+   ALIGNMENT BUTTON AND CONTAINER
+   ============================================ */
+.align-button-container {
+    text-align: center;
+    margin: 0 0 2rem 0;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.align-starts-button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.align-starts-button:hover {
+    background-color: var(--primary-hover);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+}
+
+.align-starts-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.align-button-hint {
+    margin: 0.75rem 0 0 0;
+    font-size: 0.875rem;
+    color: var(--text-light);
+    font-style: italic;
+}
+
 /* 
 MOBILE LAYOUT 
 Centers discipline/stat name above the two ratings

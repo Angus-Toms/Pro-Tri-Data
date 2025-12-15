@@ -14,6 +14,8 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
     gap: 0;
+    max-height: 340px;
+    overflow: hidden;
 }
 
 .athlete-hero-content {
@@ -209,17 +211,6 @@
     white-space: nowrap;
 }
 
-.notable-result-primary {
-    color: var(--primary-color);
-    text-decoration: none;
-    font-weight: 500;
-    line-height: 1.2;
-}
-
-.notable-result-primary:hover {
-    text-decoration: underline;
-}
-
 .notable-result-toggle {
     background: rgba(53, 122, 189, 0.1);
     border: none;
@@ -333,8 +324,10 @@
    RESPONSIVE
    ============================================ */
 @media (max-width: 1024px) {
+    /* Center align athlete profile and info but keep notable results to the side */
     .athlete-hero-main {
         grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+        max-height: none;
     }
 
     .athlete-hero-overview {
@@ -367,8 +360,10 @@
 }
 
 @media (max-width: 768px) {
+    /* Move notable results section below athlete profile and info */
     .athlete-hero-main {
         grid-template-columns: 1fr;
+        max-height: none;
     }
 
     .notable-results-section {

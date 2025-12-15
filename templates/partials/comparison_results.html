@@ -5,6 +5,7 @@
         <span class="collapse-toggle" onclick="toggleCollapse(this)">−</span>
     </h3>
     <div class="collapsible-content">
+
         {% for discipline in head_to_head_ratings %}
         <div class="h2h-row">
             <!-- Left rating -->
@@ -169,8 +170,20 @@
         Ratings Comparison
         <span class="collapse-toggle" onclick="toggleCollapse(this)">−</span>
     </h3>
-
     <div class="collapsible-content">
+
+    <!-- Alignment button -->
+            <div class="align-button-container">
+                <button 
+                    id="align-btn" 
+                    class="align-starts-button"
+                    onclick="alignChartStarts()"
+                >
+                    Align Career Starts
+                </button>
+                <p class="align-button-hint">Compare careers from Day 0 regardless of actual dates</p>
+            </div>
+
         <div class="charts-grid">
             <div class="mini-chart full-width">
                 <h4>Overall Ratings</h4>

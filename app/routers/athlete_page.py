@@ -69,19 +69,21 @@ def format_olympic_position(position: int) -> str:
     if position == 1: return "Olympic Champion"
     if position == 2: return "Olympic Silver"
     if position == 3: return "Olympic Bronze"
-    return f"{format_ordinal(position)} at Olympic Games"
+    return f"Olympic Games, {format_ordinal(position)}"
 
 def format_world_champs_position(position: int) -> str:
     position = int(position)
     if position == 1: return "World Champion"
     if position == 2: return "World Championships Silver"
     if position == 3: return "World Championships Bronze"
-    return f"{format_ordinal(position)} at World Championships"
+    return f"World Championships, {format_ordinal(position)}"
 
 def format_race_position(race_type: str, position: int) -> str:
     position = int(position)
     if position == 1: return f"{race_type} Win"
-    return f"{format_ordinal(position)} at {race_type}"
+    if position == 2: return f"{race_type} Silver"
+    if position == 3: return f"{race_type} Bronze"
+    return f"{race_type}, {format_ordinal(position)}"
 
 def format_notable_results(athlete: Athlete, race_lookup: dict) -> List[dict]:
     categories = [
@@ -120,16 +122,20 @@ def format_notable_results(athlete: Athlete, race_lookup: dict) -> List[dict]:
             entry["count"] += 1
 
         # Limit to results per event type
-        for entry in list(grouped_results.values())[:2]:
+        for entry in list(grouped_results.values())[:3]:
             description = entry["description"]
             if entry["count"] > 1:
-                description = f"{entry['count']}x{description}"
+                if description.endswith("Win"):
+                    description = f"{entry['count']} x {description}s" 
+                else:
+                    description = f"{entry['count']} x {description}"
+
             formatted_results.append({
                 "description": description,
                 "races": entry["races"]
             })
 
-    return formatted_results[:6]
+    return formatted_results[:10]
 
 def get_current_ratings(athlete: Athlete) -> dict:
     return {
