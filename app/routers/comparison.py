@@ -120,29 +120,23 @@ async def search_athletes_for_compare(q: str = ""):
         
         query: str = q.strip().lower()
 
-        # Get athlete lookup
-        athlete_lookup: dict = cache.get_athlete_lookup()
+        # Get athlete lookup, pre-sorted by overall rating
+        athlete_lookup: pd.DataFrame = cache.get_athlete_lookup()
+        matches = athlete_lookup[athlete_lookup["name"].str.contains(query, case = False)]
 
         # Search through athletes
-        results = []
-        for athlete_id, athlete_data in athlete_lookup.items():
-            if query in athlete_data["name"].lower() or query in str(athlete_id):
-                results.append({
-                    'athlete_id': athlete_id,
-                    'name': athlete_data["name"],
-                    'rating': athlete_data["rating"],
-                    'country_emoji': athlete_data["country_emoji"],
-                    'country_name': athlete_data["country_name"],
-                    'country_alpha3': athlete_data["country_alpha3"],
-                    'year_of_birth': athlete_data.get("year_of_birth", "")
-                })
-                
-                # Limit to 20 results
-                if len(results) >= 20:
-                    break
-        
-        # Sort by rating, faster athletes will probably more popular
-        results.sort(key = lambda x: x['rating'], reverse = True)
+        results = [
+            {
+                "athlete_id": row.Index,
+                "name": row.name,
+                "rating": row.rating,
+                "country_emoji": row.country_emoji,
+                "country_name": row.country_name,  
+                "country_alpha3": row.country_alpha3,
+                "year_of_birth": row.year_of_birth or ""
+            } 
+            for row in matches.itertuples()
+        ]
         
         return JSONResponse(results)
         

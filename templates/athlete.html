@@ -9,98 +9,90 @@
 {%block content %}
 <div class="athlete-hero">
     <div class="athlete-hero-main">
+        <div class="athlete-hero-content">
+            <div class="athlete-hero-overview">
+                <img
+                    src="{{ url_for('static', path = 'athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') if athlete.profile_img else url_for('static', path='default_user.jpg') }}"
+                    alt="{{ athlete.name }}"
+                    class="athlete-hero-img {{ 'active' if athlete.active else 'inactive' }}"
+                >
+                <div class="athlete-hero-info">
+                    <h1>{{ athlete.name }} {{ athlete.country_emoji }}</h1>
+                    <div class="athlete-basic-info">
+                        <span class="status-badge {{ 'active' if athlete.active else 'inactive' }}">
+                            {{ 'Active' if athlete.active else 'Inactive' }}
+                        </span>
+                        <div class="info-row">
+                            <div class="info-item">
+                                <span class="info-text">{{ athlete.country_full }}</span>
+                            </div>
+                            {% if athlete.year_of_birth != 0 %}
+                            <div class="info-item">
+                                <span class="info-text">Born {{ athlete.year_of_birth|int }}</span>
+                            </div>
+                            {% endif %}
+                            <div class="info-item">
+                                <span class="info-text">ID: {{ athlete.athlete_id }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-        <!-- Key info: image, name, YOB, country etc. -->
-        <img
-            src="{{ url_for('static', path = 'athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') if athlete.profile_img else url_for('static', path='default_user.jpg') }}"
-            alt="{{ athlete.name }}"
-            class="athlete-hero-img {{ 'active' if athlete.active else 'inactive' }}"
-        >
-        <div class="athlete-hero-info">
-            <h1>{{ athlete.name }} {{ athlete.country_emoji }}</h1>
-            <div class="athlete-basic-info">
-                <span class="status-badge {{ 'active' if athlete.active else 'inactive' }}">
-                    {{ 'Active' if athlete.active else 'Inactive' }}
-                </span>
-                <span class="info-divider">•</span>
-                <span class="info-text">{{ athlete.country_full }}</span>
-                {% if athlete.year_of_birth != 0 %}
-                    <span class="info-divider">•</span>
-                    <span class="info-text">Born {{ athlete.year_of_birth|int }}</span>
-                {% endif %}
-                <span class="info-divider">•</span>
-                <span class="info-text">ID: {{ athlete.athlete_id }}</span>
+            <div class="athlete-stats-banner">
+                <div class="stat-block">
+                    <div class="stat-number">{{ athlete.race_starts }}</div>
+                    <div class="stat-label">Race Starts</div>
+                </div>
+                <div class="stat-block">
+                    <div class="stat-number">{{ athlete.win_count }}</div>
+                    <div class="stat-label">Wins ({{ "%.1f"|format(athlete.win_pct * 100) }}%)</div>
+                </div>
+                <div class="stat-block">
+                    <div class="stat-number">{{ athlete.podium_count }}</div>
+                    <div class="stat-label">Podiums ({{ "%.1f"|format(athlete.podium_pct * 100) }}%)</div>
+                </div>
             </div>
         </div>
-        
-        <!-- Notable Results on the right side -->
+
         <div class="notable-results-section">
-            {% if notable_results %}
-            <h3 class="notable-results-title">Notable Results</h3>
-                <div class="notable-results-categories">
-
-                    {% for category, results_by_desc in notable_results.items() %}
-                        {% if results_by_desc %}
-                            <div class="notable-category">
-                                <!-- Category header -->
-                                <div class="notable-category-header" onclick="toggleCategory(this)">
-                                    <span class="notable-category-title">{{ category }}</span>
-                                    <span class="toggle-icon">▼</span>
-                                </div>
-
-                                <!-- Category body -->
-                                <div class="notable-category-body collapsed">
-                                    {% for description, races in results_by_desc.items() %}
-                                        <div class="notable-result-item">
-                                            <div class="notable-result-header">
-                                                <span class="notable-result-description">{{ description }}</span>
-
-                                                {% if races|length > 1 %}
-                                                    <button class="notable-result-toggle" onclick="toggleRaces(this)">
-                                                        <span class="toggle-icon">▼</span>
-                                                    </button>
-                                                {% endif %}
-                                            </div>
-
-                                            <div class="notable-result-races
-                                                {{ 'multiple' if races|length > 1 else 'single' }}
-                                                {{ 'collapsed' if races|length > 1 else '' }}">
-                                                {% for rid, race_name in races %}
-                                                    <a href="/race/{{ rid }}" class="notable-result-race-link">
-                                                        {{ race_name }}
-                                                    </a>
-                                                {% endfor %}
-                                            </div>
-                                        </div>
-                                    {% endfor %}
-                                </div>
+        {% if notable_results %}
+            <div class="notable-results-header">
+                <span class="notable-results-label">Notable Results</span>
+            </div>
+            <div class="notable-results-list">
+                {% for result in notable_results %}
+                    {% set primary_race = result.races[0] %}
+                    <div class="notable-result-item">
+                        <div class="notable-result-line">
+                            <span class="notable-result-description">{{ result.description }}</span>
+                            <a href="/race/{{ primary_race.race_id }}" class="notable-result-primary">
+                                {{ primary_race.race_name }}
+                            </a>
+                            {% if result.races|length > 1 %}
+                                <button
+                                    class="notable-result-toggle"
+                                    type="button"
+                                    aria-expanded="false"
+                                    onclick="toggleNotableResults(this, 'notable-races-{{ loop.index }}')"
+                                >
+                                    +{{ result.races|length - 1 }} more
+                                </button>
+                            {% endif %}
+                        </div>
+                        {% if result.races|length > 1 %}
+                            <div id="notable-races-{{ loop.index }}" class="notable-result-dropdown" hidden>
+                                {% for race in result.races[1:] %}
+                                    <a href="/race/{{ race.race_id }}" class="notable-result-dropdown-link">
+                                        {{ race.race_name }}
+                                    </a>
+                                {% endfor %}
                             </div>
                         {% endif %}
-                    {% endfor %}
-                </div>
-            {% endif %}
-        </div>
-
-    <div class="athlete-stats-banner">
-        <div class="stat-block">
-            <div class="stat-number">{{ athlete.race_starts }}</div>
-            <div class="stat-label">Race Starts</div>
-        </div>
-        <div class="stat-block">
-            <div class="stat-number">{{ athlete.win_count }}</div>
-            <div class="stat-label">Wins ({{ "%.1f"|format(athlete.win_pct * 100) }}%)</div>
-        </div>
-        <div class="stat-block">
-            <div class="stat-number">{{ athlete.podium_count }}</div>
-            <div class="stat-label">Podiums ({{ "%.1f"|format(athlete.podium_pct * 100) }}%)</div>
-        </div>
-        <div class="stat-block">
-            <div class="stat-number">{{ athlete.dnf_count }}</div>
-            <div class="stat-label">DNFs ({{ "%.1f"|format(athlete.dnf_pct * 100) }}%)</div>
-        </div>
-        <div class="stat-block">
-            <div class="stat-number">{{ athlete.dq_count }}</div>
-            <div class="stat-label">DQs ({{ "%.1f"|format(athlete.dq_pct * 100) }}%)</div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
         </div>
     </div>
 </div>
@@ -517,15 +509,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-// Palmares unfolding
-function toggleCategory(el) {
-    const body = el.nextElementSibling;
-    body.classList.toggle("collapsed");
-    el.querySelector(".toggle-icon").classList.toggle("open");
-}
-</script>
-
 <!-- Historical ratings chart -->
 <script id="ratings-chart-data" type="application/json">
     {{ ratings_chart | tojson }}

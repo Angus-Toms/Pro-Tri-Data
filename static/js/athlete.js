@@ -1,3 +1,13 @@
+function toggleNotableResults(button, targetId) {
+    const dropdown = document.getElementById(targetId);
+    if (!dropdown) return;
+
+    const expanded = button.getAttribute('aria-expanded') === 'true';
+    button.setAttribute('aria-expanded', !expanded);
+    dropdown.hidden = expanded;
+    button.classList.toggle('open', !expanded);
+}
+
 // Add click handlers to sortable headers
 document.addEventListener('DOMContentLoaded', () => {
     const tables = document.querySelectorAll('table.sortable-table');

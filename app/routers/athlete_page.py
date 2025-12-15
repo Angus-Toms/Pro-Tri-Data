@@ -1,7 +1,7 @@
 import pickle
 from functools import lru_cache
-from typing import List, Dict, Tuple
-from collections import defaultdict
+from typing import List, Tuple
+from collections import OrderedDict
 import pandas as pd
 import time
 import numpy as np
@@ -84,53 +84,52 @@ def format_race_position(race_type: str, position: int) -> str:
     return f"{format_ordinal(position)} at {race_type}"
 
 def format_notable_results(athlete: Athlete, race_lookup: dict) -> List[dict]:
-    """ """
-    # --- Group palmares by description text ---
-    # Special formatting for Olympic and World Champs
-    olympic_results = defaultdict(list)
-    for (rid, pos) in sorted(athlete.notable_results_olympic, key = lambda x: x[1]): # Sort by position
+    categories = [
+        athlete.notable_results_olympic,
+        athlete.notable_results_world_champs,
+        athlete.notable_results_wtcs,
+        athlete.notable_results_wc,
+        athlete.notable_results_cc
+    ]
+    formatters = [
+        format_olympic_position,
+        format_world_champs_position,
+        lambda pos: format_race_position("WTCS", pos),
+        lambda pos: format_race_position("World Cup", pos),
+        lambda pos: format_race_position("Continental Cup", pos)
+    ]
+
+    formatted_results: List[dict] = []
+
+    for results, formatter in zip(categories, formatters):
+        grouped_results: OrderedDict[str, dict] = OrderedDict()
+        for rid, pos in sorted(results, key = lambda x: int(x[1])):
             race_info = race_lookup.get(rid, [])
-            race_handle = race_info[2] if len(race_info) > 1 else f"Race {rid}"
-            description = format_olympic_position(pos)
-            olympic_results[description].append((rid, race_handle))
+            race_handle = race_info[2] if len(race_info) > 2 else f"Race {rid}"
+            description = formatter(pos)
 
-    world_champs_results = defaultdict(list)
-    for (rid, pos) in sorted(athlete.notable_results_world_champs, key = lambda x: x[1]):
-            race_info = race_lookup.get(rid, [])
-            race_handle = race_info[2] if len(race_info) > 1 else f"Race {rid}"
-            description = format_world_champs_position(pos)
-            world_champs_results[description].append((rid, race_handle))
+            entry = grouped_results.setdefault(description, {
+                "description": description,
+                "races": [],
+                "count": 0
+            })
+            entry["races"].append({
+                "race_id": rid,
+                "race_name": race_handle
+            })
+            entry["count"] += 1
 
-    # WTCS, WC, CC formatting
-    wtcs_results = defaultdict(list)
-    for rid, pos in sorted(athlete.notable_results_wtcs, key = lambda x: x[1]):
-        race_info = race_lookup.get(rid, [])
-        race_handle = race_info[2] if len(race_info) > 1 else f"Race {rid}"
-        description = format_race_position("WTCS", pos)
-        wtcs_results[description].append((rid, race_handle))
+        # Limit to results per event type
+        for entry in list(grouped_results.values())[:2]:
+            description = entry["description"]
+            if entry["count"] > 1:
+                description = f"{entry['count']}x{description}"
+            formatted_results.append({
+                "description": description,
+                "races": entry["races"]
+            })
 
-    wc_results = defaultdict(list)
-    for rid, pos in sorted(athlete.notable_results_wc, key = lambda x: x[1]):
-        race_info = race_lookup.get(rid, [])
-        race_handle = race_info[2] if len(race_info) > 1 else f"Race {rid}"
-        description = format_race_position("World Cup", pos)
-        wc_results[description].append((rid, race_handle))
-
-    cc_results = defaultdict(list)
-    for rid, pos in sorted(athlete.notable_results_cc, key = lambda x: x[1]):
-        race_info = race_lookup.get(rid, [])
-        race_handle = race_info[2] if len(race_info) > 1 else f"Race {rid}"
-        description = format_race_position("Continental Cup", pos)
-        cc_results[description].append((rid, race_handle))
-
-    # Collapse duplicate results
-    return {
-        "Olympics": olympic_results,
-        "World Championships": wc_results,
-        "WTCS": wtcs_results,
-        "World Cup": wc_results,
-        "Continental Cup": cc_results
-    }
+    return formatted_results[:6]
 
 def get_current_ratings(athlete: Athlete) -> dict:
     return {

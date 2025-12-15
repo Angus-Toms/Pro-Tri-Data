@@ -3,40 +3,52 @@
    ============================================ */
 .athlete-hero {
     background: white;
-    padding: 2rem;
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     margin-bottom: 2rem;
     border: 1px solid var(--border-color);
+    overflow: hidden;
 }
 
 .athlete-hero-main {
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+    gap: 0;
+}
+
+.athlete-hero-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* Profile Section with Background */
+.athlete-hero-overview {
+    display: flex;
+    align-items: center;
     gap: 2rem;
-    margin-bottom: 2rem;
-    padding-bottom: 2rem;
+    padding: 2.5rem 2rem;
     border-bottom: 1px solid var(--border-color);
-    align-items: start;
 }
 
 .athlete-hero-img {
-    width: 120px;
-    height: 120px;
+    width: 140px;
+    height: 140px;
     border-radius: 50%;
     object-fit: cover;
-    border: 4px solid var(--border-color);
+    border: 4px solid white;
     flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .athlete-hero-img.active {
     border-color: var(--success-color);
-    box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.1);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
 }
 
 .athlete-hero-img.inactive {
     border-color: var(--error-color);
-    box-shadow: 0 0 0 4px rgba(244, 67, 54, 0.1);
+    box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
     opacity: 0.7;
 }
 
@@ -44,7 +56,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 1.25rem;
 }
 
 .athlete-hero-info h1 {
@@ -56,8 +68,15 @@
 
 .athlete-basic-info {
     display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.info-row {
+    display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 1.5rem;
     flex-wrap: wrap;
 }
 
@@ -68,6 +87,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    width: fit-content;
 }
 
 .status-badge.active {
@@ -85,175 +105,170 @@
     font-size: 1rem;
 }
 
-.info-divider {
-    color: var(--border-color);
-    font-weight: bold;
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Stats banner */
+.athlete-stats-banner {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    flex: 1;
+}
+
+.stat-block {
+    padding: 1.75rem 1.5rem;
+    text-align: center;
+    border-right: 1px solid var(--border-color);
+}
+
+.stat-block:last-child {
+    border-right: none;
+}
+
+.stat-number {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin: 0;
+    line-height: 1.1;
+}
+
+.stat-label {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
 }
 
 /* ============================================
    NOTABLE RESULTS SECTION
    ============================================ */
 .notable-results-section {
+    border-left: 1px solid var(--border-color);
     min-width: 280px;
     max-width: 350px;
-}
-
-.notable-results-categories {
+    padding: 2rem 1.5rem;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    align-self: stretch;
 }
 
-.notable-category {
-    border: 1px solid var(--border-color, #e3e3e3);
-    border-radius: 10px;
-    overflow: hidden;
-    background: #fff;
-}
-
-.notable-category-header {
+.notable-results-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.6rem 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-    background: #f6f7f9;
+    margin-bottom: 0.5rem;
 }
 
-.notable-category-header:hover {
-    background: #eef0f3;
-}
-
-.notable-category-body {
-    padding: 0.5rem 0.8rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-}
-
-.notable-category-body.collapsed {
-    display: none;
-}
-
-.notable-results-title {
-    margin: 0 0 0.75rem 0;
+.notable-results-label {
     font-size: 0.85rem;
-    color: var(--text-light);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
+    color: var(--text-light);
     font-weight: 600;
 }
 
 .notable-results-list {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.65rem;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+    flex: 1;
 }
 
 .notable-result-item {
-    padding: 0.4rem 0;
-    border-bottom: 1px dashed #ddd;
+    border-bottom: 1px solid rgba(209, 213, 219, 0.6);
+    padding-bottom: 0.5rem;
 }
 
 .notable-result-item:last-child {
     border-bottom: none;
+    padding-bottom: 0;
 }
 
-.notable-result-header {
+.notable-result-line {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 0.35rem;
     font-size: 0.9rem;
+    flex-wrap: wrap;
 }
 
 .notable-result-description {
-    font-weight: 500;
+    font-weight: 600;
     color: var(--text-color);
+    white-space: nowrap;
 }
 
-.notable-result-toggle {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0.2rem 0.4rem;
+.notable-result-primary {
     color: var(--primary-color);
-    font-size: 0.7rem;
-    transition: color var(--transition-fast);
-    flex-shrink: 0;
-}
-
-.notable-result-toggle:hover {
-    color: var(--primary-hover);
-}
-
-.toggle-icon {
-    display: inline-block;
-    transition: transform var(--transition-fast);
-}
-
-.notable-result-races {
-    margin-top: 0.25rem;
-    padding-left: 0.75rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-}
-
-.notable-result-races.collapsed {
-    display: none;
-}
-
-.notable-result-race-link {
-    font-size: 0.85rem;
-    color: #555;
     text-decoration: none;
+    font-weight: 500;
+    line-height: 1.2;
 }
 
-.notable-result-race-link:hover {
+.notable-result-primary:hover {
     text-decoration: underline;
 }
 
-/* Stats Banner */
-.athlete-stats-banner {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 2rem;
-    text-align: center;
-}
-
-.stat-block {
-    position: relative;
-    padding: 0.5rem;
-}
-
-.stat-block:not(:last-child)::after {
-    content: '';
-    position: absolute;
-    right: -1rem;
-    top: 15%;
-    height: 70%;
-    width: 1px;
-    background: var(--border-color);
-}
-
-.stat-number {
-    font-size: 2.5rem;
-    font-weight: bold;
+.notable-result-toggle {
+    background: rgba(53, 122, 189, 0.1);
+    border: none;
     color: var(--primary-color);
-    margin-bottom: 0.25rem;
-    line-height: 1;
+    font-size: 0.75rem;
+    padding: 0.15rem 0.65rem;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast);
 }
 
-.stat-label {
-    color: var(--text-light);
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 500;
+.notable-result-toggle.open {
+    background: var(--primary-color);
+    color: #fff;
 }
-/* Ratings */
 
+.notable-result-dropdown[hidden] {
+    display: none !important;
+}
+
+.notable-result-dropdown {
+    margin-top: 0.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.notable-result-dropdown-link {
+    font-size: 0.85rem;
+    color: var(--text-color);
+    text-decoration: none;
+    padding-left: 0.75rem;
+    position: relative;
+}
+
+.notable-result-dropdown-link::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: var(--primary-color);
+}
+
+.notable-result-dropdown-link:hover {
+    color: var(--primary-color);
+}
+
+/* ============================================
+   RATINGS
+   ============================================ */
 /* Used when no splits have been recorded for particular performance */
 .no-best-performance {
     font-size: var(--font-size-bg);
@@ -318,64 +333,55 @@
    RESPONSIVE
    ============================================ */
 @media (max-width: 1024px) {
-    .ratings-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-    
-    .rating-box:nth-child(3n)::after {
-        display: none;
+    .athlete-hero-main {
+        grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
     }
 
-    .athlete-hero-main {
-        grid-template-columns: auto 1fr;
-        grid-template-rows: auto auto;
+    .athlete-hero-overview {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+        align-items: center;
     }
-    
-    .notable-results-section {
-        grid-column: 1 / -1;
-        max-width: 100%;
-        margin-top: 1rem;
-        padding-top: 1rem;
-        border-top: 1px solid var(--border-color);
+
+    .athlete-hero-img {
+        width: 120px;
+        height: 120px;
+    }
+
+    .athlete-hero-info {
+        align-items: center;
+    }
+
+    .athlete-basic-info {
+        align-items: center;
+    }
+
+    .info-row {
+        justify-content: center;
+    }
+
+    .ratings-grid {
+        grid-template-columns: repeat(3, 1fr);
     }
 }
 
 @media (max-width: 768px) {
     .athlete-hero-main {
         grid-template-columns: 1fr;
-        text-align: center;
-    }
-
-    .athlete-hero-img {
-        margin: 0 auto;
-    }
-    
-    .athlete-hero-info h1 {
-        font-size: 2rem;
-    }
-    
-    .athlete-basic-info {
-        justify-content: center;
     }
 
     .notable-results-section {
-        text-align: left;
-        padding-top: 1.5rem;
+        width: 100%;
+        max-width: 100%;
+        border-left: none;
+        border-top: 1px solid var(--border-color);
     }
-    
-    .notable-result-item {
-        padding: 0.6rem 0.8rem;
+
+    .notable-results-list {
+        max-height: none;
     }
-    
-    .athlete-stats-banner {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1.5rem;
-    }
-    
-    .stat-block:nth-child(even)::after {
-        display: none;
-    }
-    
+
     .stat-number {
         font-size: 2rem;
     }
@@ -397,11 +403,24 @@
     .athlete-stats-banner {
         grid-template-columns: 1fr;
     }
-    
-    .stat-block::after {
-        display: none;
+
+    .stat-block {
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
     }
-    
+
+    .stat-block:last-child {
+        border-bottom: none;
+    }
+
+    .athlete-hero-overview {
+        padding: 1.5rem;
+    }
+
+    .athlete-hero-info h1 {
+        font-size: 2rem;
+    }
+
     .ratings-grid {
         grid-template-columns: 1fr;
     }
