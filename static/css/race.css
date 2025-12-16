@@ -1,32 +1,159 @@
-.race-header {
-    margin-bottom: var(--spacing-xl);
+/* ============================================
+   RACE HERO SECTION
+   ============================================ */
+.race-hero {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
 }
 
-.race-header h1 {
-    margin-bottom: var(--spacing-sm);
+.race-hero-main {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 0;
+}
+
+/* Left section - Race info */
+.race-hero-info {
+    padding: 2.5rem 2rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-right: 1px solid var(--border-color);
+}
+
+.race-hero-info h1 {
+    font-size: 2rem;
     color: var(--text-color);
-    font-size: var(--font-size-xxl);
+    margin: 0 0 1.25rem 0;
+    line-height: 1.3;
 }
 
-.race-info {
+/* Right section - Podium */
+.race-podium-section {
+    padding: 2rem 1.5rem;
+    background: #fafbfc;
+    display: flex;
+    flex-direction: column;
+}
+
+.podium-header {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
     color: var(--text-light);
-    line-height: 1.6;
+    font-weight: 600;
+    margin-bottom: 1.25rem;
+    text-align: center;
 }
 
-.race-meta {
-    margin-bottom: var(--spacing-xs);
-    font-size: var(--font-size-lg);
+.podium-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
-.race-separator {
-    margin: 0 var(--spacing-sm);
-    color: var(--text-lighter);
+.podium-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    border-radius: 8px;
+    transition: background 0.15s ease;
 }
 
-.race-athletes {
-    margin: var(--spacing-xs) 0;
-    font-size: var(--font-size-sm);
-    color: var(--text-lighter);
+.podium-item:hover {
+    background: rgba(53, 122, 189, 0.05);
+}
+
+.podium-item.gold {
+    background: var(--gold);
+}
+
+.podium-item.silver {
+    background: var(--silver);
+}
+
+.podium-item.bronze {
+    background: var(--bronze);
+}
+
+.podium-position {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-light);
+    width: 30px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.podium-item.gold .podium-position {
+    color: var(--gold-accent);
+}
+
+.podium-item.silver .podium-position {
+    color: var(--silver-accent);
+}
+
+.podium-item.bronze .podium-position {
+    color: var(--bronze-accent);
+}
+
+.podium-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: none;
+}
+
+.podium-item.gold .podium-avatar {
+    box-shadow: 0 0 0 3px var(--gold-accent);
+}
+
+.podium-item.silver .podium-avatar {
+    box-shadow: 0 0 0 3px var(--silver-accent);
+}
+
+.podium-item.bronze .podium-avatar {
+    box-shadow: 0 0 0 3px var(--bronze-accent);
+}
+
+.podium-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.podium-name {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-color);
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.podium-name a {
+    color: var(--text-color);
+    text-decoration: none;
+}
+
+.podium-name a:hover {
+    color: var(--primary-color);
+}
+
+.podium-time {
+    font-size: 0.875rem;
+    color: var(--text-light);
+    font-weight: 500;
+}
+
+.podium-country {
+    font-size: 1.25rem;
+    margin-left: 0.25rem;
 }
 
 /* ============================================
@@ -85,7 +212,98 @@
 /* ============================================
    RESPONSIVE
    ============================================ */
+@media (max-width: 1024px) {
+    .race-hero-main {
+        grid-template-columns: 1fr 350px;
+    }
+
+    /* Center align race info */
+    .race-hero-info {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .race-hero-info .meta-grid {
+        width: 100%;
+        max-width: 500px;
+    }
+
+    .race-hero-info h1 {
+        text-align: center;
+    }
+}
+
 @media (max-width: 768px) {
+    /* Move podium below race info */
+    .race-hero-main {
+        grid-template-columns: 1fr;
+    }
+
+    .race-hero-info {
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .race-podium-section {
+        background: white;
+    }
+
+    .race-hero-info h1 {
+        font-size: 1.5rem;
+    }
+
+    .podium-list {
+        flex-direction: row;
+        gap: 0.75rem;
+    }
+
+    .podium-item {
+        flex-direction: column;
+        align-items: center;
+        padding: 1rem 0.5rem;
+        flex: 1;
+        position: relative;
+        text-align: center;
+    }
+
+    .podium-position {
+        position: absolute;
+        top: 0.5rem;
+        left: 0.5rem;
+        font-size: 1rem;
+        width: auto;
+    }
+
+    .podium-avatar {
+        width: 60px;
+        height: 60px;
+        margin-bottom: 0.5rem;
+    }
+
+    .podium-details {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .podium-name {
+        font-size: 0.875rem;
+        text-align: center;
+        white-space: normal;
+        overflow: visible;
+    }
+
+    .podium-time {
+        font-size: 0.75rem;
+    }
+
+    .podium-country {
+        display: block;
+        margin: 0.25rem 0 0 0;
+    }
+
     .race-header h1 {
         font-size: var(--font-size-xl);
     }
@@ -100,5 +318,16 @@
     
     .time-col, .rating-col {
         font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .race-hero-info {
+        padding: 1.5rem;
+    }
+
+    .podium-avatar {
+        width: 50px;
+        height: 50px;
     }
 }

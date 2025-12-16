@@ -152,6 +152,87 @@ html, body {
 }
 
 /* ============================================
+   METADATA GRID - for athlete and race info
+   ============================================ */
+.meta-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.meta-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-lighter);
+    font-weight: 500;
+}
+
+.meta-value {
+    font-size: 1rem;
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+/* Responsive: single column on very small screens */
+@media (max-width: 480px) {
+    .meta-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================
+   STATS BAR - for race and athlete key stats
+   ============================================ */
+.stats-bar {
+    display: flex;
+    gap: 2rem;
+    padding-top: 1.5rem;
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-lighter);
+    font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .stats-bar {
+        gap: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-bar {
+        flex-wrap: wrap;
+    }
+}
+
+/* ============================================
    FOOTER
    ============================================ */
 .site-footer {

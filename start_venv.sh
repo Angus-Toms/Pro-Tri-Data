@@ -1,5 +1,5 @@
 # Activate venv
-source venv/bin/activate
+source ./.venv/bin/activate
 
 # Upgrade pip
 pip install --upgrade pip

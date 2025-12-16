@@ -7,19 +7,81 @@
 {% endblock %}
 
 {% block content %}
-<div class="race-header">
-    <h1>{{ race.race_title }}</h1>
-    <div class="race-info">
-        <p class="race-meta">
-            <span>{{ race.date.strftime('%B %d, %Y') }}</span>
-            <span class="race-separator">•</span>
-            <span>{{ race.location }}, {{ race.country }}</span>
-            <span class="race-separator">•</span>
-            <span>{{ race.prog_name }}</span>
-            <span class="race-separator">•</span>
-            <span>ID {{ race.race_id }}</span>
-        </p>
-        <p class="race-athletes">{{ race.athlete_count }} athletes</p>
+<div class="race-hero">
+    <div class="race-hero-main">
+        <!-- Race Information -->
+        <div class="race-hero-info">
+            <h1>{{ race.race_title }}</h1>
+            
+            <div class="meta-grid">
+                <div class="meta-item">
+                    <span class="meta-label">Date</span>
+                    <span class="meta-value">{{ race.date.strftime('%B %d, %Y') }}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Location</span>
+                    <span class="meta-value">{{ race.location }}, {{ race.country }}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Program</span>
+                    <span class="meta-value">{{ race.prog_name }}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Race ID</span>
+                    <span class="meta-value">{{ race.race_id }}</span>
+                </div>
+            </div>
+
+            <!-- Key stats -->
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <div class="stat-number">{{ race.athlete_count }}</div>
+                    <div class="stat-label">Athletes</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ 75 }}</div>
+                    <div class="stat-label">Finishers</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ 3 }}</div>
+                    <div class="stat-label">DNFs</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Podium -->
+        <div class="race-podium-section">
+            {% if splits_data and splits_data|length > 0 %}
+            <div class="podium-header">Podium</div>
+            <div class="podium-list">
+                {% for athlete in splits_data[:3] %}
+                    {% if athlete.position in ['1', '2', '3'] %}
+                    <div class="podium-item {{ 'gold' if athlete.position == '1' else 'silver' if athlete.position == '2' else 'bronze' }}">
+                        <div class="podium-position">{{ athlete.position }}</div>
+                        <img 
+                            src="{{ url_for('static', path='athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') }}"
+                            onerror="{{ url_for('static', path='default_user.jpg') }}"
+                            alt="{{ athlete.name }}"
+                            class="podium-avatar"
+                        >
+                        <div class="podium-details">
+                            <div class="podium-name">
+                                <a href="/athlete/{{ athlete.athlete_id }}">{{ athlete.name }}</a>
+                                <span class="podium-country">{{ athlete.country_emoji }}</span>
+                            </div>
+                            <div class="podium-time">
+                                {{ athlete.overall_}}
+                                {% if athlete.overall_behind_s != "+00:00" %}
+                                    ({{ athlete.overall_behind_s }})
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
     </div>
 </div>
 
@@ -116,7 +178,7 @@
 <!-- Results Table -->
 <div class="data-table collapsible-card">
     <h3 class="card-title">
-        Race Results & Times
+        Race Results
         <span class="collapse-toggle" onclick="toggleCollapse(this)">−</span>
     </h3>
     <div class="collapsible-content">

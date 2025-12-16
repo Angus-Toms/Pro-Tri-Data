@@ -19,38 +19,48 @@
                 <div class="athlete-hero-info">
                     <h1>{{ athlete.name }} {{ athlete.country_emoji }}</h1>
                     <div class="athlete-basic-info">
-                        <span class="status-badge {{ 'active' if athlete.active else 'inactive' }}">
-                            {{ 'Active' if athlete.active else 'Inactive' }}
-                        </span>
-                        <div class="info-row">
-                            <div class="info-item">
-                                <span class="info-text">{{ athlete.country_full }}</span>
+                        <!-- Use new metadata section-->
+                        <div class="meta-grid">
+                            <div class="meta-item">
+                                <span class="meta-label">Status</span>
+                                <span class="meta-value">
+                                    <span class="status-badge {{ 'active' if athlete.active else 'inactive' }}">
+                                        {{ 'Active' if athlete.active else 'Inactive' }}
+                                    </span>
+                                </span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">Country</span>
+                                <span class="meta-value">{{ athlete.country_full }}</span>
                             </div>
                             {% if athlete.year_of_birth != 0 %}
-                            <div class="info-item">
-                                <span class="info-text">Born {{ athlete.year_of_birth|int }}</span>
+                            <div class="meta-item">
+                                <span class="meta-label">YOB</span>
+                                <span class="meta-value">{{ athlete.year_of_birth|int }}</span>
                             </div>
                             {% endif %}
-                            <div class="info-item">
-                                <span class="info-text">ID: {{ athlete.athlete_id }}</span>
+                            <div class="meta-item">
+                                <span class="meta-label">ID</span>
+                                <span class="meta-value">{{ athlete.athlete_id }}</span>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <div class="athlete-stats-banner">
-                <div class="stat-block">
-                    <div class="stat-number">{{ athlete.race_starts }}</div>
-                    <div class="stat-label">Race Starts</div>
-                </div>
-                <div class="stat-block">
-                    <div class="stat-number">{{ athlete.win_count }}</div>
-                    <div class="stat-label">Wins ({{ "%.1f"|format(athlete.win_pct * 100) }}%)</div>
-                </div>
-                <div class="stat-block">
-                    <div class="stat-number">{{ athlete.podium_count }}</div>
-                    <div class="stat-label">Podiums ({{ "%.1f"|format(athlete.podium_pct * 100) }}%)</div>
+                    <!-- Stats bar inside athlete-hero-info -->
+                    <div class="stats-bar">
+                        <div class="stat-item">
+                            <div class="stat-number">{{ athlete.race_starts }}</div>
+                            <div class="stat-label">Race Starts</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">{{ athlete.win_count }}</div>
+                            <div class="stat-label">Wins ({{ "%.1f"|format(athlete.win_pct * 100) }}%)</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">{{ athlete.podium_count }}</div>
+                            <div class="stat-label">Podiums ({{ "%.1f"|format(athlete.podium_pct * 100) }}%)</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
