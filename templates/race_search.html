@@ -7,33 +7,72 @@
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <header class="page-header">
-        <h1>Races</h1>
-        <p class="page-subtitle">Search for races and events</p>
-    </header>
-
-    <!-- Search Section -->
-    <section class="search-section">
-        <div class="search-container">
-            <div class="search-input-wrapper">
-                <input 
-                    type="text" 
-                    id="raceSearch" 
-                    class="search-input" 
-                    placeholder="Search for a race..."
-                    autocomplete="off"
-                >
-                <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <path d="m21 21-4.35-4.35"></path>
-                </svg>
-            </div>
-            
-            <div id="searchResults" class="search-results" style="display: none;">
-                <!-- Results populated by JS -->
+<div class="race-page">
+    <section class="race-hero">
+        <div class="hero-copy">
+            <h1>Race Database</h1>
+            <p class="hero-lede">
+                View and analyze results from every World Triathlon race held. Check out the most recent events below.
+            </p>
+            <div class="hero-stats">
+                <div class="stat-pill">
+                    <span class="stat-label">Events tracked</span>
+                    <span class="stat-value">{{ total_races }}</span>
+                </div>
+                {% if races %}
+                <div class="stat-pill">
+                    <span class="stat-label">Most recent</span>
+                    <span class="stat-value">{{ races[0].race_date.strftime('%d %B %Y') }}</span>
+                </div>
+                {% endif %}
             </div>
         </div>
+
+        <div class="search-card">
+            <div class="search-card-header">
+                <p class="search-label">Search races</p>
+                <h3>Find an event</h3>
+            </div>
+            <div class="search-container">
+                <div class="search-input-wrapper">
+                    <input 
+                        type="text" 
+                        id="raceSearch" 
+                        class="search-input" 
+                        placeholder="Search for a race..."
+                        autocomplete="off"
+                    >
+                    <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                </div>
+                
+                <div id="searchResults" class="search-results" style="display: none;">
+                    <!-- Results populated by JS -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="race-listing">
+        <h2 class="section-title">Recent races</h2>
+
+        <div id="raceGrid" class="race-grid">
+            {% if races %}
+                {% include "partials/more_races.html" %}
+            {% else %}
+                <div class="empty-state">
+                    <p>No races available right now.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        {% if has_more_races %}
+        <div class="load-more-container">
+            <button id="loadMoreRaces" class="btn" data-offset="{{ initial_offset }}">Load more races</button>
+        </div>
+        {% endif %}
     </section>
 </div>
 {% endblock %}

@@ -122,9 +122,7 @@ async def leaderboard(
 
     # Convert to dict for FastAPI
     athletes = leaderboard_df.reset_index().to_dict(orient = "records")
-    print(athletes[0])
-
-
+ 
     if order == "hot":
             # Format rating changes to correct strings for hot leaderboard
             for athlete in athletes:

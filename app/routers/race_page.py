@@ -207,6 +207,10 @@ async def get_race(request: Request, race_id: int):
             "t2_behind_s": format_time_behind(result.t2_behind_s)
         })
             
+    DNF_POSITIONS = set(['dnf', 'dns', 'dq', 'lap', 'nc'])
+    dnf_count = len([r for r in positions if r.strip().lower() in DNF_POSITIONS])
+    finish_count = len(positions) - dnf_count
+
     # Build ratings data
     ratings_data = []
     for pos, rating in zip(positions, race.ratings):
@@ -238,6 +242,8 @@ async def get_race(request: Request, race_id: int):
             "request": request,
             "active_page": "races",
             "race": race,
+            "finish_count": finish_count,
+            "dnf_count": dnf_count,
             "race_standards": race_standards,
             "best_performances": best_performances,
             "splits_data": splits_data,

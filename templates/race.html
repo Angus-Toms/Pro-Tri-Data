@@ -113,6 +113,7 @@
         </div>
     </div>
 
+
     <div class="ratings-section">
         <h3 class="card-title">Best Performances</h3>
         <div class="ratings-grid">
@@ -450,6 +451,16 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+// Fallback if podium images don't load
+document.querySelectorAll('img[data-fallback]').forEach(img => {
+  img.onerror = () => {
+    img.onerror = null;
+    img.src = img.dataset.fallback;
+  };
+});
+</script>
+
 <!-- Time histograms -->
 <script id="overall-time-hist-data" type="application/json">
     {{ overall_time_hist | tojson }}

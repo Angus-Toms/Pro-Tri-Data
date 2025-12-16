@@ -6,47 +6,50 @@
 <link rel="stylesheet" href="{{ url_for('static', path='css/athlete.css') }}">
 {% endblock %}
 
-{%block content %}
+{% block content %}
 <div class="athlete-hero">
     <div class="athlete-hero-main">
         <div class="athlete-hero-content">
             <div class="athlete-hero-overview">
-                <img
-                    src="{{ url_for('static', path = 'athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') if athlete.profile_img else url_for('static', path='default_user.jpg') }}"
-                    alt="{{ athlete.name }}"
-                    class="athlete-hero-img {{ 'active' if athlete.active else 'inactive' }}"
-                >
-                <div class="athlete-hero-info">
-                    <h1>{{ athlete.name }} {{ athlete.country_emoji }}</h1>
-                    <div class="athlete-basic-info">
-                        <!-- Use new metadata section-->
-                        <div class="meta-grid">
-                            <div class="meta-item">
-                                <span class="meta-label">Status</span>
-                                <span class="meta-value">
-                                    <span class="status-badge {{ 'active' if athlete.active else 'inactive' }}">
-                                        {{ 'Active' if athlete.active else 'Inactive' }}
-                                    </span>
+                <!-- Image + Name in horizontal layout -->
+                <div class="athlete-profile-header">
+                    <img
+                        src="{{ url_for('static', path = 'athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') if athlete.profile_img else url_for('static', path='default_user.jpg') }}"
+                        alt="{{ athlete.name }}"
+                        class="athlete-hero-img {{ 'active' if athlete.active else 'inactive' }}"
+                    >
+                    <div class="athlete-hero-info">
+                        <h1>{{ athlete.name }} {{ athlete.country_emoji }}</h1>
+                    </div>
+                </div>
+
+                <!-- Meta info and stats below -->
+                <div class="athlete-basic-info">
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <span class="meta-label">Status</span>
+                            <span class="meta-value">
+                                <span class="status-badge {{ 'active' if athlete.active else 'inactive' }}">
+                                    {{ 'Active' if athlete.active else 'Inactive' }}
                                 </span>
-                            </div>
-                            <div class="meta-item">
-                                <span class="meta-label">Country</span>
-                                <span class="meta-value">{{ athlete.country_full }}</span>
-                            </div>
-                            {% if athlete.year_of_birth != 0 %}
-                            <div class="meta-item">
-                                <span class="meta-label">YOB</span>
-                                <span class="meta-value">{{ athlete.year_of_birth|int }}</span>
-                            </div>
-                            {% endif %}
-                            <div class="meta-item">
-                                <span class="meta-label">ID</span>
-                                <span class="meta-value">{{ athlete.athlete_id }}</span>
-                            </div>
+                            </span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Country</span>
+                            <span class="meta-value">{{ athlete.country_full }}</span>
+                        </div>
+                        {% if athlete.year_of_birth != 0 %}
+                        <div class="meta-item">
+                            <span class="meta-label">YOB</span>
+                            <span class="meta-value">{{ athlete.year_of_birth|int }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="meta-item">
+                            <span class="meta-label">ID</span>
+                            <span class="meta-value">{{ athlete.athlete_id }}</span>
                         </div>
                     </div>
 
-                    <!-- Stats bar inside athlete-hero-info -->
                     <div class="stats-bar">
                         <div class="stat-item">
                             <div class="stat-number">{{ athlete.race_starts }}</div>
@@ -65,8 +68,8 @@
             </div>
         </div>
 
-        <div class="notable-results-section">
         {% if notable_results %}
+        <div class="notable-results-section">
             <div class="notable-results-header">
                 <span class="notable-results-label">Palmares</span>
             </div>
@@ -93,7 +96,7 @@
                         {% if result.races|length > 1 %}
                             <div id="notable-races-{{ loop.index }}" class="notable-result-dropdown" hidden>
                                 {% for race in result.races %}
-                                    <a href="/race/{{ race.race_id }}" class="small-link">
+                                    <a href="/race/{{ race.race_id }}" class="notable-result-dropdown-link">
                                         {{ race.race_name }}
                                     </a>
                                 {% endfor %}
@@ -102,8 +105,8 @@
                     </div>
                 {% endfor %}
             </div>
-        {% endif %}
         </div>
+        {% endif %}
     </div>
 </div>
 

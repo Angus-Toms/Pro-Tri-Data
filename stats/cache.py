@@ -9,7 +9,7 @@ import sys
 import re
 from typing import List
 
-sys.path.append(str(Path(__file__).parent.parent))
+# sys.path.append(str(Path(__file__).parent.parent))
 from stats.athlete import Athlete
 
 from config import (
