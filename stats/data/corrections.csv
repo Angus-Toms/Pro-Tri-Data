@@ -116,3 +116,4 @@ race_id,athlete_id,swim,t1,bike,t2,run,overall,notes
 310497,111606,00:38:24,00:01:03,00:00:00,00:01:02,00:00:00,03:07:53,Claire Azzopardi has short bike and run split; both removed for consistency
 310497,91696,00:26:46,00:01:43,00:00:00,00:01:21,00:00:00,03:15:42,Marian Belsten has short bike and run split; both removed for consistency
 310497,111611,00:34:48,00:02:03,00:00:00,00:01:25,00:00:00,03:17:13,Nanette Farrugia has short bike and run split; both removed for consistency
+389432,8045,00:00:00,00:00:00,00:00:00,00:00:00,00:00:00,02:31:00,Sergio Muciño has incorrect overall time; time interpolated from competition

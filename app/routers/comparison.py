@@ -143,6 +143,24 @@ async def search_athletes_for_compare(q: str = ""):
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
 
+@router.get("/compare/athlete/{athlete_id}")
+async def get_athlete_for_compare(athlete_id: int):
+    """ Return basic athlete data for pre-filling comparison searches """
+    try:
+        athlete = load_athlete_cached(athlete_id)
+        return JSONResponse({
+            "athlete_id": athlete.athlete_id,
+            "name": athlete.name,
+            "country_emoji": athlete.country_emoji,
+            "country_name": athlete.country_full,
+            "country_alpha3": athlete.country_alpha3,
+            "year_of_birth": athlete.year_of_birth or ""
+        })
+    except HTTPException as exc:
+        return JSONResponse({"error": exc.detail}, status_code=exc.status_code)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
 def get_basic_h2h_data(athlete: Athlete) -> Dict:
     """ Get and format basic data for athlete in h2h comparison """
     return {

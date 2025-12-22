@@ -166,29 +166,7 @@
     gap: var(--spacing-xl);
     align-items: center;
     position: relative;
-    overflow: hidden;
-}
-
-.race-hero::after {
-    content: "";
-    position: absolute;
-    width: 260px;
-    height: 260px;
-    background: rgba(53, 122, 189, 0.09);
-    border-radius: 50%;
-    top: -80px;
-    right: -60px;
-}
-
-.race-hero::before {
-    content: "";
-    position: absolute;
-    width: 140px;
-    height: 140px;
-    background: rgba(255, 152, 0, 0.08);
-    border-radius: 50%;
-    bottom: -60px;
-    left: -40px;
+    overflow: visible;
 }
 
 .race-hero > * {
@@ -231,6 +209,7 @@
     padding: var(--spacing-md) var(--spacing-lg);
     min-width: 160px;
     box-shadow: var(--box-shadow);
+    z-index: 2;
 }
 
 .stat-label {
@@ -254,6 +233,8 @@
     box-shadow: var(--box-shadow);
     padding: var(--spacing-lg);
     border-left: 4px solid var(--primary-color);
+    position: relative;
+    z-index: 5;
 }
 
 .search-card-header {
@@ -316,9 +297,10 @@
     pointer-events: none;
 }
 
-/* Search Results override z-index for new layout */
-.search-results {
-    z-index: 10;
+/* Let results dropdown extend past the hero without getting clipped. */
+.race-hero .search-results {
+    max-height: 300px;
+    z-index: 20;
 }
 
 /* Listing */
@@ -328,11 +310,6 @@
     gap: var(--spacing-lg);
 }
 
-.section-title {
-    margin: 0;
-    color: var(--text-color);
-    font-size: 1.6rem;
-}
 
 .race-grid {
     display: grid;
@@ -458,15 +435,12 @@
     border: none;
     cursor: pointer;
     font-size: 1rem;
-    font-weight: 600;
     transition: all var(--transition-base) ease;
     font-family: var(--font-family);
 }
 
 .btn:hover {
     background-color: var(--primary-hover);
-    transform: translateY(-2px);
-    box-shadow: var(--box-shadow-hover);
 }
 
 .empty-state {

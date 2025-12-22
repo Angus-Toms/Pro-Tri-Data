@@ -8,14 +8,28 @@ import pandas as pd
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
+def _get_podium(df: pd.DataFrame):
+    if "overall_rank" in df.columns:
+        df = df.sort_values("overall_rank")
+    podium = df.head(3).reset_index()
+    return podium.to_dict(orient="records")
+
 @router.get("/athletes", response_class=HTMLResponse)
 async def athletes_landing(request: Request):
     """ Landing page for athlete search """
+    athlete_lookup = cache.get_athlete_lookup()
+    female_podium = _get_podium(cache.get_female_short_leaderboard())
+    male_podium = _get_podium(cache.get_male_short_leaderboard())
+
     return templates.TemplateResponse(
         "athlete_search.html", 
         {
             "request": request,
-            "active_page": "athletes"
+            "active_page": "athletes",
+            "total_athletes": len(athlete_lookup),
+            "total_countries": len(cache.get_country_list()),
+            "female_podium": female_podium,
+            "male_podium": male_podium,
         }
     )
 

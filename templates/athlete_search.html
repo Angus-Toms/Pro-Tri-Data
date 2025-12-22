@@ -7,50 +7,115 @@
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <header class="page-header">
-        <h1>Athletes</h1>
-        <p class="page-subtitle">Search for athletes or view leaderboards</p>
-    </header>
-
-    <!-- Search Section -->
-    <section class="search-section">
-        <div class="search-container">
-            <div class="search-input-wrapper">
-                <input 
-                    type="text" 
-                    id="athleteSearch" 
-                    class="search-input" 
-                    placeholder="Search for an athlete..."
-                    autocomplete="off"
-                >
-                <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <path d="m21 21-4.35-4.35"></path>
-                </svg>
+<div class="athlete-page">
+    <section class="athlete-hero">
+        <div class="hero-copy">
+            <h1>Athlete Database</h1>
+            <p class="hero-lede">
+                Search for an athlete and view their results from every World Triathlon race held.
+            </p>
+            <div class="hero-stats">
+                <div class="stat-pill">
+                    <span class="stat-label">Athletes tracked</span>
+                    <span class="stat-value">{{ total_athletes }}</span>
+                </div>
+                <div class="stat-pill">
+                    <span class="stat-label">Countries represented</span>
+                    <span class="stat-value">{{ total_countries }}</span>
+                </div>
             </div>
-            
-            <div id="searchResults" class="search-results" style="display: none;">
-                <!-- Results populated by JS -->
+        </div>
+
+        <div class="search-card">
+            <div class="search-card-header">
+                <p class="search-label">Search athletes</p>
+                <h3>Find an athlete</h3>
+            </div>
+            <div class="search-container">
+                <div class="search-input-wrapper">
+                    <input 
+                        type="text" 
+                        id="athleteSearch" 
+                        class="search-input" 
+                        placeholder="Search for an athlete..."
+                        autocomplete="off"
+                    >
+                    <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                </div>
+                
+                <div id="searchResults" class="search-results" style="display: none;">
+                    <!-- Results populated by JS -->
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- Leaderboards Section -->
+    <section class="comparison-callout">
+        <div class="comparison-callout-card">
+            <div class="comparison-callout-copy">
+                <p class="comparison-eyebrow">Head-to-head</p>
+                <h2 class="comparison-title">Compare two athletes across their careers</h2>
+                <p class="comparison-text">
+                    Pick any two athletes to line up ratings, head-to-head results, and performance trends over time.
+                </p>
+            </div>
+            <a href="/compare" class="comparison-link">Open comparison</a>
+        </div>
+    </section>
+
     <section class="leaderboards-section">
-        <h2>Leaderboards</h2>
-        <div class="leaderboard-cards">
-            <a href="/leaderboard" class="leaderboard-card">
-                <h3>Women's Leaderboard</h3>
-                <p>View top-ranked female athletes</p>
-                <span class="card-arrow">→</span>
-            </a>
-            
-            <a href="/leaderboard?gender=male" class="leaderboard-card">
-                <h3>Men's Leaderboard</h3>
-                <p>View top-ranked male athletes</p>
-                <span class="card-arrow">→</span>
-            </a>
+        <h2 class="section-title">All-Time Leaderboards</h2>
+        <div class="leaderboard-grid">
+            <article class="leaderboard-card">
+                <div class="leaderboard-card-header">
+                    <div>
+                        <p class="leaderboard-eyebrow">Women</p>
+                    </div>
+                    <a href="/leaderboard" class="leaderboard-link">See All</a>
+                </div>
+                <div class="podium-steps">
+                    {% for athlete in female_podium %}
+                    <a href="/athlete/{{ athlete.athlete_id }}" class="podium-step position-{{ loop.index }}">
+                        <div class="podium-avatar-wrap">
+                            <img src="{{ url_for('static', path = 'athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') if athlete.profile_img_exists else url_for('static', path = 'default_user.jpg') }}"
+                                 alt="{{ athlete.name }}"
+                                 loading="lazy"
+                                 class="podium-avatar">
+                        </div>
+                        <div class="podium-rating">{{ athlete.overall_rating }}</div>
+                        <div class="podium-name">{{ athlete.name }}</div>
+                        <div class="podium-meta">{{ athlete.country_full }}</div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </article>
+
+            <article class="leaderboard-card">
+                <div class="leaderboard-card-header">
+                    <div>
+                        <p class="leaderboard-eyebrow">Men</p>
+                    </div>
+                    <a href="/leaderboard?gender=male" class="leaderboard-link">See All</a>
+                </div>
+                <div class="podium-steps">
+                    {% for athlete in male_podium %}
+                    <a href="/athlete/{{ athlete.athlete_id }}" class="podium-step position-{{ loop.index }}">
+                        <div class="podium-avatar-wrap">
+                            <img src="{{ url_for('static', path = 'athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') if athlete.profile_img_exists|default(false) else url_for('static', path = 'default_user.jpg') }}"
+                                 alt="{{ athlete.name }}"
+                                 loading="lazy"
+                                 class="podium-avatar">
+                        </div>
+                        <div class="podium-rating">{{ athlete.overall_rating }}</div>
+                        <div class="podium-name">{{ athlete.name }}</div>
+                        <div class="podium-meta">{{ athlete.country_full }}</div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </article>
         </div>
     </section>
 </div>

@@ -186,7 +186,6 @@
     border: none;
     border-radius: var(--border-radius);
     font-size: 1.125rem;
-    font-weight: 600;
     cursor: pointer;
     transition: all var(--transition-base);
     box-shadow: var(--box-shadow);
@@ -195,7 +194,6 @@
 .compare-button:hover:not(:disabled) {
     background-color: var(--primary-hover);
     box-shadow: var(--box-shadow-hover);
-    transform: translateY(-2px);
 }
 
 .compare-button:disabled {
@@ -258,46 +256,33 @@
 }
 
 /* ============================================
-   ALIGNMENT BUTTON AND CONTAINER
+   ALIGNMENT BUTTON
    ============================================ */
-.align-button-container {
-    text-align: center;
-    margin: 0 0 2rem 0;
-    padding: 1.5rem;
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
-}
 
 .align-starts-button {
     background-color: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 0.75rem 1.75rem;
-    font-size: 1rem;
-    font-weight: 600;
-    border-radius: 8px;
+    color: var(--white);
+    padding: 0.5rem 1.2rem;
+    border: 0;
+    font-weight: 500;
+    border-radius: var(--border-radius);
     cursor: pointer;
-    transition: all var(--transition-fast);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: color var(--transition-fast), background-color var(--transition-fast);
+    display: block;
+    width: fit-content;
+    margin: 0 auto;
 }
 
 .align-starts-button:hover {
     background-color: var(--primary-hover);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    transform: translateY(-1px);
-}
-
-.align-starts-button:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--box-shadow-hover);
 }
 
 .align-button-hint {
-    margin: 0.75rem 0 0 0;
-    font-size: 0.875rem;
+    margin: 0.5rem 0 1.5rem 0;
+    font-size: 0.85rem;
     color: var(--text-light);
-    font-style: italic;
+    text-align: center;
 }
 
 /* 

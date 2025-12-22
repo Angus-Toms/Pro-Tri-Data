@@ -158,6 +158,41 @@ function showError(message) {
     }, 5000);
 }
 
+async function prefillFromQuery() {
+    const params = new URLSearchParams(window.location.search);
+    const athlete1Id = params.get('athlete1');
+    if (!athlete1Id) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/compare/athlete/${encodeURIComponent(athlete1Id)}`);
+        if (!response.ok) {
+            return;
+        }
+        const athlete = await response.json();
+        if (!athlete || !athlete.athlete_id) {
+            return;
+        }
+
+        const searchInput = document.getElementById('search1');
+        const resultsDiv = document.getElementById('results1');
+        const selectedDiv = document.getElementById('selected1');
+        const searchWrapper = searchInput.closest('.search-input-wrapper');
+
+        selectAthlete('athlete1', {
+            id: athlete.athlete_id,
+            name: athlete.name,
+            country_emoji: athlete.country_emoji,
+            country_name: athlete.country_name,
+            country_alpha3: athlete.country_alpha3,
+            year_of_birth: athlete.year_of_birth
+        }, searchInput, resultsDiv, selectedDiv, searchWrapper);
+    } catch (error) {
+        console.error('Prefill error:', error);
+    }
+}
+
 async function performComparison() {
     const loadingDiv = document.getElementById('loading');
     const resultsDiv = document.getElementById('comparisonResults');
@@ -220,5 +255,6 @@ function loadComparisonResultsJs() {
 // Initialize
 initSearch('search1', 'results1', 'selected1', 'athlete1');
 initSearch('search2', 'results2', 'selected2', 'athlete2');
+prefillFromQuery();
 
 document.getElementById('compareBtn').addEventListener('click', performComparison);

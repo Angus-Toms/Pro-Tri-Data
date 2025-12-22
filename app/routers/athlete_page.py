@@ -74,8 +74,8 @@ def format_olympic_position(position: int) -> str:
 def format_world_champs_position(position: int) -> str:
     position = int(position)
     if position == 1: return "World Champion"
-    if position == 2: return "World Championships Silver"
-    if position == 3: return "World Championships Bronze"
+    if position == 2: return "World Championship Silver"
+    if position == 3: return "World Championship Bronze"
     return f"World Championships, {format_ordinal(position)}"
 
 def format_race_position(race_type: str, position: int) -> str:

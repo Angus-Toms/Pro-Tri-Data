@@ -3,27 +3,29 @@ let searchTimeout;
 const searchInput = document.getElementById('athleteSearch');
 const searchResults = document.getElementById('searchResults');
 
-searchInput.addEventListener('input', function() {
-    const query = this.value.trim();
-    
-    // Clear previous timeout
-    clearTimeout(searchTimeout);
-    
-    // Hide results if query is too short
-    if (query.length < 3) {
-        searchResults.style.display = 'none';
-        return;
-    }
-    
-    // Show loading state
-    searchResults.innerHTML = '<div class="search-loading">Searching...</div>';
-    searchResults.style.display = 'block';
-    
-    // Debounce search
-    searchTimeout = setTimeout(() => {
-        performSearch(query);
-    }, 300);
-});
+if (searchInput && searchResults) {
+    searchInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        // Clear previous timeout
+        clearTimeout(searchTimeout);
+        
+        // Hide results if query is too short
+        if (query.length < 3) {
+            searchResults.style.display = 'none';
+            return;
+        }
+        
+        // Show loading state
+        searchResults.innerHTML = '<div class="search-loading">Searching...</div>';
+        searchResults.style.display = 'block';
+        
+        // Debounce search
+        searchTimeout = setTimeout(() => {
+            performSearch(query);
+        }, 300);
+    });
+}
 
 async function performSearch(query) {
     try {
@@ -60,14 +62,17 @@ function displayResults(results) {
 
 // Close search results when clicking outside
 document.addEventListener('click', function(event) {
+    if (!searchResults || !searchInput) return;
     if (!event.target.closest('.search-container')) {
         searchResults.style.display = 'none';
     }
 });
 
 // Reopen results when focusing on input with existing query
-searchInput.addEventListener('focus', function() {
-    if (this.value.trim().length >= 2 && searchResults.innerHTML.trim() !== '') {
-        searchResults.style.display = 'block';
-    }
-});
+if (searchInput && searchResults) {
+    searchInput.addEventListener('focus', function() {
+        if (this.value.trim().length >= 3 && searchResults.innerHTML.trim() !== '') {
+            searchResults.style.display = 'block';
+        }
+    });
+}

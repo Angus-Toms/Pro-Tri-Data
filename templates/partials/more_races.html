@@ -1,0 +1,26 @@
+{% for race in races %}
+<div class="race-card">
+    <div class="race-card-content">
+        <div class="race-card-top">
+            {% if race.prog_name %}
+            <span class="race-program-tag">{{ race.prog_name }}</span>
+            {% endif %}
+        </div>
+
+        <div class="race-card-main">
+            <h3 class="race-title">{{ race.race_title }}</h3>
+            <p class="race-meta">
+                <span class="race-location">{{ race.race_country }}</span>
+                <span class="race-separator">•</span>
+                <span class="race-date-inline">{{ race.race_date.strftime('%d %B %Y') }}</span>
+            </p>
+        </div>
+    </div>
+
+    <a href="/race/{{ race.race_id }}" class="race-card-link" aria-label="View race {{ race.race_title }}">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+    </a>
+</div>
+{% endfor %}

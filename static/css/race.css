@@ -32,7 +32,6 @@
 /* Right section - Podium */
 .race-podium-section {
     padding: 2rem 1.5rem;
-    background: #fafbfc;
     display: flex;
     flex-direction: column;
 }
