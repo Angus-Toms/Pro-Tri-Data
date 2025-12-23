@@ -19,6 +19,11 @@ RACE_LOOKUP = DATA_DIR / "race_lookup.pkl"
 
 COUNTRY_LIST = DATA_DIR / "countries.pkl"
 
+ABOUT_DATA_DIR = STATIC_DIR / "about"
+QA_PATH = ABOUT_DATA_DIR / "qa.json"
+BLOG_DIR = ABOUT_DATA_DIR / "blogs"
+
+
 # Raw data used to learn ELO 
 SOURCE_DIR = ROOT_DIR / "stats" / "data"
 EVENT_CATEGORIES_CSV = SOURCE_DIR / "event_categories.csv"
@@ -36,13 +41,3 @@ WARNINGS = SOURCE_DIR / "warnings.csv"
 ELITE_START_RATING = 1750
 AG_START_RATING = 0
 
-# Display names and offsets for event categories
-RACE_CATEGORY_OFFSETS = {
-    343: { "offset": 0, "display_name": "Olympic Games" },
-    624: { "offset": 3, "display_name": "World Championships" }, # WTCS Finals
-    348: { "offset": 3, "display_name": "World Championships" }, # World Champs (Old name / format)
-    351: { "offset": 6, "display_name": "WTCS" },
-    340: { "offset": 9, "display_name": "Continential Championships" },
-    349: { "offset": 13, "display_name": "World Cup" },
-    341: { "offset": 28, "display_name": "Continential Cup" }
-}

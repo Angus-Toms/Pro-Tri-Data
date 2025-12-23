@@ -1,0 +1,202 @@
+/* ============================================
+   ABOUT PAGE
+   ============================================ */
+
+.about-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+}
+
+.about-hero {
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-xl);
+    box-shadow: var(--box-shadow);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--spacing-xl);
+    align-items: start;
+    position: relative;
+    overflow: hidden;
+}
+
+.about-hero-copy {
+    position: relative;
+    z-index: 1;
+}
+
+.about-eyebrow {
+    margin: 0 0 var(--spacing-sm) 0;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.75rem;
+    color: var(--text-lighter);
+}
+
+.about-hero h1 {
+    font-size: 2.3rem;
+    margin: 0 0 var(--spacing-sm) 0;
+    color: var(--text-color);
+}
+
+.about-lede {
+    margin: 0;
+    color: var(--text-light);
+    max-width: 540px;
+}
+
+.about-hero-panel {
+    background: linear-gradient(120deg, rgba(53, 122, 189, 0.08), rgba(53, 122, 189, 0.02));
+    border: 1px solid rgba(53, 122, 189, 0.18);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--box-shadow);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    position: relative;
+    z-index: 1;
+}
+
+.about-hero-panel h3 {
+    margin: 0;
+    color: var(--text-color);
+}
+
+.about-bullets {
+    margin: 0;
+    padding-left: 1.1rem;
+    color: var(--text-light);
+}
+
+.about-bullets li {
+    margin-bottom: var(--spacing-sm);
+}
+
+.about-bullets li:last-child {
+    margin-bottom: 0;
+}
+
+.about-qa,
+.about-blogs {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+.qa-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.qa-card {
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-lg);
+    box-shadow: var(--box-shadow);
+}
+
+.qa-question {
+    margin: 0 0 var(--spacing-sm) 0;
+    font-size: 1.05rem;
+    color: var(--text-color);
+}
+
+.qa-answer {
+    margin: 0;
+    color: var(--text-light);
+}
+
+.blog-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.blog-card {
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-lg);
+    box-shadow: var(--box-shadow);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.blog-eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 0.7rem;
+    color: var(--text-lighter);
+}
+
+.blog-title {
+    margin: 0;
+    color: var(--text-color);
+    font-size: 1.1rem;
+}
+
+.blog-body {
+    margin: 0;
+    color: var(--text-light);
+}
+
+.blog-link {
+    align-self: flex-start;
+    text-decoration: none;
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.blog-link:hover {
+    color: var(--primary-hover);
+}
+
+.blog-detail {
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-xl);
+    box-shadow: var(--box-shadow);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.blog-detail .blog-title {
+    font-size: 1.6rem;
+}
+
+.blog-detail .blog-body {
+    line-height: 1.7;
+}
+
+.blog-back {
+    text-decoration: none;
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.blog-back:hover {
+    color: var(--primary-hover);
+}
+
+@media (max-width: 900px) {
+    .about-hero h1 {
+        font-size: 1.9rem;
+    }
+}
+
+@media (max-width: 720px) {
+    .about-hero {
+        padding: var(--spacing-lg);
+    }
+}

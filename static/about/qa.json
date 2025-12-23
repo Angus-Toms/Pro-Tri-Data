@@ -1,0 +1,14 @@
+[
+  {
+    "question": "What is Pro Tri Data?",
+    "answer": "A lightweight reference for results, ratings, and the stories behind them."
+  },
+  {
+    "question": "Where does the data come from?",
+    "answer": "Results are aggregated from World Triathlon race archives and normalized for comparison."
+  },
+  {
+    "question": "What can I do on the site?",
+    "answer": "Explore athletes, inspect races, and compare careers across seasons."
+  }
+]

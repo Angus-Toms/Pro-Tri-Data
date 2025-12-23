@@ -23,7 +23,16 @@ Data format for site APIs:
 - [ ] Remove histograms if no splits
 - [X] "Hot" athletes leaderboard
 - [ ] Limit comparisons to gender
+- [ ] Luis vs. KB - Why does KB not have a time for paris 
+- [ ] Move comparison button on thin athlete pages somewhere else / make smaller
 - [X] Palmares
+
+After launch:
+- [ ] Migrate backend to DuckDB
+- [ ] Collect races into programs 
+- [ ] Collect programs into long-running races e.g. Tongyeong WC
+- [ ] Add event web images
+- [ ] Add more athlete images
 
 Later:
 - [ ] Previous nationalities for athletes

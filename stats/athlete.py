@@ -15,8 +15,7 @@ sys.path.insert(0, str(root_dir))
 from config import (
     ATHLETE_IMG_DIR,
     ELITE_START_RATING,
-    AG_START_RATING,
-    RACE_CATEGORY_OFFSETS
+    AG_START_RATING
 )
 
 def get_short_country_and_emoji(full_name: str) -> Tuple[str, str]:

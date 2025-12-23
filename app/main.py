@@ -6,7 +6,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.exception_handlers import http_exception_handler
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.routers import index, athlete_search, race_search, athlete_page, race_page, leaderboard, comparison
+from app.routers import index, athlete_search, race_search, athlete_page, race_page, leaderboard, comparison, about
 
 BASE_DIR = Path(__file__).resolve().parent.parent # Project root
 
@@ -37,6 +37,7 @@ app.include_router(athlete_page.router)
 app.include_router(race_page.router)
 app.include_router(leaderboard.router)
 app.include_router(comparison.router)
+app.include_router(about.router)
 
 if __name__ == "__main__":
     import uvicorn
