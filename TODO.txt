@@ -18,7 +18,7 @@ Data format for site APIs:
 - [X] Start maintaining ignored race list
 - [X] Add all countries to leaderboard filtering
 - [X] Add program to athlete results table
-- [ ] Redo data access to check event id rather then prog (i.e. no request for seen events) 
+- [X] Redo data access to check event id rather then prog (i.e. no request for seen events) 
 - [ ] Events leaderboard, will need a new cache
 - [ ] Remove histograms if no splits
 - [X] "Hot" athletes leaderboard

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Page Not Found - Pro Tri Data{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/404.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="error-page">
+    <div class="error-card">
+        <div class="error-code">404</div>
+        <h1 class="error-title">That page is out of transition.</h1>
+        <p class="error-message">We could not find what you were looking for.</p>
+        {% if detail %}
+        <p class="error-detail">{{ detail }}</p>
+        {% endif %}
+        <div class="error-actions">
+            <a class="btn" href="/">Back to Home</a>
+            <a class="btn" href="/races">Browse Races</a>
+            <a class="btn" href="/athletes">Browse Athletes</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

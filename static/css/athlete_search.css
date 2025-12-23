@@ -255,7 +255,7 @@
     color: var(--white);
     background: var(--primary-color);
     padding: 0.65rem 1.4rem;
-    border-radius: 999px;
+    border-radius: var(--border-radius);
     font-size: 0.9rem;
     font-weight: 600;
     transition: background-color var(--transition-fast), transform var(--transition-fast);
@@ -264,7 +264,7 @@
 
 .comparison-link:hover {
     background: var(--primary-hover);
-    transform: translateY(-1px);
+    box-shadow: var(--box-shadow-hover);
 }
 
 

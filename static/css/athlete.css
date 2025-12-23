@@ -91,6 +91,7 @@
 
 .athlete-compare-link:hover {
     background-color: var(--primary-hover);
+    box-shadow: var(--box-shadow-hover);
 }
 
 @media (max-width: 900px) {

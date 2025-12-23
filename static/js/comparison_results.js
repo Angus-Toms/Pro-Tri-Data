@@ -21,6 +21,10 @@ let transitionRatingsChart = null;
 
 // Track alignment state
 let isAligned = false;
+const msPerYear = 365.25 * 24 * 60 * 60 * 1000;
+
+// Date of athlete's first races for alignment
+let athleteFirstDates = null;
 
 // --- Initialisation functions for all graphs ---
 function initOverallChart() {
@@ -35,7 +39,7 @@ function initOverallChart() {
             const dates = dataset.data.map(d => new Date(d.x).getTime());
             return Math.min(...dates);
         });
-
+        athleteFirstDates = firstDates;
         data.datasets.forEach((dataset, i) => {
             dataset.data = dataset.data.map(point => ({
                 ...point,
@@ -67,6 +71,17 @@ function initOverallChart() {
                     callbacks: {
                         title: function(context) {
                             const dataPoint = context[0].raw;
+                            if (isAligned) {
+                                const baseDate = athleteFirstDates ? athleteFirstDates[context[0].datasetIndex] : null;
+                                if (baseDate) {
+                                    const date = new Date(Number(dataPoint.x) + baseDate);
+                                    return [
+                                        dataPoint.race_name,
+                                        date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                                    ];
+                                }
+                                return [dataPoint.race_name, ''];
+                            }
                             const date = new Date(dataPoint.x);
                             return [
                                 dataPoint.race_name,
@@ -80,7 +95,18 @@ function initOverallChart() {
                 },
             },
             scales: {
-                x: {
+                x: isAligned ? {
+                    type: 'linear',
+                    min: 0,
+                    ticks: {
+                        stepSize: msPerYear,
+                        callback: function(value) {
+                            const yearIndex = Math.floor(Number(value) / msPerYear) + 1;
+                            return `Season ${yearIndex}`;
+                        }
+                    },
+                    title: { display: true, text: 'Year' }
+                } : {
                     type: 'time',
                     time: { unit: 'year', tooltipFormat: 'dd-MM-yyyy' },
                     title: { display: true, text: 'Date' }
@@ -138,6 +164,17 @@ function initSwimChart() {
                     callbacks: {
                         title: function(context) {
                             const dataPoint = context[0].raw;
+                            if (isAligned) {
+                                const baseDate = athleteFirstDates ? athleteFirstDates[context[0].datasetIndex] : null;
+                                if (baseDate) {
+                                    const date = new Date(Number(dataPoint.x) + baseDate);
+                                    return [
+                                        dataPoint.race_name,
+                                        date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                                    ];
+                                }
+                                return [dataPoint.race_name, ''];
+                            }
                             const date = new Date(dataPoint.x);
                             return [
                                 dataPoint.race_name,
@@ -151,7 +188,16 @@ function initSwimChart() {
                 },
             },
             scales: {
-                x: {
+                x: isAligned ? {
+                    type: 'linear',
+                    ticks: {
+                        callback: function(value) {
+                            const yearIndex = Math.floor(Number(value) / msPerYear) + 1;
+                            return `Season ${yearIndex}`;
+                        }
+                    },
+                    title: { display: true, text: 'Year' }
+                } : {
                     type: 'time',
                     time: { unit: 'year', tooltipFormat: 'dd-MM-yyyy' },
                     title: { display: true, text: 'Date' }
@@ -209,6 +255,17 @@ function initBikeChart() {
                     callbacks: {
                         title: function(context) {
                             const dataPoint = context[0].raw;
+                            if (isAligned) {
+                                const baseDate = athleteFirstDates ? athleteFirstDates[context[0].datasetIndex] : null;
+                                if (baseDate) {
+                                    const date = new Date(Number(dataPoint.x) + baseDate);
+                                    return [
+                                        dataPoint.race_name,
+                                        date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                                    ];
+                                }
+                                return [dataPoint.race_name, ''];
+                            }
                             const date = new Date(dataPoint.x);
                             return [
                                 dataPoint.race_name,
@@ -222,7 +279,16 @@ function initBikeChart() {
                 },
             },
             scales: {
-                x: {
+                x: isAligned ? {
+                    type: 'linear',
+                    ticks: {
+                        callback: function(value) {
+                            const yearIndex = Math.floor(Number(value) / msPerYear) + 1;
+                            return `Season ${yearIndex}`;
+                        }
+                    },
+                    title: { display: true, text: 'Year' }
+                } : {
                     type: 'time',
                     time: { unit: 'year', tooltipFormat: 'dd-MM-yyyy' },
                     title: { display: true, text: 'Date' }
@@ -280,6 +346,17 @@ function initRunChart() {
                     callbacks: {
                         title: function(context) {
                             const dataPoint = context[0].raw;
+                            if (isAligned) {
+                                const baseDate = athleteFirstDates ? athleteFirstDates[context[0].datasetIndex] : null;
+                                if (baseDate) {
+                                    const date = new Date(Number(dataPoint.x) + baseDate);
+                                    return [
+                                        dataPoint.race_name,
+                                        date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                                    ];
+                                }
+                                return [dataPoint.race_name, ''];
+                            }
                             const date = new Date(dataPoint.x);
                             return [
                                 dataPoint.race_name,
@@ -293,7 +370,16 @@ function initRunChart() {
                 },
             },
             scales: {
-                x: {
+                x: isAligned ? {
+                    type: 'linear',
+                    ticks: {
+                        callback: function(value) {
+                            const yearIndex = Math.floor(Number(value) / msPerYear) + 1;
+                            return `Season ${yearIndex}`;
+                        }
+                    },
+                    title: { display: true, text: 'Year' }
+                } : {
                     type: 'time',
                     time: { unit: 'year', tooltipFormat: 'dd-MM-yyyy' },
                     title: { display: true, text: 'Date' }
@@ -351,6 +437,17 @@ function initTransitionChart() {
                     callbacks: {
                         title: function(context) {
                             const dataPoint = context[0].raw;
+                            if (isAligned) {
+                                const baseDate = athleteFirstDates ? athleteFirstDates[context[0].datasetIndex] : null;
+                                if (baseDate) {
+                                    const date = new Date(Number(dataPoint.x) + baseDate);
+                                    return [
+                                        dataPoint.race_name,
+                                        date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                                    ];
+                                }
+                                return [dataPoint.race_name, ''];
+                            }
                             const date = new Date(dataPoint.x);
                             return [
                                 dataPoint.race_name,
@@ -364,7 +461,16 @@ function initTransitionChart() {
                 },
             },
             scales: {
-                x: {
+                x: isAligned ? {
+                    type: 'linear',
+                    ticks: {
+                        callback: function(value) {
+                            const yearIndex = Math.floor(Number(value) / msPerYear) + 1;
+                            return `Season ${yearIndex}`;
+                        }
+                    },
+                    title: { display: true, text: 'Year' }
+                } : {
                     type: 'time',
                     time: { unit: 'year', tooltipFormat: 'dd-MM-yyyy' },
                     title: { display: true, text: 'Date' }

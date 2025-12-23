@@ -107,6 +107,7 @@ function selectAthlete(athleteKey, athlete, searchInput, resultsDiv, selectedDiv
             <img 
                 class="selected-athlete-img"
                 src="${imgSrc}"
+                data-fallback="{{ url_for('static', path='default_user.jpg') }}"
                 onerror="${defaultImgSrc}"
                 alt="${athlete.name}"
             >

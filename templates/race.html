@@ -58,12 +58,13 @@
                     {% if athlete.position in ['1', '2', '3'] %}
                     <div class="podium-item {{ 'gold' if athlete.position == '1' else 'silver' if athlete.position == '2' else 'bronze' }}">
                         <div class="podium-position">{{ athlete.position }}</div>
-                        <img 
-                            src="{{ url_for('static', path='athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') }}"
-                            onerror="{{ url_for('static', path='default_user.jpg') }}"
-                            alt="{{ athlete.name }}"
-                            class="podium-avatar"
-                        >
+                        <img
+                        src="{{ url_for('static', path='athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') }}"
+                        data-fallback="{{ url_for('static', path='default_user.jpg') }}"
+                        onerror="this.onerror=null;this.src=this.dataset.fallback;"
+                        alt="{{ athlete.name }}"
+                        class="podium-avatar"
+                        />
                         <div class="podium-details">
                             <div class="podium-name">
                                 <a href="/athlete/{{ athlete.athlete_id }}">{{ athlete.name }}</a>
@@ -451,16 +452,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-// Fallback if podium images don't load
-document.querySelectorAll('img[data-fallback]').forEach(img => {
-  img.onerror = () => {
-    img.onerror = null;
-    img.src = img.dataset.fallback;
-  };
-});
-</script>
-
 <!-- Time histograms -->
 <script id="overall-time-hist-data" type="application/json">
     {{ overall_time_hist | tojson }}
