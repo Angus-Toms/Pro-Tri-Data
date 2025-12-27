@@ -36,6 +36,7 @@ MALE_SHORT_DIR = SOURCE_DIR / "male_short"
 CORRECTIONS = SOURCE_DIR / "corrections.csv"
 IGNORED_RACES = SOURCE_DIR / "ignored.csv"
 WARNINGS = SOURCE_DIR / "warnings.csv"
+DUPLICATES = SOURCE_DIR / "duplicates.csv"
 
 # Constants 
 ELITE_START_RATING = 1750

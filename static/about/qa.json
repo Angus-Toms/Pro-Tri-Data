@@ -1,14 +1,30 @@
 [
   {
     "question": "What is Pro Tri Data?",
-    "answer": "A lightweight reference for results, ratings, and the stories behind them."
+    "answer": "PTD is the go-to database for race results, breakdowns, and athlete tracking. It's designed to help athletes better understand their own performance and check out their competition."
   },
   {
     "question": "Where does the data come from?",
-    "answer": "Results are aggregated from World Triathlon race archives and normalized for comparison."
+    "answer": "We get our race results from the World Triathlon archive and compute ratings and other aggregates for each one."
   },
   {
-    "question": "What can I do on the site?",
-    "answer": "Explore athletes, inspect races, and compare careers across seasons."
+    "question": "How do the ratings work?",
+    "answer": "We use an extension of the ELO chess rating system, adapted for multi-athlete endurance sports. Rather than giving points based on position or time, ratings go up and down based on the quality of the field around you and your performance compared to them."
+  },
+  {
+    "question": "Why are the bike ratings so low?",
+    "answer": "The rating system is based on percentage time difference. As the bike leg is typically longer and bike splits are similar in drafting races, the percentage difference across bike times is typically lower than across run or overall splits, for example."
+  },
+  {
+    "question": "What hapens when a split is not available?",
+    "answer": "If a split isn't available for a discipline (or has had to be removed), your rating stays the same. "
+  },
+  {
+    "question": "Why is my race result missing?",
+    "answer": "We don't include results that are taken from within other races, for example, seperate U23 results within an Elite race. The system is also limited to Sprint and Olympic triathlons so triathlons that are run as duathlons due to weather are removed. Some national championships and older races combine Elite and Age-Group results which also have to be removed. For more details, read our full blog about how our rating system is calculated."
+  },
+  {
+    "question": "Why is my time/split different from the one on World Triathlon?",
+    "answer": "We have applied over 500 manual corrections to race results we have detected to be incorrect. These are listed at the bottom of each race page. If you think a correction is needed or is wrong, please let us know."
   }
 ]

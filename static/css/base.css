@@ -171,6 +171,17 @@ html, body {
     background-color: var(--primary-hover);
 }
 
+.wt-link {
+    color: var(--white);
+    text-decoration: none;
+    transition: color var(--transition-base);
+    display: inline-block;
+}
+
+.wt-link:hover {
+    color: var(--primary-hover);
+}
+
 /* ============================================
    METADATA GRID - for athlete and race info
    ============================================ */

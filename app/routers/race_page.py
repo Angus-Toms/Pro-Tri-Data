@@ -236,12 +236,18 @@ async def get_race(request: Request, race_id: int):
     time_histograms: dict = get_time_histograms(race)
     rating_histograms: dict = get_rating_histograms(race)
         
+    # Format race location and country properly - some formatting errors get through the API formatting 
+    race_location = race.location.replace('"', '').replace("'", "")
+    race_country = race.country.replace('"', '').replace("'", "")
+
     return templates.TemplateResponse(
         "race.html",
         {
             "request": request,
             "active_page": "races",
             "race": race,
+            "race_location": race_location,
+            "race_country": race_country,
             "finish_count": finish_count,
             "dnf_count": dnf_count,
             "race_standards": race_standards,

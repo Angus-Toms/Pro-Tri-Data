@@ -179,6 +179,30 @@
     line-height: 1.7;
 }
 
+.blog-detail .blog-body p {
+    margin: 0 0 var(--spacing-sm);
+}
+
+.blog-detail .blog-body p:last-child {
+    margin-bottom: 0;
+}
+
+.blog-detail .blog-body ul,
+.blog-detail .blog-body ol {
+    margin: 0 0 var(--spacing-sm);
+    padding-left: var(--spacing-lg);
+    color: var(--text-light);
+}
+
+.blog-detail .blog-body li {
+    margin-bottom: var(--spacing-xs);
+}
+
+.blog-detail .blog-body ul:last-child,
+.blog-detail .blog-body ol:last-child {
+    margin-bottom: 0;
+}
+
 .blog-back {
     text-decoration: none;
     color: var(--primary-color);

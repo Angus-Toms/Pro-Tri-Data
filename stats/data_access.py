@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import sys
 import shutil
+import csv
 
 root_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(root_dir))
@@ -224,11 +225,12 @@ class DataFetcher:
             
             # Process each program
             for _, prog in programs.iterrows():
-                if (prog['prog_name'] in prog_categories and 
-                    prog['results'] and 
-                    prog['is_race']):
+
+                if (prog.get('prog_name') in prog_categories and 
+                    prog.get('results') and 
+                    prog.get('is_race')):
                     
-                    print(f"  - Found new result: {prog['prog_name']}")
+                    print(f"  - Found new result: {prog.get('prog_name')}")
                     
                     # Save results
                     self._save_result(event_id, prog['prog_id'], results_dir)
@@ -243,7 +245,11 @@ class DataFetcher:
                     
                     # Append and save
                     existing_progs.loc[len(existing_progs)] = prog_details
-                    existing_progs.to_csv(events_file, index=False, quoting=1) # Minimal quotes
+                    existing_progs.to_csv(
+                        events_file,
+                        index=False,
+                        quoting=csv.QUOTE_MINIMAL  # Avoid unnecessary quotes in output
+                    )
                     
                     new_count += 1
             
@@ -256,8 +262,8 @@ class DataFetcher:
 def main():
     fetcher = DataFetcher()
     
-    fetcher.clear_data('male')
-    fetcher.clear_data('female')
+    # fetcher.clear_data('male')
+    # fetcher.clear_data('female')
     
     # Update all events first
     # fetcher.update_all_events()

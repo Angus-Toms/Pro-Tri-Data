@@ -319,7 +319,7 @@
 }
 
 .race-card {
-    background: var(--white);
+    background: linear-gradient(120deg, rgba(53, 122, 189, 0.08), rgba(53, 122, 189, 0.02));
     border-radius: var(--border-radius);
     border: 1px solid var(--border-color);
     padding: var(--spacing-lg);
@@ -332,16 +332,16 @@
     transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.race-card::before {
+/* .race-card::before {
     content: "";
     position: absolute;
     inset: 0;
     background: radial-gradient(circle at 20% 20%, rgba(53,122,189,0.08), transparent 45%);
     pointer-events: none;
-}
+} */
 
 .race-card:hover {
-    transform: translateY(-3px);
+    /* transform: translateY(-3px); */
     box-shadow: var(--box-shadow-hover);
 }
 

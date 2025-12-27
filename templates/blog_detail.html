@@ -10,6 +10,6 @@
 <section class="blog-detail">
     <a class="blog-back" href="/about">&larr; Back to About</a>
     <h1 class="blog-title">{{ post.title }}</h1>
-    <p class="blog-body">{{ post.body }}</p>
+    <div class="blog-body">{{ post.body_html | safe }}</div>
 </section>
 {% endblock %}

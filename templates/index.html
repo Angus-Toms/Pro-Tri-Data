@@ -7,43 +7,78 @@
 {% endblock %}
 
 {% block content %}
-<div class="hero-section">
-    <h1>Welcome to Pro Tri Data</h1>
-    <p class="hero-subtitle">Track, analyze, and visualize triathlon performance data</p>
-</div>
+<div class="home-page">
+    <section class="home-hero">
+        <div class="hero-bg-decoration"></div>
+        <div class="hero-bg-decoration"></div>
+        
+        <div class="hero-content">
+            <div class="home-hero-copy">
+                <h1>Pro Tri Data</h1>
+                <h2 class="home-subtitle">Triathlon performance, made explorable.</h2>
+            </div>
+            
+            <div class="home-hero-stats">
+                <div class="stat-pill">
+                    <span class="stat-label">Athletes tracked</span>
+                    <span class="stat-value"><span class="stat-counter" data-target="{{ total_athletes }}">0</span></span>
+                </div>
+                <div class="stat-pill">
+                    <span class="stat-label">Races recorded</span>
+                    <span class="stat-value"><span class="stat-counter" data-target="{{ total_races }}">0</span></span>
+                </div>
+                <div class="stat-pill">
+                    <span class="stat-label">Results analyzed</span>
+                    <span class="stat-value"><span class="stat-counter" data-target="{{ total_results }}">0</span></span>
+                </div>
+            </div>
+        </div>
+    </section>
 
-<div class="info-grid">
-    <div class="info-card">
-        <h2>Athletes</h2>
-        <p>View detailed performance metrics, ratings history, and progress tracking for individual athletes.</p>
-        <a href="/athletes" class="btn">Browse Athletes</a>
-    </div>
-    
-    <div class="info-card">
-        <h2>Races</h2>
-        <p>Explore race results, compare performances, and analyze trends across different events and distances.</p>
-        <a href="/races" class="btn">View Races</a>
-    </div>
-    
-    <div class="info-card">
-        <h2>Analytics</h2>
-        <p>Dive into comprehensive charts and statistics to understand performance patterns and improvements.</p>
-        <a href="/about" class="btn btn-secondary">Learn More</a>
-    </div>
-</div>
+    <section class="home-explore">
+        <h2 class="section-title">Explore the data</h2>
+        <div class="home-primary-grid">
+            <a href="/athletes" class="home-card">
+                <p class="card-eyebrow">Athletes</p>
+                <h3>Ratings, results, and leaderboards</h3>
+                <p>Track career arcs, performances, and head-to-head records for all athletes.</p>
+                <span class="card-link">View athletes</span>
+            </a>
+            <a href="/races" class="home-card">
+                <p class="card-eyebrow">Races</p>
+                <h3>Event results and analysis</h3>
+                <p>Explore results and ratings and see how the races evolved.</p>
+                <span class="card-link">View races</span>
+            </a>
+        </div>
+    </section>
 
-<div class="stats-banner">
-    <div class="stat-item">
-        <div class="stat-number">{{ total_athletes }}</div>
-        <div class="stat-label">Athletes Tracked</div>
-    </div>
-    <div class="stat-item">
-        <div class="stat-number">{{ total_races }}</div>
-        <div class="stat-label">Races Recorded</div>
-    </div>
-    <div class="stat-item">
-        <div class="stat-number">{{ total_results }}</div>
-        <div class="stat-label">Results Analyzed</div>
-    </div>
+    <section class="home-secondary">
+        <h2 class="section-title">Dig deeper</h2>
+        <div class="home-secondary-grid">
+            <a href="/compare" class="home-card">
+                <p class="card-eyebrow">Comparison</p>
+                <h3>Line up two careers</h3>
+                <p>Compare head-to-head races, ratings, and performance across careers.</p>
+                <span class="card-link">Open comparison</span>
+            </a>
+            <a href="/leaderboard" class="home-card">
+                <p class="card-eyebrow">Leaderboards</p>
+                <h3>All-time rankings</h3>
+                <p>Explore the greatest of all-time and see who's in form this year.</p>
+                <span class="card-link">Open leaderboards</span>
+            </a>
+            <a href="/about" class="home-card">
+                <p class="card-eyebrow">About</p>
+                <h3>Methodology and updates</h3>
+                <p>Learn how ratings are calculated and how data is processed and maintained.</p>
+                <span class="card-link">Learn more</span>
+            </a>
+        </div>
+    </section>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', path='js/index.js') }}"></script>
 {% endblock %}
