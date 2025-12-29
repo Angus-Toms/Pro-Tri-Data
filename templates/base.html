@@ -11,10 +11,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='favicon.ico') }}">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     
     <!-- Base CSS, force cache bust -->
-    <link rel="stylesheet" href="{{ url_for('static', path='css/base.css') }}">
+    <link rel="stylesheet" href="/static/css/base.css">
     
     <!-- Page-specific CSS -->
     {% block extra_css %}{% endblock %}
@@ -25,7 +25,7 @@
         <div class="header-container">
             <div class="logo">
                 <a href="/">
-                    <img src="{{ url_for('static', path='logo_1024.png') }}" alt="Logo" class="logo-img">
+                    <img src="/static/logo_1024.png" alt="Logo" class="logo-img">
                     <span class="logo-text">Pro Tri Data</span>
                 </a>
             </div>

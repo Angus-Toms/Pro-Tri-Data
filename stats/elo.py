@@ -16,18 +16,18 @@ from race import Race
 from stats.cache import make_athlete_lookup, make_race_lookup
 
 from config import (
-    FEMALE_SHORT_EVENTS,
-    MALE_SHORT_EVENTS,
-    FEMALE_SHORT_LEADERBOARD,
-    MALE_SHORT_LEADERBOARD,
-    ATHLETES_DIR,
-    RACES_DIR,
-    FEMALE_SHORT_DIR,
-    MALE_SHORT_DIR,
-    CORRECTIONS,
-    RACE_LOOKUP,
-    WARNINGS,
-    IGNORED_RACES
+    FEMALE_SHORT_EVENTS_CSV_PATH,
+    MALE_SHORT_EVENTS_CSV_PATH,
+    SITE_FEMALE_SHORT_LEADERBOARD_PATH,
+    SITE_MALE_SHORT_LEADERBOARD_PATH,
+    SITE_ATHLETES_DIR,
+    SITE_RACES_DIR,
+    FEMALE_SHORT_RESULTS_DIR,
+    MALE_SHORT_RESULTS_DIR,
+    CORRECTIONS_CSV_PATH,
+    SITE_RACE_LOOKUP_PATH,
+    WARNINGS_CSV_PATH,
+    IGNORED_RACES_CSV_PATH
 )
 
 pd.set_option('display.max_columns', None)
@@ -47,8 +47,8 @@ class TriathlonELOSystem:
                  k_factor: float, 
                  race_guide_file: Path, 
                  race_dir: Path,
-                 corrections_file: Path = CORRECTIONS,
-                 ignored_file: Path = IGNORED_RACES
+                 corrections_file: Path = CORRECTIONS_CSV_PATH,
+                 ignored_file: Path = IGNORED_RACES_CSV_PATH
         ):
         """
         Initialize the ELO system.
@@ -348,12 +348,12 @@ class TriathlonELOSystem:
             for disc in range(4):
                 discs = ["overall", "swim","bike", "run"]
                 if times1[disc] != 0 and times1[disc] < 180:
-                    warnings_df = pd.read_csv(WARNINGS, header = 0)
+                    warnings_df = pd.read_csv(WARNINGS_CSV_PATH, header = 0)
                     warnings_df.loc[len(warnings_df)] = {
                         "athlete_id": id1,
                         "discipline": discs[disc]
                     }
-                    warnings_df.to_csv(WARNINGS, index = False)
+                    warnings_df.to_csv(WARNINGS_CSV_PATH, index = False)
             
             for j in range(i + 1, num_athletes):
                 id2 = athlete_ids[j]
@@ -584,17 +584,25 @@ class TriathlonELOSystem:
                 athlete.transition_rank = row.transition_rank
 
 def main():
-    female_short_elo = TriathlonELOSystem(k_factor = 16, race_guide_file = FEMALE_SHORT_EVENTS, race_dir = FEMALE_SHORT_DIR)
+    female_short_elo = TriathlonELOSystem(
+        k_factor = 16,
+        race_guide_file = FEMALE_SHORT_EVENTS_CSV_PATH,
+        race_dir = FEMALE_SHORT_RESULTS_DIR
+    )
     female_short_elo.process_all_races()
-    female_short_elo.make_leaderboard(FEMALE_SHORT_LEADERBOARD)
-    female_short_elo.save_athlete_data(ATHLETES_DIR)
-    female_short_elo.save_race_data(RACES_DIR)
+    female_short_elo.make_leaderboard(SITE_FEMALE_SHORT_LEADERBOARD_PATH)
+    female_short_elo.save_athlete_data(SITE_ATHLETES_DIR)
+    female_short_elo.save_race_data(SITE_RACES_DIR)
     
-    male_short_elo = TriathlonELOSystem(k_factor = 16, race_guide_file = MALE_SHORT_EVENTS, race_dir = MALE_SHORT_DIR)
+    male_short_elo = TriathlonELOSystem(
+        k_factor = 16,
+        race_guide_file = MALE_SHORT_EVENTS_CSV_PATH,
+        race_dir = MALE_SHORT_RESULTS_DIR
+    )
     male_short_elo.process_all_races()
-    male_short_elo.make_leaderboard(MALE_SHORT_LEADERBOARD)
-    male_short_elo.save_athlete_data(ATHLETES_DIR)
-    male_short_elo.save_race_data(RACES_DIR)
+    male_short_elo.make_leaderboard(SITE_MALE_SHORT_LEADERBOARD_PATH)
+    male_short_elo.save_athlete_data(SITE_ATHLETES_DIR)
+    male_short_elo.save_race_data(SITE_RACES_DIR)
     
     athlete_count = len(female_short_elo.athletes) + len(male_short_elo.athletes)
     print(f"Total athletes processed: {athlete_count}")
@@ -606,8 +614,8 @@ def main():
     make_athlete_lookup()
     # Rebuild race lookups
     make_race_lookup(
-        event_guides = [FEMALE_SHORT_EVENTS, MALE_SHORT_EVENTS],
-        output_path = RACE_LOOKUP
+        event_guides = [FEMALE_SHORT_EVENTS_CSV_PATH, MALE_SHORT_EVENTS_CSV_PATH],
+        output_path = SITE_RACE_LOOKUP_PATH
     )
 
 if __name__ == "__main__":

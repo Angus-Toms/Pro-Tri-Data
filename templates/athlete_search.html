@@ -3,7 +3,7 @@
 {% block title %}Athletes - Search & Leaderboards{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', path='css/athlete_search.css') }}">
+<link rel="stylesheet" href="/static/css/athlete_search.css">
 {% endblock %}
 
 {% block content %}
@@ -80,7 +80,7 @@
                     {% for athlete in female_podium %}
                     <a href="/athlete/{{ athlete.athlete_id }}" class="podium-step position-{{ loop.index }}">
                         <div class="podium-avatar-wrap">
-                            <img src="{{ url_for('static', path = 'athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') if athlete.profile_img_exists else url_for('static', path = 'default_user.jpg') }}"
+                            <img src="{{ url_for('static', path = 'data/athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') if athlete.profile_img_exists else url_for('static', path = 'default_user.jpg') }}"
                                  alt="{{ athlete.name }}"
                                  loading="lazy"
                                  class="podium-avatar">
@@ -104,7 +104,7 @@
                     {% for athlete in male_podium %}
                     <a href="/athlete/{{ athlete.athlete_id }}" class="podium-step position-{{ loop.index }}">
                         <div class="podium-avatar-wrap">
-                            <img src="{{ url_for('static', path = 'athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') if athlete.profile_img_exists|default(false) else url_for('static', path = 'default_user.jpg') }}"
+                            <img src="{{ url_for('static', path = 'data/athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') if athlete.profile_img_exists|default(false) else url_for('static', path = 'default_user.jpg') }}"
                                  alt="{{ athlete.name }}"
                                  loading="lazy"
                                  class="podium-avatar">
@@ -122,6 +122,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', path='js/utils.js') }}"></script>
-<script src="{{ url_for('static', path='js/athlete_search.js') }}"></script>
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/athlete_search.js"></script>
 {% endblock %}

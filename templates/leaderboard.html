@@ -132,7 +132,7 @@
         <div class="rank-badge {{ 'rank-' ~ athlete.rank ~ '-text' if athlete.rank <= 3 else '' }}">#{{athlete.rank}}</div>
         <div class="athlete-card-content">
             <div class="athlete-main-info">
-                <img src="{{ url_for('static', path = 'athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') if athlete.profile_img_exists else url_for('static', path = 'default_user.jpg') }}" 
+                <img src="{{ url_for('static', path = 'data/athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') if athlete.profile_img_exists else url_for('static', path = 'data/default_user.jpg') }}" 
                      alt="{{ athlete.name }}" 
                      loading="lazy"
                      class="athlete-profile-img">
@@ -255,5 +255,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', path='js/leaderboard.js') }}"></script>
+<script src="/static/js/leaderboard.js"></script>
 {% endblock %}

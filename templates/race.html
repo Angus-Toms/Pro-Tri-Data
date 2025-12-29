@@ -3,7 +3,7 @@
 {% block title %}{{ race.race_title }} - {{ race.date.strftime('%B %d %Y') }}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', path='css/race.css') }}">
+<link rel="stylesheet" href="/static/css/race.css">
 {% endblock %}
 
 {% block content %}
@@ -489,6 +489,6 @@
     {{ transition_rating_hist | tojson }}
 </script>
 
-<script src="{{ url_for('static', path='js/utils.js') }}"></script>
-<script src="{{ url_for('static', path='js/race.js') }}"></script>
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/race.js"></script>
 {% endblock %}

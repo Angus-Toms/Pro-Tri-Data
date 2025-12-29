@@ -6,7 +6,7 @@ from stats import cache
 from stats.athlete import Athlete, RaceResult
 from app.routers import router_utils
 
-from config import ATHLETES_DIR
+from config import SITE_ATHLETES_DIR
 
 from app.routers.router_utils import format_1yr_rating_change, format_rating
 
@@ -27,7 +27,7 @@ class RenameUnpickler(pickle.Unpickler):
     
 def load_athlete(athlete_id: int) -> Athlete:
     """ Load athlete data from pickle file """
-    file_path = ATHLETES_DIR / f"{athlete_id}.pkl"
+    file_path = SITE_ATHLETES_DIR / f"{athlete_id}.pkl"
     
     if not file_path.exists():
         raise HTTPException(status_code = 404, detail = f"Athlete {athlete_id} not found")

@@ -13,7 +13,7 @@ root_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(root_dir))
 
 from config import (
-    ATHLETE_IMG_DIR,
+    SITE_ATHLETE_IMAGES_DIR,
     ELITE_START_RATING,
     AG_START_RATING
 )
@@ -189,7 +189,7 @@ class Athlete:
         Attempt to access and save athlete's profile image URL.
         """
         if self.profile_img:
-            path = ATHLETE_IMG_DIR / f"{self.athlete_id}.jpg"
+            path = SITE_ATHLETE_IMAGES_DIR / f"{self.athlete_id}.jpg"
             if path.exists():
                 return # Image already saved
             

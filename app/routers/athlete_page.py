@@ -9,7 +9,7 @@ import numpy as np
 from stats.athlete import Athlete
 from stats.cache import get_race_lookup
 
-from config import ATHLETES_DIR
+from config import SITE_ATHLETES_DIR
 
 from app.routers.router_utils import format_time, format_time_behind, format_rating_change, format_1yr_rating_change
 
@@ -29,7 +29,7 @@ class RenameUnpickler(pickle.Unpickler):
     
 def load_athlete(athlete_id: int) -> Athlete:
     """ Load athlete data from pickle file """
-    file_path = ATHLETES_DIR / f"{athlete_id}.pkl"
+    file_path = SITE_ATHLETES_DIR / f"{athlete_id}.pkl"
     
     if not file_path.exists():
         # TODO: Add 404 page

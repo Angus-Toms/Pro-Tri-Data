@@ -15,11 +15,11 @@ pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 1000)
 
 from config import (
-    FEMALE_SHORT_EVENTS,
-    MALE_SHORT_EVENTS,
-    ALL_EVENTS,
-    MALE_SHORT_DIR,
-    FEMALE_SHORT_DIR
+    FEMALE_SHORT_EVENTS_CSV_PATH,
+    MALE_SHORT_EVENTS_CSV_PATH,
+    EVENTS_CSV_PATH,
+    MALE_SHORT_RESULTS_DIR,
+    FEMALE_SHORT_RESULTS_DIR
 )
 
 HEADERS = {"apikey": "aac0df989cb613114241670ca2f5ff75"}
@@ -66,8 +66,8 @@ class DataFetcher:
         Args:
             gender: 'male' or 'female'
         """
-        events_file = MALE_SHORT_EVENTS if gender == 'male' else FEMALE_SHORT_EVENTS
-        results_dir = MALE_SHORT_DIR if gender == 'male' else FEMALE_SHORT_DIR
+        events_file = MALE_SHORT_EVENTS_CSV_PATH if gender == 'male' else FEMALE_SHORT_EVENTS_CSV_PATH
+        results_dir = MALE_SHORT_RESULTS_DIR if gender == 'male' else FEMALE_SHORT_RESULTS_DIR
         
         print(f"\n⚠️  WARNING: This will delete all {gender} short course data!")
         print(f"   - Events file: {events_file}")
@@ -126,13 +126,13 @@ class DataFetcher:
             "event_latitude", "event_longitude", "event_categories", "event_specifications"
         ]
         df = pd.json_normalize(all_events)[cols]
-        df.to_csv(ALL_EVENTS, index=False)
+        df.to_csv(EVENTS_CSV_PATH, index=False)
         
-        print(f"Saved {len(df)} events to {ALL_EVENTS}")
+        print(f"Saved {len(df)} events to {EVENTS_CSV_PATH}")
     
     def _filter_short_course_events(self):
         """Returns events that have short course triathlon programs"""
-        events = pd.read_csv(ALL_EVENTS, header=0)
+        events = pd.read_csv(EVENTS_CSV_PATH, header=0)
         
         short_course_events = []
         for _, event in events.iterrows():
@@ -191,8 +191,8 @@ class DataFetcher:
         Args:
             gender: 'male' or 'female'
         """
-        events_file = MALE_SHORT_EVENTS if gender == 'male' else FEMALE_SHORT_EVENTS
-        results_dir = MALE_SHORT_DIR if gender == 'male' else FEMALE_SHORT_DIR
+        events_file = MALE_SHORT_EVENTS_CSV_PATH if gender == 'male' else FEMALE_SHORT_EVENTS_CSV_PATH
+        results_dir = MALE_SHORT_RESULTS_DIR if gender == 'male' else FEMALE_SHORT_RESULTS_DIR
         prog_categories = self.PROG_CATEGORIES[gender]
         
         print(f"\nFetching {gender} short course programs...")
