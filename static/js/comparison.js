@@ -98,8 +98,8 @@ function selectAthlete(athleteKey, athlete, searchInput, resultsDiv, selectedDiv
         searchWrapper.classList.add('hidden');
     }
     
-    const imgSrc = `/static/athlete_imgs/${athlete.id}.jpg`;
-    const defaultImgSrc = `/static/default_user.jpg`
+    const imgSrc = `/data/athlete_imgs/${athlete.id}.jpg`;
+    const defaultImgSrc = `/static/imgs/default_user.jpg`
     selectedDiv.innerHTML = `
         <button class="selected-athlete-remove" aria-label="Clear selection">&times;</button>
 
@@ -107,7 +107,7 @@ function selectAthlete(athleteKey, athlete, searchInput, resultsDiv, selectedDiv
             <img 
                 class="selected-athlete-img"
                 src="${imgSrc}"
-                data-fallback="/static/default_user.jpg"
+                data-fallback="/static/imgs/default_user.jpg"
                 onerror="${defaultImgSrc}"
                 alt="${athlete.name}"
             >

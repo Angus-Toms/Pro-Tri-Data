@@ -1,17 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}Page Not Found - Pro Tri Data{% endblock %}
+{% block title %}Error {{ status_code }} - Pro Tri Data{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/404.css">
+<link rel="stylesheet" href="/static/css/error.css">
 {% endblock %}
 
 {% block content %}
 <section class="error-page">
     <div class="error-card">
-        <div class="error-code">404</div>
+        <div class="error-code">{{ status_code }}</div>
         <h1 class="error-title">That page is out of transition.</h1>
-        <p class="error-message">We could not find what you were looking for.</p>
+        <p class="error-message">Something went wrong.</p>
         {% if detail %}
         <p class="error-detail">{{ detail }}</p>
         {% endif %}

@@ -3,7 +3,7 @@ from functools import lru_cache
 
 import pandas as pd
 
-from config import SITE_RACES_DIR
+from config import RUNTIME_RACES_DIR
 
 from app.routers.router_utils import format_time, format_time_behind, format_rating, format_rating_change
 
@@ -27,7 +27,7 @@ class RenameUnpickler(pickle.Unpickler):
     
 def load_race(race_id: int) -> Race:
     """ Load Race from pickle file """
-    file_path = SITE_RACES_DIR / f"{race_id}.pkl"
+    file_path = RUNTIME_RACES_DIR / f"{race_id}.pkl"
     
     if not file_path.exists():
         # TODO: Add 404 page

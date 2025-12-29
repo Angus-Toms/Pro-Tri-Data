@@ -18,14 +18,14 @@ from stats.cache import make_athlete_lookup, make_race_lookup
 from config import (
     FEMALE_SHORT_EVENTS_CSV_PATH,
     MALE_SHORT_EVENTS_CSV_PATH,
-    SITE_FEMALE_SHORT_LEADERBOARD_PATH,
-    SITE_MALE_SHORT_LEADERBOARD_PATH,
-    SITE_ATHLETES_DIR,
-    SITE_RACES_DIR,
+    RUNTIME_FEMALE_SHORT_LEADERBOARD_PATH,
+    RUNTIME_MALE_SHORT_LEADERBOARD_PATH,
+    RUNTIME_ATHLETES_DIR,
+    RUNTIME_RACES_DIR,
     FEMALE_SHORT_RESULTS_DIR,
     MALE_SHORT_RESULTS_DIR,
     CORRECTIONS_CSV_PATH,
-    SITE_RACE_LOOKUP_PATH,
+    RUNTIME_RACE_LOOKUP_PATH,
     WARNINGS_CSV_PATH,
     IGNORED_RACES_CSV_PATH
 )
@@ -590,9 +590,9 @@ def main():
         race_dir = FEMALE_SHORT_RESULTS_DIR
     )
     female_short_elo.process_all_races()
-    female_short_elo.make_leaderboard(SITE_FEMALE_SHORT_LEADERBOARD_PATH)
-    female_short_elo.save_athlete_data(SITE_ATHLETES_DIR)
-    female_short_elo.save_race_data(SITE_RACES_DIR)
+    female_short_elo.make_leaderboard(RUNTIME_FEMALE_SHORT_LEADERBOARD_PATH)
+    female_short_elo.save_athlete_data(RUNTIME_ATHLETES_DIR)
+    female_short_elo.save_race_data(RUNTIME_RACES_DIR)
     
     male_short_elo = TriathlonELOSystem(
         k_factor = 16,
@@ -600,9 +600,9 @@ def main():
         race_dir = MALE_SHORT_RESULTS_DIR
     )
     male_short_elo.process_all_races()
-    male_short_elo.make_leaderboard(SITE_MALE_SHORT_LEADERBOARD_PATH)
-    male_short_elo.save_athlete_data(SITE_ATHLETES_DIR)
-    male_short_elo.save_race_data(SITE_RACES_DIR)
+    male_short_elo.make_leaderboard(RUNTIME_MALE_SHORT_LEADERBOARD_PATH)
+    male_short_elo.save_athlete_data(RUNTIME_ATHLETES_DIR)
+    male_short_elo.save_race_data(RUNTIME_RACES_DIR)
     
     athlete_count = len(female_short_elo.athletes) + len(male_short_elo.athletes)
     print(f"Total athletes processed: {athlete_count}")
@@ -615,7 +615,7 @@ def main():
     # Rebuild race lookups
     make_race_lookup(
         event_guides = [FEMALE_SHORT_EVENTS_CSV_PATH, MALE_SHORT_EVENTS_CSV_PATH],
-        output_path = SITE_RACE_LOOKUP_PATH
+        output_path = RUNTIME_RACE_LOOKUP_PATH
     )
 
 if __name__ == "__main__":

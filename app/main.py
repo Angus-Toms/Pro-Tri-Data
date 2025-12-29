@@ -3,31 +3,46 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.exception_handlers import http_exception_handler
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.routers import index, athlete_search, race_search, athlete_page, race_page, leaderboard, comparison, about
+from config import RUNTIME_DATA_DIR
 
 BASE_DIR = Path(__file__).resolve().parent.parent # Project root
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory = BASE_DIR / "static"), name = "static")
+app.mount("/data", StaticFiles(directory = RUNTIME_DATA_DIR), name = "data")
 templates = Jinja2Templates(directory = BASE_DIR / "templates")
 
-# Redirect 404s
+# Render HTTP errors with a shared template
 @app.exception_handler(StarletteHTTPException)
-async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):
-    if exc.status_code == 404:
-        return templates.TemplateResponse(
-            "404.html",
-            {
-                "request": request,
-                "detail": exc.detail,
-                "active_page": None,
-            },
-            status_code = 404,
-        )
-    return await http_exception_handler(request, exc)
+async def http_error_handler(request: Request, exc: StarletteHTTPException):
+    detail = exc.detail if exc.detail else exc.__class__.__name__
+    return templates.TemplateResponse(
+        "error.html",
+        {
+            "request": request,
+            "status_code": exc.status_code,
+            "detail": str(detail),
+            "active_page": None,
+        },
+        status_code = exc.status_code,
+    )
+
+# Render unexpected errors with the same template
+@app.exception_handler(Exception)
+async def unhandled_error_handler(request: Request, exc: Exception):
+    return templates.TemplateResponse(
+        "error.html",
+        {
+            "request": request,
+            "status_code": 500,
+            "detail": str(exc),
+            "active_page": None,
+        },
+        status_code = 500,
+    )
 
 # Include page routers
 app.include_router(index.router)

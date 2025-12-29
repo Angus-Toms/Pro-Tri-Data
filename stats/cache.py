@@ -13,39 +13,39 @@ from typing import List
 from stats.athlete import Athlete
 
 from config import (
-    SITE_FEMALE_SHORT_LEADERBOARD_PATH,
-    SITE_MALE_SHORT_LEADERBOARD_PATH,
+    RUNTIME_FEMALE_SHORT_LEADERBOARD_PATH,
+    RUNTIME_MALE_SHORT_LEADERBOARD_PATH,
     FEMALE_SHORT_EVENTS_CSV_PATH,
     MALE_SHORT_EVENTS_CSV_PATH,
-    SITE_RACE_LOOKUP_PATH,
-    SITE_ATHLETES_DIR,
-    SITE_ATHLETE_LOOKUP_PATH,
-    SITE_COUNTRY_LIST_PATH
+    RUNTIME_RACE_LOOKUP_PATH,
+    RUNTIME_ATHLETES_DIR,
+    RUNTIME_ATHLETE_LOOKUP_PATH,
+    RUNTIME_COUNTRY_LIST_PATH
 )
 
 @lru_cache(maxsize=1)
 def get_female_short_leaderboard() -> pd.DataFrame:
-    with open(SITE_FEMALE_SHORT_LEADERBOARD_PATH, "rb") as f:
+    with open(RUNTIME_FEMALE_SHORT_LEADERBOARD_PATH, "rb") as f:
         return pickle.load(f)
     
 @lru_cache(maxsize=1)
 def get_male_short_leaderboard() -> pd.DataFrame:
-    with open(SITE_MALE_SHORT_LEADERBOARD_PATH, "rb") as f:
+    with open(RUNTIME_MALE_SHORT_LEADERBOARD_PATH, "rb") as f:
         return pickle.load(f)
     
 @lru_cache(maxsize=1)
 def get_race_lookup():
-    with open(SITE_RACE_LOOKUP_PATH, "rb") as f:
+    with open(RUNTIME_RACE_LOOKUP_PATH, "rb") as f:
         return pickle.load(f)
     
 @lru_cache(maxsize=1)
 def get_athlete_lookup():
-    with open(SITE_ATHLETE_LOOKUP_PATH, "rb") as f:
+    with open(RUNTIME_ATHLETE_LOOKUP_PATH, "rb") as f:
         return pickle.load(f)
 
 @lru_cache(maxsize=1)
 def get_country_list():
-    with open(SITE_COUNTRY_LIST_PATH, "rb") as f:
+    with open(RUNTIME_COUNTRY_LIST_PATH, "rb") as f:
         return pickle.load(f)
 
 def get_athlete_name(athlete_id: int):
@@ -67,7 +67,7 @@ def process_single_athlete(athlete_file):
     
 def make_athlete_lookup():
     """ Parallel process athlete lookup creation. """
-    athlete_files = list(SITE_ATHLETES_DIR.glob("*.pkl"))
+    athlete_files = list(RUNTIME_ATHLETES_DIR.glob("*.pkl"))
     athlete_count = len(athlete_files)
     athlete_lookup = {}
     
@@ -85,7 +85,7 @@ def make_athlete_lookup():
     lookup_df.index.name = "athlete_id"
     lookup_df.sort_values(by = "rating", ascending = False, inplace = True) # Pre-sort for fast searches
 
-    with open(SITE_ATHLETE_LOOKUP_PATH, "wb") as f:
+    with open(RUNTIME_ATHLETE_LOOKUP_PATH, "wb") as f:
         pickle.dump(lookup_df, f)
     
     # Make country list from all saved athletes
@@ -100,7 +100,7 @@ def make_country_list(athlete_lookup: dict) -> List[str]:
     for _, v in athlete_lookup.items():
         countries.add(v["country_name"])
 
-    with open(SITE_COUNTRY_LIST_PATH, "wb") as f:
+    with open(RUNTIME_COUNTRY_LIST_PATH, "wb") as f:
         pickle.dump(countries, f)
 
     print(f"Made country list with {len(countries)} countries")
@@ -180,5 +180,5 @@ if __name__ == "__main__":
     make_athlete_lookup()
     make_race_lookup(
         event_guides = [FEMALE_SHORT_EVENTS_CSV_PATH, MALE_SHORT_EVENTS_CSV_PATH],
-        output_path = SITE_RACE_LOOKUP_PATH
+        output_path = RUNTIME_RACE_LOOKUP_PATH
     )

@@ -59,8 +59,8 @@
                     <div class="podium-item {{ 'gold' if athlete.position == '1' else 'silver' if athlete.position == '2' else 'bronze' }}">
                         <div class="podium-position">{{ athlete.position }}</div>
                         <img
-                        src="{{ url_for('static', path='athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') }}"
-                        data-fallback="{{ url_for('static', path='default_user.jpg') }}"
+                        src="{{ url_for('data', path='athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') }}"
+                        data-fallback="{{ url_for('static', path='imgs/default_user.jpg') }}"
                         onerror="this.onerror=null;this.src=this.dataset.fallback;"
                         alt="{{ athlete.name }}"
                         class="podium-avatar"

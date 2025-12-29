@@ -208,16 +208,6 @@ async def about(request: Request):
 @router.get("/about/blog/{slug}")
 async def blog_detail(request: Request, slug: str):
     post = load_blog_by_slug(slug)
-    if not post:
-        return templates.TemplateResponse(
-            "404.html",
-            {
-                "request": request,
-                "detail": "Blog post not found",
-                "active_page": "about",
-            },
-            status_code=404,
-        )
 
     context = {
         "request": request,

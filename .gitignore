@@ -29,5 +29,8 @@ ENV/
 .env.*
 secrets.json
 
-/static/data
-/stats/data
+# ================================
+# RUNTIME DATA
+# ================================
+data/
+*.pkl

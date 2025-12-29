@@ -17,7 +17,7 @@
                 <!-- Image + Name in horizontal layout -->
                 <div class="athlete-profile-header">
                     <img
-                        src="{{ url_for('static', path = 'data/athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') if athlete.profile_img else url_for('static', path='default_user.jpg') }}"
+                        src="{{ url_for('data', path = 'athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') if athlete.profile_img else url_for('static', path='imgs/default_user.jpg') }}"
                         alt="{{ athlete.name }}"
                         class="athlete-hero-img {{ 'active' if athlete.active else 'inactive' }}"
                     >
