@@ -3,7 +3,7 @@
 {% block title %}Athletes - Search & Leaderboards{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/athlete_search.css">
+<link rel="stylesheet" href="https://static.protridata.com/css/athlete_search.css">
 {% endblock %}
 
 {% block content %}
@@ -80,7 +80,7 @@
                     {% for athlete in female_podium %}
                     <a href="/athlete/{{ athlete.athlete_id }}" class="podium-step position-{{ loop.index }}">
                         <div class="podium-avatar-wrap">
-                            <img src="{{ url_for('data', path = 'athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') if athlete.profile_img_exists else url_for('static', path = 'imgs/default_user.jpg') }}"
+                            <img src="{{ 'https://static.protridata.com/athlete_imgs/64/' ~ athlete.athlete_id ~ '.webp' if athlete.profile_img_exists else 'https://static.protridata.com/imgs/default_user.jpg' }}"
                                  alt="{{ athlete.name }}"
                                  loading="lazy"
                                  class="podium-avatar">
@@ -104,7 +104,7 @@
                     {% for athlete in male_podium %}
                     <a href="/athlete/{{ athlete.athlete_id }}" class="podium-step position-{{ loop.index }}">
                         <div class="podium-avatar-wrap">
-                            <img src="{{ url_for('data', path = 'athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') if athlete.profile_img_exists|default(false) else url_for('static', path = 'imgs/default_user.jpg') }}"
+                            <img src="{{ 'https://static.protridata.com/athlete_imgs/64/' ~ athlete.athlete_id ~ '.webp' if athlete.profile_img_exists|default(false) else 'https://static.protridata.com/imgs/default_user.jpg' }}"
                                  alt="{{ athlete.name }}"
                                  loading="lazy"
                                  class="podium-avatar">
@@ -122,6 +122,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="/static/js/utils.js"></script>
-<script src="/static/js/athlete_search.js"></script>
+<script src="https://static.protridata.com/js/utils.js"></script>
+<script src="https://static.protridata.com/js/athlete_search.js"></script>
 {% endblock %}

@@ -3,7 +3,7 @@
     <div class="rank-badge {{ 'rank-' ~ athlete.rank ~ '-text' if athlete.rank <= 3 else '' }}">#{{athlete.rank}}</div>
     <div class="athlete-card-content">
         <div class="athlete-main-info">
-            <img src="{{ request.url_for('data', path='athlete_imgs/' ~ athlete['athlete_id'] ~ '.jpg') if athlete['profile_img_exists'] else request.url_for('static', path='imgs/default_user.jpg') }}" 
+            <img src="{{ 'https://static.protridata.com/athlete_imgs/64/' ~ athlete['athlete_id'] ~ '.webp' if athlete['profile_img_exists'] else 'https://static.protridata.com/imgs/default_user.jpg' }}" 
                  alt="{{ athlete.name }}" 
                  loading="lazy"
                  class="athlete-profile-img">

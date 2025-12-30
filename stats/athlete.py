@@ -31,7 +31,8 @@ def get_short_country_and_emoji(full_name: str) -> Tuple[str, str]:
         "Venezuela": ("VEN", "🇻🇪"),
         "Chinese Taipei": ("TPE", "🇹🇼"),
         "Virgin Islands": ("ISV", "🇻🇮"),
-        "Tahiti": ("PYF", "🇵🇫")
+        "Tahiti": ("PYF", "🇵🇫"),
+        "Bolivia": ("BOL", "🇧🇴"),
     }
     
     if full_name in special_cases.keys():
@@ -188,6 +189,7 @@ class Athlete:
         """
         Attempt to access and save athlete's profile image URL.
         """
+        # TODO: Perform compress to 64 and 128 here
         if self.profile_img:
             path = RUNTIME_ATHLETE_IMAGES_DIR / f"{self.athlete_id}.jpg"
             if path.exists():

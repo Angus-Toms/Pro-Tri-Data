@@ -3,7 +3,7 @@
 {% block title %}{{ athlete.name }} - Athlete Profile{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/athlete.css">
+<link rel="stylesheet" href="https://static.protridata.com/css/athlete.css">
 {% endblock %}
 
 {% block content %}
@@ -17,7 +17,7 @@
                 <!-- Image + Name in horizontal layout -->
                 <div class="athlete-profile-header">
                     <img
-                        src="{{ url_for('data', path = 'athlete_imgs/' ~ athlete.athlete_id ~ '.jpg') if athlete.profile_img else url_for('static', path='imgs/default_user.jpg') }}"
+                        src="{{ 'https://static.protridata.com/athlete_imgs/128/' ~ athlete.athlete_id ~ '.webp' if athlete.profile_img else 'https://static.protridata.com/imgs/default_user.jpg' }}"
                         alt="{{ athlete.name }}"
                         class="athlete-hero-img {{ 'active' if athlete.active else 'inactive' }}"
                     >
@@ -566,6 +566,6 @@
 </script>
 
 <!-- Load JS -->
-<script src="/static/js/utils.js"></script>
-<script src="/static/js/athlete.js"></script>
+<script src="https://static.protridata.com/js/utils.js"></script>
+<script src="https://static.protridata.com/js/athlete.js"></script>
 {% endblock %}
