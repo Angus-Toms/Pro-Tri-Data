@@ -61,7 +61,7 @@ async def leaderboard_more(
     chunk.loc[:, "rank"] = range(offset + 1, offset + 51)
 
     # Convert to dict for FastAPI
-    chunk = chunk.to_dict(orient = "records")
+    chunk = chunk.reset_index().to_dict(orient = "records")
 
     if order == "hot":
         # Format rating changes to correct strings for hot leaderboard
