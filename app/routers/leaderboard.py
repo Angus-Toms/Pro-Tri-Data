@@ -4,12 +4,14 @@ from typing import Optional
 
 from fastapi import APIRouter, Query, Request
 from fastapi.templating import Jinja2Templates
+from config import STATIC_BASE_URL
 
 from stats.cache import get_male_short_leaderboard, get_female_short_leaderboard, get_country_list
 from app.routers.router_utils import format_rating_change
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
+templates.env.globals["STATIC_BASE_URL"] = STATIC_BASE_URL
 
 @router.get("/leaderboard/more")
 async def leaderboard_more(
@@ -55,8 +57,8 @@ async def leaderboard_more(
         leaderboard_df.sort_values(f"{disc}_change_rank", inplace = True)
 
     # Add new rank numbers (may be different from global rank if selections applied) to requested chunk
-    chunk = leaderboard_df.iloc[offset:offset+50]
-    chunk["rank"] = range(offset+1, offset+51)
+    chunk = leaderboard_df.iloc[offset:offset+50].copy()
+    chunk.loc[:, "rank"] = range(offset + 1, offset + 51)
 
     # Convert to dict for FastAPI
     chunk = chunk.to_dict(orient = "records")
@@ -117,8 +119,8 @@ async def leaderboard(
         leaderboard_df.sort_values(f"{disc}_change_rank", inplace = True)
 
     # Add new rank numbers (may be different from global rank if selections applied) to returned athletes
-    leaderboard_df = leaderboard_df.head(50)
-    leaderboard_df["rank"] = range(1, len(leaderboard_df) + 1)
+    leaderboard_df = leaderboard_df.head(50).copy()
+    leaderboard_df.loc[:, "rank"] = range(1, len(leaderboard_df) + 1)
 
     # Convert to dict for FastAPI
     athletes = leaderboard_df.reset_index().to_dict(orient = "records")

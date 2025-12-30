@@ -3,7 +3,7 @@
 {% block title %}{{ race.race_title }} - {{ race.date.strftime('%B %d %Y') }}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="https://static.protridata.com/css/race.css">
+<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/race.css">
 {% endblock %}
 
 {% block content %}
@@ -59,7 +59,7 @@
                     <div class="podium-item {{ 'gold' if athlete.position == '1' else 'silver' if athlete.position == '2' else 'bronze' }}">
                         <div class="podium-position">{{ athlete.position }}</div>
                         <img
-                        src="{{ 'https://static.protridata.com/athlete_imgs/64/' ~ athlete.athlete_id ~ '.webp' }}"
+                        src="{{ STATIC_BASE_URL ~ 'athlete_imgs/128/' ~ athlete.athlete_id ~ '.webp' }}"
                         data-fallback="{{ url_for('static', path='imgs/default_user.jpg') }}"
                         onerror="this.onerror=null;this.src=this.dataset.fallback;"
                         alt="{{ athlete.name }}"
@@ -489,6 +489,6 @@
     {{ transition_rating_hist | tojson }}
 </script>
 
-<script src="https://static.protridata.com/js/utils.js"></script>
-<script src="https://static.protridata.com/js/race.js"></script>
+<script src="{{ STATIC_BASE_URL }}js/utils.js"></script>
+<script src="{{ STATIC_BASE_URL }}js/race.js"></script>
 {% endblock %}

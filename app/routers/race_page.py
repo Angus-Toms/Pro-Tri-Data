@@ -14,8 +14,10 @@ from stats.cache import get_athlete_lookup, get_athlete_name
 from fastapi import HTTPException, Request, APIRouter
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from config import STATIC_BASE_URL
 
 templates = Jinja2Templates(directory="templates")
+templates.env.globals["STATIC_BASE_URL"] = STATIC_BASE_URL
 router = APIRouter()
     
 class RenameUnpickler(pickle.Unpickler):

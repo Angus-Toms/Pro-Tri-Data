@@ -6,7 +6,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.routers import index, athlete_search, race_search, athlete_page, race_page, leaderboard, comparison, about
-from config import RUNTIME_DATA_DIR
+from config import RUNTIME_DATA_DIR, STATIC_BASE_URL
 
 BASE_DIR = Path(__file__).resolve().parent.parent # Project root
 
@@ -14,6 +14,7 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory = BASE_DIR / "static"), name = "static")
 app.mount("/data", StaticFiles(directory = RUNTIME_DATA_DIR), name = "data")
 templates = Jinja2Templates(directory = BASE_DIR / "templates")
+templates.env.globals["STATIC_BASE_URL"] = STATIC_BASE_URL
 
 # Render HTTP errors with a shared template
 @app.exception_handler(StarletteHTTPException)

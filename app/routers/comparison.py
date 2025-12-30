@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from config import STATIC_BASE_URL
 
 from stats import cache
 from stats.athlete import Athlete, RaceResult
@@ -17,6 +18,7 @@ import pandas as pd
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
+templates.env.globals["STATIC_BASE_URL"] = STATIC_BASE_URL
 
 class RenameUnpickler(pickle.Unpickler):
     def find_class(self, module, name):

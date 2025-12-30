@@ -3,7 +3,7 @@
 {% block title %}Athletes - Search & Leaderboards{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="https://static.protridata.com/css/comparison.css">
+<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/comparison.css">
 {% endblock %}
 
 {% block content %}
@@ -60,8 +60,8 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://static.protridata.com/js/utils.js"></script>
-<script src="https://static.protridata.com/js/comparison.js"></script>
+<script src="{{ STATIC_BASE_URL }}js/utils.js"></script>
+<script src="{{ STATIC_BASE_URL }}js/comparison.js"></script>
 {% endblock %}    
 
 {% block comparison_specific_js %}

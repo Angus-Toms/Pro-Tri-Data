@@ -6,6 +6,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 STATIC_DIR = PROJECT_ROOT / "static"
 STATIC_IMG_DIR = STATIC_DIR / "imgs"
 RUNTIME_DATA_DIR = Path(os.getenv("DATA_ROOT", PROJECT_ROOT / "data"))
+STATIC_BASE_URL = "https://www.static.protridata.com/"
 
 # Runtime data (local: ./data, render: /var/data via DATA_ROOT)
 RUNTIME_ATHLETES_DIR = RUNTIME_DATA_DIR / "athletes"

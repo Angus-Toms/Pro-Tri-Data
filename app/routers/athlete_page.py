@@ -16,8 +16,10 @@ from app.routers.router_utils import format_time, format_time_behind, format_rat
 from fastapi import HTTPException, Request, APIRouter
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from config import STATIC_BASE_URL
 
 templates = Jinja2Templates(directory = "templates")
+templates.env.globals["STATIC_BASE_URL"] = STATIC_BASE_URL
 router = APIRouter()
 
 class RenameUnpickler(pickle.Unpickler):

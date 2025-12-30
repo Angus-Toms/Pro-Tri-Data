@@ -98,8 +98,9 @@ function selectAthlete(athleteKey, athlete, searchInput, resultsDiv, selectedDiv
         searchWrapper.classList.add('hidden');
     }
     
-    const imgSrc = `https://static.protridata.com/athlete_imgs/64/${athlete.id}.webp`;
-    const defaultImgSrc = `https://static.protridata.com/imgs/default_user.jpg`;
+    const baseUrl = window.STATIC_BASE_URL || "https://www.static.protridata/";
+    const imgSrc = `${baseUrl}athlete_imgs/128/${athlete.id}.webp`;
+    const defaultImgSrc = `${baseUrl}imgs/default_user.jpg`;
     selectedDiv.innerHTML = `
         <button class="selected-athlete-remove" aria-label="Clear selection">&times;</button>
 
@@ -107,7 +108,7 @@ function selectAthlete(athleteKey, athlete, searchInput, resultsDiv, selectedDiv
             <img 
                 class="selected-athlete-img"
                 src="${imgSrc}"
-                data-fallback="https://static.protridata.com/imgs/default_user.jpg"
+                data-fallback="${defaultImgSrc}"
                 onerror="${defaultImgSrc}"
                 alt="${athlete.name}"
             >
@@ -239,7 +240,8 @@ function loadComparisonResultsJs() {
     }
     
     const script = document.createElement("script");
-    script.src = "https://static.protridata.com/js/comparison_results.js";
+    const baseUrl = window.STATIC_BASE_URL || "https://www.static.protridata/";
+    script.src = `${baseUrl}js/comparison_results.js`;
     document.body.appendChild(script);
 
     // Initialise all rating graphs

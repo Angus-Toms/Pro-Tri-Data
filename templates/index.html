@@ -3,7 +3,7 @@
 {% block title %}Home - Pro Tri Data{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="https://static.protridata.com/css/index.css">
+<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/index.css">
 {% endblock %}
 
 {% block content %}
@@ -80,5 +80,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://static.protridata.com/js/index.js"></script>
+<script src="{{ STATIC_BASE_URL }}js/index.js"></script>
 {% endblock %}

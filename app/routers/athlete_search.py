@@ -1,12 +1,14 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from config import STATIC_BASE_URL
 import stats.cache as cache
 
 import pandas as pd
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
+templates.env.globals["STATIC_BASE_URL"] = STATIC_BASE_URL
 
 def _get_podium(df: pd.DataFrame):
     if "overall_rank" in df.columns:
