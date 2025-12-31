@@ -8,7 +8,7 @@ STATIC_IMG_DIR = STATIC_DIR / "imgs"
 RUNTIME_DATA_DIR = Path(os.getenv("DATA_ROOT", PROJECT_ROOT / "data"))
 ENV = os.getenv("PTD_ENV", "local").lower()
 STATIC_BASE_URL = (
-    "https://www.static.protridata/"
+    "https://www.static.protridata.com/"
     if ENV in {"prod", "production"}
     else "/static/"
 )
