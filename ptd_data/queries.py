@@ -5111,3 +5111,57 @@ def get_program_options_for_recurring(recurring_id):
         ORDER BY {_SUB_ORDER_CASE}, {_GENDER_ORDER_CASE}, r.prog_name
     """, [recurring_id]).fetchall()
     return _collapse_program_rows(rows)
+
+
+# ---------------------------------------------------------------------------
+# User-system support: follow validation and stitching (ptd_users lives in
+# Postgres; these provide the DuckDB side of the join done in Python)
+# ---------------------------------------------------------------------------
+
+def get_nationality_options():
+    """[(country_full, alpha3)] for the account-page country select."""
+    return _get_conn().execute(
+        "SELECT country_full, alpha3 FROM nationalities ORDER BY country_full"
+    ).fetchall()
+
+
+def get_athletes_brief_bulk(athlete_ids):
+    """{athlete_id: {name, country_full, country_alpha3}} for follow lists."""
+    if not athlete_ids:
+        return {}
+    placeholders = ",".join("?" * len(athlete_ids))
+    rows = _get_conn().execute(f"""
+        SELECT a.athlete_id, a.name, a.country_full, n.alpha3
+        FROM athletes a
+        JOIN nationalities n ON a.country_full = n.country_full
+        WHERE a.athlete_id IN ({placeholders})
+    """, list(athlete_ids)).fetchall()
+    return {r[0]: {"athlete_id": r[0], "name": r[1], "country_full": r[2],
+                   "country_alpha3": r[3]} for r in rows}
+
+
+def get_races_brief_bulk(race_ids):
+    """{race_id: {race_title, prog_name, race_date, gender, country,
+    event_spec_ids, is_upcoming}} across past and upcoming races. A race that
+    appears in both (just-finished, not yet rebuilt) keeps the past row."""
+    if not race_ids:
+        return {}
+    ids = list(race_ids)
+    placeholders = ",".join("?" * len(ids))
+    rows = _get_conn().execute(f"""
+        SELECT r.race_id, r.race_title, r.prog_name, r.race_date, r.gender,
+               e.country, NULL AS event_spec_ids, FALSE AS is_upcoming
+        FROM races r JOIN events e ON r.event_id = e.event_id
+        WHERE r.race_id IN ({placeholders})
+        UNION ALL
+        SELECT ur.race_id, ur.race_title, ur.prog_name, ur.race_date, ur.gender,
+               e.country, ur.event_spec_ids, TRUE AS is_upcoming
+        FROM upcoming_races ur JOIN events e ON ur.event_id = e.event_id
+        WHERE ur.race_id IN ({placeholders})
+    """, ids + ids).fetchall()
+    cols = ["race_id", "race_title", "prog_name", "race_date", "gender",
+            "country", "event_spec_ids", "is_upcoming"]
+    out = {}
+    for r in rows:
+        out.setdefault(r[0], dict(zip(cols, r)))
+    return out
