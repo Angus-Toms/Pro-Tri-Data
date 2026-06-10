@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Log in | Pro Tri Data{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/users.css?v={{ ASSET_VERSION }}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-card">
+    {% if sent %}
+    <h1 class="auth-title">Check your email</h1>
+    <p class="auth-text">If the address is valid, a login link is on its way. The link works once and expires in 15 minutes.</p>
+    {% else %}
+    <h1 class="auth-title">Log in or sign up</h1>
+    <p class="auth-text">Enter your email and we send you a login link. No password needed; new emails create an account automatically.</p>
+    {% if error %}<p class="auth-error">{{ error }}</p>{% endif %}
+    <form method="post" action="/auth/request-link" class="auth-form">
+        <input type="hidden" name="next" value="{{ next }}">
+        <input type="text" name="website" value="" class="auth-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <input type="email" name="email" class="auth-input" placeholder="you@example.com" required autofocus>
+        <button type="submit" class="btn-primary">Send login link</button>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}

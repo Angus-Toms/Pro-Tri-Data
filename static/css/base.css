@@ -411,6 +411,15 @@ html, body {
     background: rgba(232,93,4,0.18);
 }
 
+/* Account chip: hydrated from /me; keep display names on one line */
+.nav-account-chip {
+    white-space: nowrap;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+}
+
 .nav-link:hover {
     color: #fff;
     background: var(--primary-color);

@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -5,13 +6,22 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.routers import index, athlete_search, race_search, athlete_page, race_page, event_page, leaderboard, race_leaderboard, comparison, race_comparison, about, robots, series_page, country_page, upcoming_page, api
+from app.routers import index, athlete_search, race_search, athlete_page, race_page, event_page, leaderboard, race_leaderboard, comparison, race_comparison, about, robots, series_page, country_page, upcoming_page, api, auth
 from config import RUNTIME_DATA_DIR, STATIC_BASE_URL, ASSET_VERSION, flag
+from ptd_users import db as users_db
 
 BASE_DIR = Path(__file__).resolve().parent.parent # Project root
 ALLOWED_HOSTS = {"protridata.com", "www.protridata.com", "127.0.0.1:8000"}
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await users_db.init()
+    yield
+    await users_db.close()
+
+
+app = FastAPI(lifespan=lifespan)
 
 # Long-cache flag SVGs: filenames are alpha3-stable, content effectively immutable.
 @app.middleware("http")
@@ -88,6 +98,7 @@ app.include_router(series_page.router)
 app.include_router(country_page.router)
 app.include_router(upcoming_page.router)
 app.include_router(api.router)
+app.include_router(auth.router)
 
 if __name__ == "__main__":
     import uvicorn

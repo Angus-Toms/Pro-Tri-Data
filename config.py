@@ -13,6 +13,22 @@ STATIC_BASE_URL = (
     if ENV in {"prod", "production"}
     else "/static/"
 )
+SITE_BASE_URL = (
+    "https://protridata.com"
+    if ENV in {"prod", "production"}
+    else "http://localhost:8000"
+)
+
+# User-system Postgres. Local dev defaults to the Homebrew instance; prod must
+# set DATABASE_URL explicitly - crash at import rather than run without it.
+DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL is None:
+    if ENV in {"prod", "production"}:
+        raise RuntimeError("DATABASE_URL must be set in production")
+    DATABASE_URL = "postgresql://localhost:5432/ptd_users"
+
+# Resend email API key. Unset means dev mode: magic links are printed to stdout.
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 
 
 def _compute_asset_version() -> str:
