@@ -411,6 +411,11 @@ html, body {
     background: rgba(232,93,4,0.18);
 }
 
+/* hidden attribute loses to .nav-link's display:inline-flex without this */
+.nav-link[hidden] {
+    display: none;
+}
+
 /* Account chip: hydrated from /me; keep display names on one line */
 .nav-account-chip {
     white-space: nowrap;

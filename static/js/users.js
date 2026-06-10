@@ -11,7 +11,10 @@ window.ptdUser = (function () {
         const cached = sessionStorage.getItem(KEY);
         if (cached) {
             const { t, me } = JSON.parse(cached);
-            if (Date.now() - t < TTL_MS) {
+            // Only logged-in payloads are cached: a cached null would keep the
+            // page anonymous for minutes after logging in, and the anonymous
+            // /me round trip is a cookie-less 401 that costs nothing.
+            if (me && Date.now() - t < TTL_MS) {
                 promise = Promise.resolve(me);
                 return promise;
             }
@@ -19,7 +22,8 @@ window.ptdUser = (function () {
         promise = fetch('/me')
             .then(r => r.ok ? r.json() : null)
             .then(me => {
-                sessionStorage.setItem(KEY, JSON.stringify({ t: Date.now(), me }));
+                if (me) sessionStorage.setItem(KEY, JSON.stringify({ t: Date.now(), me }));
+                else sessionStorage.removeItem(KEY);
                 return me;
             });
         return promise;

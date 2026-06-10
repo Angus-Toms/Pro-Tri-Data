@@ -458,6 +458,11 @@
     margin: 0 0 var(--spacing-md);
 }
 
+/* display:flex would defeat the hidden attribute the hydration relies on */
+.comment-form[hidden] {
+    display: none;
+}
+
 .comment-form {
     display: flex;
     flex-direction: column;
