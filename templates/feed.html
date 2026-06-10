@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Feed | Pro Tri Data{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/users.css?v={{ ASSET_VERSION }}">
+{% endblock %}
+
+{% block content %}
+<div class="feed-page">
+    <div class="feed-section">
+        <h2 class="feed-section-title">Upcoming races</h2>
+        {% if upcoming_races %}
+        {% for r in upcoming_races %}
+        <div class="feed-card">
+            <div class="feed-card-head">
+                <span class="feed-card-title"><a href="/race/{{ r.race_id }}">{{ r.race_title }}</a></span>
+                <span class="feed-card-meta">{{ r.prog_name }} · {{ r.race_date.strftime('%d %b %Y') }} · {{ r.country }}</span>
+            </div>
+            <div class="feed-reason">
+                {%- if r.followed_race %}You follow this race{% endif -%}
+                {%- if r.followed_race and r.athletes %} · {% endif -%}
+                {%- if r.athletes %}On the start list: {{ r.athletes | join(', ') }}{% endif -%}
+            </div>
+            {% if r.podium %}
+            <div class="feed-podium">
+                {% for p in r.podium %}
+                <div class="feed-podium-row">
+                    <span class="feed-podium-pos">{{ p.position }}.</span>
+                    <a href="/athlete/{{ p.athlete_id }}">{{ p.name }}</a>
+                    {{ flag(p.country_alpha3) }}
+                    {% if p.time %}<span class="feed-card-meta">{{ p.gap if p.gap else p.time }}</span>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="feed-empty">No upcoming races from your follows. Follow races on the <a href="/upcoming">upcoming page</a> or athletes on the <a href="/athlete-leaderboard">leaderboard</a>.</div>
+        {% endif %}
+    </div>
+
+    <div class="feed-section">
+        <h2 class="feed-section-title">Recent results</h2>
+        {% if recent_results %}
+        <div class="feed-card">
+            {% for r in recent_results %}
+            <div class="feed-result-row">
+                <div class="feed-result-main">
+                    <a href="/athlete/{{ r.athlete_id }}">{{ r.name }}</a>
+                    {{ flag(r.country_alpha3) }}
+                    <span class="feed-result-pos">{% if r.position %}{{ r.position }}.{% else %}{{ r.status }}{% endif %}</span>
+                    <a href="/race/{{ r.race_id }}">{{ r.race_title }}</a>
+                </div>
+                <div class="feed-result-stats">
+                    <span>{{ r.race_date.strftime('%d %b') }}</span>
+                    {% if r.overall %}<span>{{ r.overall }}</span>{% endif %}
+                    <span class="{{ r.change.css_class }}">{{ r.change.formatted_str | safe }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="feed-empty">No results in the last 90 days from athletes you follow. Find athletes on the <a href="/athlete-leaderboard">leaderboard</a>.</div>
+        {% endif %}
+    </div>
+
+    <div class="feed-section">
+        <h2 class="feed-section-title">Comments on followed races</h2>
+        {% if comments %}
+        <div class="feed-card">
+            {% for c in comments %}
+            <div class="comment">
+                <div class="comment-head">
+                    <span class="comment-author">{{ c.display_name }}</span>
+                    {% if c.country %}{{ flag(c.country) }}{% endif %}
+                    <span class="comment-date">{{ c.when }} on <a href="/race/{{ c.race_id }}">{{ c.race_title }}</a></span>
+                </div>
+                <p class="comment-body">{{ c.body }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="feed-empty">No comments yet on races you follow.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -12,6 +12,7 @@ function initLoadMore() {
             const res = await fetch(`/athlete-leaderboard/more?${params.toString()}`);
             const html = await res.text();
             document.querySelector(".leaderboard-grid").insertAdjacentHTML("beforeend", html);
+            initFollowButtons();
             leaderboardOffset += 50;
             if (html.trim().length === 0) loadMoreBtn.style.display = "none";
         } catch (err) {

@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.routers import index, athlete_search, race_search, athlete_page, race_page, event_page, leaderboard, race_leaderboard, comparison, race_comparison, about, robots, series_page, country_page, upcoming_page, api, auth, account
+from app.routers import index, athlete_search, race_search, athlete_page, race_page, event_page, leaderboard, race_leaderboard, comparison, race_comparison, about, robots, series_page, country_page, upcoming_page, api, auth, account, follows, feed
 from config import RUNTIME_DATA_DIR, STATIC_BASE_URL, ASSET_VERSION, flag
 from ptd_users import db as users_db
 
@@ -100,6 +100,8 @@ app.include_router(upcoming_page.router)
 app.include_router(api.router)
 app.include_router(auth.router)
 app.include_router(account.router)
+app.include_router(follows.router)
+app.include_router(feed.router)
 
 if __name__ == "__main__":
     import uvicorn

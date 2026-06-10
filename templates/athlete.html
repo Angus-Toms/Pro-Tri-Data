@@ -22,6 +22,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/athlete.css?v={{ ASSET_VERSION }}">
+<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/users.css?v={{ ASSET_VERSION }}">
 {% endblock %}
 
 {% block hero %}
@@ -43,6 +44,7 @@
                     {{ flag(athlete.country_alpha3, athlete.country_full, 'flag-lg') }}
                     <span class="athlete-status-chip {{ 'status-active' if athlete.active else 'status-retired' }}">{{ 'Active' if athlete.active else 'Retired' }}</span>
                 </h1>
+                {% with follow_kind = 'athlete', follow_id = athlete.athlete_id %}{% include "_follow_button.html" %}{% endwith %}
             </div>
             <div class="athlete-hero-meta">
                 {% if athlete.country_alpha3 %}

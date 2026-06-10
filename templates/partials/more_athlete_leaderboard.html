@@ -19,6 +19,7 @@
                     <span class="meta-item-sep"> · </span><span class="meta-item"><strong>Wins:</strong> {{ athlete.win_count }}</span>
                 </div>
             </div>
+            {% with follow_kind = 'athlete', follow_id = athlete.athlete_id %}{% include "_follow_button.html" %}{% endwith %}
         </div>
 
         {% if order == "top" %}

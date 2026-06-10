@@ -15,6 +15,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/leaderboard.css?v={{ ASSET_VERSION }}">
+<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/users.css?v={{ ASSET_VERSION }}">
 {% endblock %}
 
 {% block hero %}
@@ -190,6 +191,7 @@
                         <span class="meta-item-sep"> · </span><span class="meta-item"><span class="meta-val">{{ athlete.win_count }}</span> wins</span>
                     </div>
                 </div>
+                {% with follow_kind = 'athlete', follow_id = athlete.athlete_id %}{% include "_follow_button.html" %}{% endwith %}
             </div>
 
             {% if order == "top" %}

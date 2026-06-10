@@ -129,3 +129,18 @@ async def toggle_follow(user_id, kind, ref_id):
         insert into follows (user_id, kind, ref_id) values ($1, $2, $3)
     """, user_id, kind, ref_id)
     return True
+
+
+# --- comments ---------------------------------------------------------------
+
+async def get_recent_comments_for_races(race_ids, limit=20):
+    """Latest visible comments across a set of races, for the feed."""
+    rows = await db.pool.fetch("""
+        select c.comment_id, c.race_id, c.body, c.created_at,
+               u.display_name, u.country
+        from comments c join users u using (user_id)
+        where c.race_id = any($1) and c.hidden_at is null
+        order by c.created_at desc
+        limit $2
+    """, race_ids, limit)
+    return [dict(r) for r in rows]

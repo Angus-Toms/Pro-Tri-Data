@@ -5165,3 +5165,50 @@ def get_races_brief_bulk(race_ids):
     for r in rows:
         out.setdefault(r[0], dict(zip(cols, r)))
     return out
+
+
+def get_upcoming_races_for_athletes(athlete_ids):
+    """Upcoming startlist appearances for a set of athletes.
+    {race_id: [athlete names]} plus race info, for the feed's upcoming section."""
+    if not athlete_ids:
+        return []
+    placeholders = ",".join("?" * len(athlete_ids))
+    rows = _get_conn().execute(f"""
+        SELECT ur.race_id, ur.race_title, ur.prog_name, ur.race_date, ur.gender,
+               ur.event_spec_ids, e.country, a.athlete_id, a.name
+        FROM start_list_entries sle
+        JOIN upcoming_races ur ON sle.race_id = ur.race_id
+        JOIN events e          ON ur.event_id = e.event_id
+        JOIN athletes a        ON sle.athlete_id = a.athlete_id
+        WHERE sle.athlete_id IN ({placeholders})
+        ORDER BY ur.race_date, ur.race_id
+    """, list(athlete_ids)).fetchall()
+    cols = ["race_id", "race_title", "prog_name", "race_date", "gender",
+            "event_spec_ids", "country", "athlete_id", "name"]
+    return [dict(zip(cols, r)) for r in rows]
+
+
+def get_recent_results_for_athletes(athlete_ids, days=90):
+    """Results in the last `days` for a set of athletes, newest first, with
+    overall time and rating change. One bulk query for the feed."""
+    if not athlete_ids:
+        return []
+    placeholders = ",".join("?" * len(athlete_ids))
+    rows = _get_conn().execute(f"""
+        SELECT a.athlete_id, a.name, n.alpha3 AS country_alpha3,
+               r.race_id, r.race_title, r.prog_name, r.race_date,
+               res.position, res.status, res.overall_s, ra.overall_change
+        FROM results res
+        JOIN races r         ON res.race_id = r.race_id
+        JOIN athletes a      ON res.athlete_id = a.athlete_id
+        JOIN nationalities n ON a.country_full = n.country_full
+        LEFT JOIN ratings ra ON ra.race_id = res.race_id AND ra.athlete_id = res.athlete_id
+        WHERE res.athlete_id IN ({placeholders})
+          AND r.race_date >= current_date - INTERVAL {int(days)} DAY
+          AND NOT EXISTS (SELECT 1 FROM ignored_races ig WHERE ig.race_id = r.race_id)
+        ORDER BY r.race_date DESC, r.race_id DESC
+    """, list(athlete_ids)).fetchall()
+    cols = ["athlete_id", "name", "country_alpha3", "race_id", "race_title",
+            "prog_name", "race_date", "position", "status", "overall_s",
+            "overall_change"]
+    return [dict(zip(cols, r)) for r in rows]

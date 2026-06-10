@@ -21,6 +21,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/race.css?v={{ ASSET_VERSION }}">
+<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/users.css?v={{ ASSET_VERSION }}">
 {% endblock %}
 
 {% block hero %}{% include "_race_hero.html" %}{% endblock %}
@@ -59,6 +60,7 @@ async function switchRace(raceId) {
     initRaceViewToggle();
     initRaceSortChips();
     initRaceSplitsToggle();
+    initFollowButtons();
     history.pushState({}, '', `/race/${raceId}`);
     window.scrollTo(0, 0);
 }

@@ -263,6 +263,29 @@
     color: var(--primary-color);
 }
 
+/* Dark race hero variant */
+.race-hero .btn-follow {
+    background: transparent;
+    border-color: rgba(255, 255, 255, 0.35);
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.race-hero .btn-follow:hover {
+    border-color: var(--primary-color);
+    color: var(--white);
+}
+
+.race-hero .btn-follow.following {
+    background: rgba(232, 93, 4, 0.18);
+    border-color: var(--primary-color);
+    color: var(--white);
+}
+
+/* Leaderboard cards: push to the row's right edge */
+.athlete-main-info .btn-follow {
+    margin-left: auto;
+}
+
 @media (max-width: 640px) {
     .btn-follow .follow-label {
         display: none;

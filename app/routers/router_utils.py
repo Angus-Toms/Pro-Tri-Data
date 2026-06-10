@@ -1,5 +1,18 @@
 # Formatting functions for FastAPI routers
 
+from datetime import datetime, timezone
+
+
+def rel_time(dt: datetime) -> str:
+    """Coarse relative timestamp for comments and feed entries."""
+    delta = datetime.now(timezone.utc) - dt
+    seconds = int(delta.total_seconds())
+    if seconds < 60:        return "just now"
+    if seconds < 3600:      return f"{seconds // 60}m ago"
+    if seconds < 86400:     return f"{seconds // 3600}h ago"
+    if seconds < 30*86400:  return f"{seconds // 86400}d ago"
+    return dt.strftime("%d %b %Y")
+
 # SVG chevron arrows - stroke-based so they scale cleanly with font size
 # and align geometrically rather than relying on Unicode glyph metrics.
 _SVG_UP   = ('<svg class="chg-arrow" viewBox="0 0 10 8" fill="none" '
