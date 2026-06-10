@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Moderation | Pro Tri Data{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/users.css?v={{ ASSET_VERSION }}">
+{% endblock %}
+
+{% block content %}
+<div class="mod-page">
+    <h1 class="feed-section-title">Moderation queue</h1>
+    {% if queue %}
+    {% for c in queue %}
+    <div class="mod-comment{% if c.hidden_at %} hidden-comment{% endif %}">
+        <div class="mod-meta">
+            {{ c.display_name }} ({{ c.email }}) · {{ c.when }} ·
+            <a href="/race/{{ c.race_id }}">{{ c.race_title }}</a> ·
+            {{ c.report_count }} report{{ 's' if c.report_count != 1 }}{% if c.hidden_at %} · HIDDEN{% endif %}
+        </div>
+        <p class="comment-body">{{ c.body }}</p>
+        <div class="mod-actions">
+            {% if c.hidden_at %}
+            <form method="post" action="/comments/{{ c.comment_id }}/unhide">
+                <button type="submit" class="btn-secondary">Unhide and clear reports</button>
+            </form>
+            {% endif %}
+            <form method="post" action="/comments/{{ c.comment_id }}/delete">
+                <input type="hidden" name="next" value="/admin/moderation">
+                <button type="submit" class="btn-danger">Delete</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="feed-empty">Queue is empty. No reported or hidden comments.</div>
+    {% endif %}
+</div>
+{% endblock %}

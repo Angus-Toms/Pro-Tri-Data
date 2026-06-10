@@ -84,6 +84,88 @@ async function handleFollowClick(btn) {
     window.ptdUser.invalidate();
 }
 
+// --- Race comments ------------------------------------------------------
+// The race page renders an empty #race-comments host (past races only);
+// the partial is fetched here so race HTML never contains user state.
+function initComments() {
+    const host = document.getElementById('race-comments');
+    if (!host || host.dataset.commentsInit) return;
+    host.dataset.commentsInit = '1';
+    loadComments(host, 0);
+}
+
+async function loadComments(host, offset) {
+    const res = await fetch(`/race/${host.dataset.raceId}/comments?offset=${offset}`);
+    if (!res.ok) return;
+    host.innerHTML = await res.text();
+    hydrateComments(host);
+}
+
+function hydrateComments(host) {
+    const card = host.querySelector('[data-comments]');
+    if (!card) return;
+    const raceId = card.dataset.raceId;
+
+    window.ptdUser.load().then(me => {
+        const form = card.querySelector('[data-comment-form]');
+        const cta = card.querySelector('[data-comment-login]');
+        if (me) {
+            if (form) form.hidden = false;
+        } else if (cta) {
+            cta.hidden = false;
+            const link = cta.querySelector('a');
+            if (link) link.href = '/login?next=' + encodeURIComponent(location.pathname + location.search);
+        }
+        card.querySelectorAll('.comment').forEach(el => {
+            if (!me) return;
+            const own = Number(el.dataset.authorId) === me.user_id;
+            const del = el.querySelector('[data-comment-delete]');
+            const rep = el.querySelector('[data-comment-report]');
+            if (del && (own || me.is_admin)) del.hidden = false;
+            if (rep && !own) rep.hidden = false;
+        });
+    });
+
+    const form = card.querySelector('[data-comment-form]');
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const body = form.querySelector('.comment-textarea').value;
+            const res = await fetch(`/race/${raceId}/comments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ body }),
+            });
+            host.innerHTML = await res.text();
+            hydrateComments(host);
+        });
+    }
+
+    card.querySelectorAll('[data-comment-delete]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            if (!confirm('Delete this comment?')) return;
+            const id = btn.closest('.comment').dataset.commentId;
+            const res = await fetch(`/comments/${id}/delete`, { method: 'POST' });
+            if (res.ok) loadComments(host, 0);
+        });
+    });
+
+    card.querySelectorAll('[data-comment-report]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.closest('.comment').dataset.commentId;
+            const res = await fetch(`/comments/${id}/report`, { method: 'POST' });
+            if (res.ok) {
+                btn.textContent = 'Reported';
+                btn.disabled = true;
+            }
+        });
+    });
+
+    card.querySelectorAll('[data-comments-page]').forEach(btn => {
+        btn.addEventListener('click', () => loadComments(host, Number(btn.dataset.offset)));
+    });
+}
+
 // Nav account chip + feed link + follow buttons
 document.addEventListener('DOMContentLoaded', () => {
     window.ptdUser.load().then(me => {
@@ -95,4 +177,5 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('[data-feed-link]').forEach(l => { l.hidden = false; });
     });
     initFollowButtons();
+    initComments();
 });

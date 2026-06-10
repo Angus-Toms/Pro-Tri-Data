@@ -61,6 +61,7 @@ async function switchRace(raceId) {
     initRaceSortChips();
     initRaceSplitsToggle();
     initFollowButtons();
+    initComments();
     history.pushState({}, '', `/race/${raceId}`);
     window.scrollTo(0, 0);
 }

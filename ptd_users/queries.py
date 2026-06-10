@@ -133,6 +133,96 @@ async def toggle_follow(user_id, kind, ref_id):
 
 # --- comments ---------------------------------------------------------------
 
+COMMENTS_PAGE_SIZE = 50
+AUTO_HIDE_REPORTS = 3
+
+
+async def list_comments(race_id, offset=0):
+    """Visible comments for a race, newest first. Returns (comments, has_more)."""
+    rows = await db.pool.fetch("""
+        select c.comment_id, c.user_id, c.body, c.created_at,
+               u.display_name, u.country
+        from comments c join users u using (user_id)
+        where c.race_id = $1 and c.hidden_at is null
+        order by c.created_at desc, c.comment_id desc
+        limit $2 offset $3
+    """, race_id, COMMENTS_PAGE_SIZE + 1, offset)
+    comments = [dict(r) for r in rows[:COMMENTS_PAGE_SIZE]]
+    return comments, len(rows) > COMMENTS_PAGE_SIZE
+
+
+async def insert_comment(race_id, user_id, body):
+    await db.pool.execute("""
+        insert into comments (race_id, user_id, body) values ($1, $2, $3)
+    """, race_id, user_id, body)
+
+
+async def get_comment(comment_id):
+    row = await db.pool.fetchrow(
+        "select * from comments where comment_id = $1", comment_id
+    )
+    return dict(row) if row else None
+
+
+async def delete_comment(comment_id):
+    await db.pool.execute("delete from comments where comment_id = $1", comment_id)
+
+
+async def comment_rate_state(user_id):
+    """(last_comment_at or None, comments in the last 24h) for rate limiting."""
+    row = await db.pool.fetchrow("""
+        select max(created_at) as last_at,
+               count(*) filter (where created_at > now() - interval '1 day') as day_count
+        from comments where user_id = $1
+    """, user_id)
+    return row["last_at"], row["day_count"]
+
+
+async def report_comment(comment_id, user_id):
+    """Record a report (unique per user); auto-hide at AUTO_HIDE_REPORTS distinct
+    reporters. Returns the current report count."""
+    await db.pool.execute("""
+        insert into comment_reports (comment_id, user_id) values ($1, $2)
+        on conflict do nothing
+    """, comment_id, user_id)
+    count = await db.pool.fetchval(
+        "select count(*) from comment_reports where comment_id = $1", comment_id
+    )
+    if count >= AUTO_HIDE_REPORTS:
+        await db.pool.execute("""
+            update comments set hidden_at = now()
+            where comment_id = $1 and hidden_at is null
+        """, comment_id)
+    return count
+
+
+async def unhide_comment(comment_id):
+    # Clearing the reports as well, otherwise the very next report re-hides
+    # a comment a moderator just cleared.
+    await db.pool.execute(
+        "delete from comment_reports where comment_id = $1", comment_id
+    )
+    await db.pool.execute(
+        "update comments set hidden_at = null where comment_id = $1", comment_id
+    )
+
+
+async def moderation_queue():
+    """Reported or hidden comments with report counts, hidden first."""
+    rows = await db.pool.fetch("""
+        select c.comment_id, c.race_id, c.body, c.created_at, c.hidden_at,
+               u.display_name, u.email,
+               count(cr.user_id) as report_count
+        from comments c
+        join users u using (user_id)
+        left join comment_reports cr using (comment_id)
+        group by c.comment_id, u.user_id
+        having c.hidden_at is not null or count(cr.user_id) > 0
+        order by (c.hidden_at is null), c.created_at desc
+    """)
+    return [dict(r) for r in rows]
+
+
 async def get_recent_comments_for_races(race_ids, limit=20):
     """Latest visible comments across a set of races, for the feed."""
     rows = await db.pool.fetch("""

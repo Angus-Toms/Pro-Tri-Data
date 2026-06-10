@@ -1,0 +1,42 @@
+{# Comments partial: fetched client-side and injected below race results.
+   users.js hydrates form visibility and per-comment actions from /me. #}
+<div class="comments-card" data-comments data-race-id="{{ race_id }}">
+    <p class="comments-rule">Discuss the race, not the people.</p>
+
+    <form class="comment-form" data-comment-form hidden>
+        <textarea name="body" class="comment-textarea" maxlength="2000" required placeholder="Add a comment"></textarea>
+        <div class="comment-form-actions">
+            {% if error %}<span class="comment-error">{{ error }}</span>{% endif %}
+            <button type="submit" class="btn-primary">Post</button>
+        </div>
+    </form>
+    <p class="comment-login-cta" data-comment-login hidden>
+        <a href="/login">Log in</a> to join the discussion.
+    </p>
+
+    {% for c in comments %}
+    <div class="comment" data-comment-id="{{ c.comment_id }}" data-author-id="{{ c.user_id }}">
+        <div class="comment-head">
+            <span class="comment-author">{{ c.display_name }}</span>
+            {% if c.country %}{{ flag(c.country) }}{% endif %}
+            <span class="comment-date">{{ rel_time(c.created_at) }}</span>
+        </div>
+        <p class="comment-body">{{ c.body }}</p>
+        <div class="comment-actions">
+            <button type="button" class="comment-action" data-comment-delete hidden>Delete</button>
+            <button type="button" class="comment-action" data-comment-report hidden>Report</button>
+        </div>
+    </div>
+    {% else %}
+    <p class="comments-empty">No comments yet.</p>
+    {% endfor %}
+
+    <div class="comments-more">
+        {% if offset > 0 %}
+        <button type="button" class="btn-secondary" data-comments-page data-offset="{{ [offset - page_size, 0] | max }}">Newer comments</button>
+        {% endif %}
+        {% if has_more %}
+        <button type="button" class="btn-secondary" data-comments-page data-offset="{{ offset + page_size }}">Older comments</button>
+        {% endif %}
+    </div>
+</div>
