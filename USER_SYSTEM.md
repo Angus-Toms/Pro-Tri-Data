@@ -186,4 +186,4 @@ Phases 1-2 ship together as the smallest useful unit; 3 is the retention payoff;
 - Display names: enforce uniqueness (handles, needed only if profiles ever go public)
   or freeform with the user_id as the real identity?
 - Comment policy line: do DNF/DQ discussions about named athletes count as athlete
-  commentary? Suggest a short posted rule: discuss the race, not the person.
+  commentary?
