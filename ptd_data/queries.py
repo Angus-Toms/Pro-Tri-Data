@@ -1339,7 +1339,7 @@ def get_country_relay_legs(country_full):
                    MIN(CASE WHEN l.t2_s   > 0 THEN l.t2_s   END) OVER w AS t2_best_s,
                    MIN(CASE WHEN l.run_s  > 0 THEN l.run_s  END) OVER w AS run_best_s,
                    MIN(CASE WHEN l.leg_s  > 0 THEN l.leg_s  END) OVER w AS leg_best_s
-            FROM relay_legs l
+            FROM relay_legs_corrected l
             JOIN relay_teams rt ON rt.race_id = l.race_id AND rt.team_id = l.team_id
             WINDOW w AS (PARTITION BY l.race_id, l.leg_num)
         )
@@ -2237,7 +2237,7 @@ def get_athlete_relay_history(athlete_id):
                    MIN(CASE WHEN run_s  > 0 THEN run_s  END) AS min_run,
                    MIN(CASE WHEN t1_s   > 0 THEN t1_s   END) AS min_t1,
                    MIN(CASE WHEN t2_s   > 0 THEN t2_s   END) AS min_t2
-            FROM relay_legs
+            FROM relay_legs_corrected
             GROUP BY race_id, leg_num
         )
         SELECT
@@ -2257,7 +2257,7 @@ def get_athlete_relay_history(athlete_id):
             r.event_id,
             l.leg_num,
             rt.team_title
-        FROM relay_legs l
+        FROM relay_legs_corrected l
         JOIN relay_teams rt ON rt.race_id = l.race_id AND rt.team_id = l.team_id
         JOIN races r ON r.race_id = l.race_id
         JOIN leg_leader w ON w.race_id = l.race_id AND w.leg_num = l.leg_num
@@ -2305,7 +2305,7 @@ def get_athlete_rating_history(athlete_id, category='elite', course='short'):
         -- the athlete's team result instead.
         LEFT JOIN (
             SELECT l.race_id, l.athlete_id, l.leg_num, rt.position, rt.status
-            FROM relay_legs l
+            FROM relay_legs_corrected l
             JOIN relay_teams rt ON rt.race_id = l.race_id AND rt.team_id = l.team_id
         ) rl ON rl.race_id = ra.race_id AND rl.athlete_id = ra.athlete_id
         WHERE ra.athlete_id = ? AND ra.category = ? AND r.distance IN {course_in}
@@ -2556,7 +2556,7 @@ def get_event_races_detail(event_id):
 
         leg_rows = conn.execute(f"""
             SELECT race_id, team_id, leg_num, leg_s
-            FROM relay_legs
+            FROM relay_legs_corrected
             WHERE race_id IN ({rph})
         """, relay_ids).fetchall()
         for race_id, team_id, leg_num, leg_s in leg_rows:
@@ -2720,7 +2720,7 @@ def get_relay_teams(race_id):
                l.leg_s, l.swim_s, l.t1_s, l.bike_s, l.t2_s, l.run_s
         FROM relay_teams rt
         JOIN nationalities n ON rt.country_full = n.country_full
-        LEFT JOIN relay_legs l ON l.race_id = rt.race_id AND l.team_id = rt.team_id
+        LEFT JOIN relay_legs_corrected l ON l.race_id = rt.race_id AND l.team_id = rt.team_id
         LEFT JOIN athletes a ON a.athlete_id = l.athlete_id
         WHERE rt.race_id = ?
         ORDER BY CASE rt.status
@@ -5875,7 +5875,7 @@ def _scoped_relay_races(scope, program=None):
 
     leg_rows = conn.execute(f"""
         SELECT l.race_id, l.team_id, l.leg_num, l.athlete_id, a.name, l.leg_s
-        FROM relay_legs l
+        FROM relay_legs_corrected l
         JOIN athletes a ON a.athlete_id = l.athlete_id
         WHERE l.race_id IN ({id_ph})
         ORDER BY l.race_id, l.team_id, l.leg_num
@@ -6000,7 +6000,7 @@ def _scoped_relay_performance_history(scope, program=None):
         SELECT r.race_id, l.leg_num, MIN(l.leg_s) AS best
         FROM {scope['table']}
         {scope['join']}
-        JOIN relay_legs l ON l.race_id = r.race_id
+        JOIN relay_legs_corrected l ON l.race_id = r.race_id
         WHERE {scope['where']}
           AND r.distance = 'relay'
           AND l.leg_s > 0

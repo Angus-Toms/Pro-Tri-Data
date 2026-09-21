@@ -504,6 +504,41 @@ def create_schema(conn):
         )
     """)
 
+    # relay_legs with corrections applied, so ratings and every display query
+    # read the same numbers. Manual rows win over auto; an absent row falls
+    # through to the raw split. Mirrors the corr/corr_wide CTE that ratings.py
+    # spells out for individual results. 'overall' is the leg time.
+    conn.execute("""
+        CREATE OR REPLACE VIEW relay_legs_corrected AS
+        WITH corr AS (
+            SELECT race_id, athlete_id, discipline,
+                   COALESCE(MAX(value) FILTER (WHERE source = 'manual'),
+                            MAX(value) FILTER (WHERE source = 'auto')) AS value
+            FROM corrections
+            GROUP BY race_id, athlete_id, discipline
+        ),
+        corr_wide AS (
+            SELECT race_id, athlete_id,
+                   MAX(value) FILTER (WHERE discipline = 'overall') AS leg,
+                   MAX(value) FILTER (WHERE discipline = 'swim')    AS swim,
+                   MAX(value) FILTER (WHERE discipline = 'bike')    AS bike,
+                   MAX(value) FILTER (WHERE discipline = 'run')     AS run,
+                   MAX(value) FILTER (WHERE discipline = 't1')      AS t1,
+                   MAX(value) FILTER (WHERE discipline = 't2')      AS t2
+            FROM corr GROUP BY race_id, athlete_id
+        )
+        SELECT l.race_id, l.team_id, l.leg_num, l.athlete_id,
+               COALESCE(cw.leg,  l.leg_s)  AS leg_s,
+               COALESCE(cw.swim, l.swim_s) AS swim_s,
+               COALESCE(cw.bike, l.bike_s) AS bike_s,
+               COALESCE(cw.run,  l.run_s)  AS run_s,
+               COALESCE(cw.t1,   l.t1_s)   AS t1_s,
+               COALESCE(cw.t2,   l.t2_s)   AS t2_s
+        FROM relay_legs l
+        LEFT JOIN corr_wide cw
+               ON cw.race_id = l.race_id AND cw.athlete_id = l.athlete_id
+    """)
+
     # ART indexes on non-PK columns used in WHERE/JOIN clauses
     conn.execute("CREATE INDEX IF NOT EXISTS idx_events_date ON events(start_date)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_event_series_series_id ON event_series(series_id)")

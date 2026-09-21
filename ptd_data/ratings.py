@@ -283,7 +283,7 @@ def _compute_ratings(conn, category, course, clear=True):
             # comparisons are meaningless. Damped K (see RELAY_K_MULT).
             legs = conn.execute("""
                 SELECT athlete_id, leg_num, leg_s, swim_s, bike_s, run_s, t1_s, t2_s
-                FROM relay_legs WHERE race_id = ?
+                FROM relay_legs_corrected WHERE race_id = ?
             """, [race_id]).fetchall()
 
             athlete_data = {}
@@ -703,7 +703,7 @@ def _compute_country_ratings(conn):
                    SUM(l.t1_s + l.t2_s) FILTER (WHERE l.t1_s > 0 AND l.t2_s > 0),
                    COUNT(*) FILTER (WHERE l.t1_s > 0 AND l.t2_s > 0)
             FROM relay_teams rt
-            LEFT JOIN relay_legs l ON l.race_id = rt.race_id AND l.team_id = rt.team_id
+            LEFT JOIN relay_legs_corrected l ON l.race_id = rt.race_id AND l.team_id = rt.team_id
             WHERE rt.race_id = ? AND rt.status = 'Finished'
               AND rt.position IS NOT NULL AND rt.total_s > 0
             GROUP BY rt.country_full, rt.team_id, rt.position, rt.total_s
