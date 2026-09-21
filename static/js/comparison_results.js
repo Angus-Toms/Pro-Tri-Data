@@ -200,16 +200,7 @@
         const ctx = document.getElementById(canvasId);
         if (!ctx) return null;
 
-        let data = getJSON(`${disc}-${dataPrefix}-data`);
-
-        // Compute alignment offsets from the overall ratings dataset (done once)
-        if (disc === 'overall' && dataPrefix === 'ratings' && isAligned) {
-            athleteFirstDates = data.datasets.map(dataset =>
-                Math.min(...dataset.data.map(d => new Date(d.x).getTime()))
-            );
-        }
-
-        data = applyAlignmentToData(data);
+        let data = applyAlignmentToData(getJSON(`${disc}-${dataPrefix}-data`));
 
         // Style each dataset with matching hover points
         data = {
@@ -369,7 +360,13 @@
     function setAlignMode(aligned) {
         if (isAligned === aligned) return;
         isAligned = aligned;
-        initRatings();   // sets athleteFirstDates
+        // Per-athlete debut date from the overall ratings series; every chart
+        // (any discipline, ratings or rankings) shifts by the same offsets.
+        athleteFirstDates = aligned
+            ? getJSON('overall-ratings-data').datasets.map(ds =>
+                Math.min(...ds.data.map(d => new Date(d.x).getTime())))
+            : null;
+        initRatings();
         initRankings();
     }
 

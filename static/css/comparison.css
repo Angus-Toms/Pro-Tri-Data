@@ -19,8 +19,7 @@
     /* overflow must stay visible so dropdown can escape the card */
 }
 
-/* Optional 3rd+ slot: quieter until it's filled. */
-.search-box.is-extra { border-style: dashed; box-shadow: none; }
+/* Optional 3rd+ slot: quieter header until it's filled. */
 .search-box.is-extra .search-box-header { background: #6b6b80; }
 
 .search-box-title {
