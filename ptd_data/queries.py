@@ -3397,44 +3397,52 @@ def get_race_rating_values(race_id):
 # Comparison
 # ---------------------------------------------------------------------------
 
-def get_common_races(athlete1_id, athlete2_id, course='short', category='elite'):
+def get_common_races(athlete_ids, course='short', category='elite'):
     """
-    Races where both athletes competed, scoped to a (course, category) program.
-    Returns list of dicts ordered by race_date desc.
+    Races where at least two of `athlete_ids` competed, scoped to a (course,
+    category) program. Returns a list of dicts ordered by race_date desc, each
+    with a `results` dict keyed by athlete_id -> {position, status, overall_s,
+    swim_s, bike_s, run_s}. Athletes absent from a race have no key.
     """
     conn = _get_conn()
     course_in = _course_in(course)
-    cols = ["race_id", "race_title", "race_date",
-            "a1_position", "a1_status", "a1_overall_s",
-            "a1_swim_s", "a1_bike_s", "a1_run_s",
-            "a2_position", "a2_status", "a2_overall_s",
-            "a2_swim_s", "a2_bike_s", "a2_run_s"]
-    return _dicts(cols, conn.execute(f"""
+    ids_in = "(" + ", ".join(str(int(a)) for a in athlete_ids) + ")"
+    cols = ["race_id", "race_title", "race_date", "athlete_id",
+            "position", "status", "overall_s", "swim_s", "bike_s", "run_s"]
+    rows = _dicts(cols, conn.execute(f"""
+        WITH shared AS (
+            SELECT res.race_id
+            FROM results res
+            JOIN races r ON res.race_id = r.race_id
+            WHERE res.athlete_id IN {ids_in}
+              AND r.distance IN {course_in}
+              AND r.category = ?
+            GROUP BY res.race_id
+            HAVING COUNT(DISTINCT res.athlete_id) >= 2
+        )
         SELECT
-            r1.race_id,
-            r.race_title,
-            r.race_date,
-            r1.position    AS a1_position,
-            r1.status      AS a1_status,
-            r1.overall_s   AS a1_overall_s,
-            r1.swim_s      AS a1_swim_s,
-            r1.bike_s      AS a1_bike_s,
-            r1.run_s       AS a1_run_s,
-            r2.position    AS a2_position,
-            r2.status      AS a2_status,
-            r2.overall_s   AS a2_overall_s,
-            r2.swim_s      AS a2_swim_s,
-            r2.bike_s      AS a2_bike_s,
-            r2.run_s       AS a2_run_s
-        FROM results r1
-        JOIN results r2 ON r1.race_id = r2.race_id
-        JOIN races r    ON r1.race_id = r.race_id
-        WHERE r1.athlete_id = ?
-          AND r2.athlete_id = ?
-          AND r.distance IN {course_in}
-          AND r.category = ?
-        ORDER BY r.race_date DESC
-    """, [athlete1_id, athlete2_id, category]))
+            res.race_id, r.race_title, r.race_date, res.athlete_id,
+            res.position, res.status, res.overall_s, res.swim_s, res.bike_s, res.run_s
+        FROM results res
+        JOIN races r ON res.race_id = r.race_id
+        WHERE res.race_id IN (SELECT race_id FROM shared)
+          AND res.athlete_id IN {ids_in}
+        ORDER BY r.race_date DESC, res.race_id
+    """, [category]))
+
+    races = []
+    by_race = {}
+    for row in rows:
+        race = by_race.get(row["race_id"])
+        if race is None:
+            race = {"race_id": row["race_id"], "race_title": row["race_title"],
+                    "race_date": row["race_date"], "results": {}}
+            by_race[row["race_id"]] = race
+            races.append(race)
+        race["results"][row["athlete_id"]] = {
+            k: row[k] for k in ("position", "status", "overall_s", "swim_s", "bike_s", "run_s")
+        }
+    return races
 
 
 def search_races_for_compare(query, course=None, gender=None, category='elite', limit=20):

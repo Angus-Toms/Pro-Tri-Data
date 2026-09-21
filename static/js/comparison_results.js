@@ -383,34 +383,56 @@
         });
     }
 
-    // --- H2H discipline picker (overall / swim / bike / run) ---
+    // --- H2H race table: discipline picker (overall / swim / bike / run) and,
+    // for 3+ athletes, a presence filter (any 2+ present / everyone present).
+    // The win tallies and race count are recomputed from the visible rows so
+    // both toggles stay consistent with what the table shows.
 
-    function switchH2hDisc(disc) {
+    function refreshH2hTable() {
         const table = document.querySelector('.h2h-table');
-        if (table) {
-            table.dataset.disc = disc;
-            table.querySelectorAll('.h2h-disc-val').forEach(el => {
+        if (!table) return;
+        const disc     = table.dataset.disc;
+        const allOnly  = table.dataset.presence === 'all';
+        const rows     = table.querySelectorAll('tbody tr');
+        const winsEls  = document.querySelectorAll('.h2h-wins-ath');
+        const wins     = Array.from(winsEls, () => 0);
+        let visible = 0;
+
+        rows.forEach(row => {
+            const show = !allOnly || row.dataset.allPresent === '1';
+            row.hidden = !show;
+            row.querySelectorAll('.h2h-disc-val').forEach(el => {
                 el.hidden = !el.classList.contains(`h2h-disc-${disc}`);
             });
-        }
-        const a1El = document.querySelector('.h2h-wins-a1');
-        const a2El = document.querySelector('.h2h-wins-a2');
-        if (a1El && a2El) {
-            const n1 = parseInt(a1El.dataset[disc] || '0', 10);
-            const n2 = parseInt(a2El.dataset[disc] || '0', 10);
-            a1El.textContent = n1;
-            a2El.textContent = n2;
-            a1El.classList.toggle('h2h-wins-leader', n1 > n2);
-            a2El.classList.toggle('h2h-wins-leader', n2 > n1);
-        }
+            if (!show) return;
+            visible++;
+            row.querySelectorAll('.h2h-time-cell').forEach((cell, i) => {
+                if (cell.querySelector(`.h2h-disc-${disc}.h2h-winner`)) wins[i]++;
+            });
+        });
+
+        const best = Math.max(0, ...wins);
+        winsEls.forEach((el, i) => {
+            el.textContent = wins[i];
+            el.classList.toggle('h2h-wins-leader', wins[i] > 0 && wins[i] === best);
+        });
+        const countEl = document.getElementById('h2h-race-count');
+        if (countEl) countEl.textContent = visible;
+        const emptyNote = document.getElementById('h2h-empty-note');
+        if (emptyNote) emptyNote.hidden = visible > 0;
     }
 
-    function wireH2hDiscChips() {
-        const chips = document.getElementById('h2h-disc-chips');
-        if (!chips) return;
-        chips.querySelectorAll('input[name="h2h-disc"]').forEach(r => {
+    function wireH2hChips() {
+        const table = document.querySelector('.h2h-table');
+        if (!table) return;
+        document.querySelectorAll('#h2h-disc-chips input[name="h2h-disc"]').forEach(r => {
             r.addEventListener('change', () => {
-                if (r.checked) switchH2hDisc(r.value);
+                if (r.checked) { table.dataset.disc = r.value; refreshH2hTable(); }
+            });
+        });
+        document.querySelectorAll('#h2h-presence-chips input[name="h2h-presence"]').forEach(r => {
+            r.addEventListener('change', () => {
+                if (r.checked) { table.dataset.presence = r.value; refreshH2hTable(); }
             });
         });
     }
@@ -425,6 +447,6 @@
     initRatings();
     initRankings();
     wireAlignChips();
-    wireH2hDiscChips();
+    wireH2hChips();
 
 })();

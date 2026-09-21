@@ -7,58 +7,41 @@
   {%- else -%}-{%- endif -%}
 {% endmacro %}
 
-{% macro h2h_row(label, v1, v2, d1='', d2='') -%}
-  {% set w1 = v1 is not none and v2 is not none and v1 > v2 %}
-  {% set w2 = v1 is not none and v2 is not none and v2 > v1 %}
-  <div class="h2h-stat-row">
-    <div class="h2h-stat-cell {{ 'is-winner' if w1 else 'is-loser' if w2 else '' }}">
-      <span class="h2h-stat-val">{{ v1 }}</span>
-      {% if d1 %}<span class="h2h-stat-delta">{{ d1 | safe }}</span>{% endif %}
-    </div>
-    <div class="h2h-stat-label">{{ label }}</div>
-    <div class="h2h-stat-cell {{ 'is-winner' if w2 else 'is-loser' if w1 else '' }}">
-      <span class="h2h-stat-val">{{ v2 }}</span>
-      {% if d2 %}<span class="h2h-stat-delta">{{ d2 | safe }}</span>{% endif %}
-    </div>
-  </div>
+{# Full name on wide screens, surname only on phones (swapped via CSS). #}
+{% macro athlete_head(ath) -%}
+  <span class="h2h-ath-dot" style="background: {{ ath.color }}"></span><span class="h2h-ath-name h2h-ath-name-full">{{ ath.name }}</span><span class="h2h-ath-name h2h-ath-name-short">{{ ath.short_name }}</span>
 {%- endmacro %}
+
+{% set n = athletes|length %}
 
 <!-- Head-to-head stats -->
 <div class="page-section-head">Head-to-head stats</div>
-<div class="h2h-stats-card">
-    <div class="h2h-stats-header">
-        <div class="h2h-stats-athlete">{{ athlete1.name }}</div>
-        <div class="h2h-stats-vs">vs</div>
-        <div class="h2h-stats-athlete">{{ athlete2.name }}</div>
-    </div>
-
-    <div class="h2h-stats-group">
-        {% for d in head_to_head_ratings %}
-        {% set w1 = d.rating1 > d.rating2 %}
-        {% set w2 = d.rating2 > d.rating1 %}
-        <div class="h2h-stat-row">
-            <div class="h2h-stat-cell {{ 'is-winner' if w1 else 'is-loser' if w2 else '' }}">
-                <span class="h2h-stat-val">{{ d.rating1 }}</span>
-                {% if d.change1 and d.change1.formatted_str %}
-                <span class="h2h-stat-delta rating-change {{ d.change1.css_class }}">{{ d.change1.formatted_str | safe }}</span>
-                {% endif %}
-            </div>
-            <div class="h2h-stat-label">{{ d.label }}</div>
-            <div class="h2h-stat-cell {{ 'is-winner' if w2 else 'is-loser' if w1 else '' }}">
-                <span class="h2h-stat-val">{{ d.rating2 }}</span>
-                {% if d.change2 and d.change2.formatted_str %}
-                <span class="h2h-stat-delta rating-change {{ d.change2.css_class }}">{{ d.change2.formatted_str | safe }}</span>
-                {% endif %}
-            </div>
-        </div>
+<div class="h2h-stats-card" style="--n: {{ n }}">
+    <div class="h2h-stats-header h2h-stat-grid">
+        <div class="h2h-stats-corner"></div>
+        {% for ath in athletes %}
+        <div class="h2h-stats-athlete">{{ athlete_head(ath) }}</div>
         {% endfor %}
     </div>
 
+    {% for group in [rating_rows, career_rows] %}
     <div class="h2h-stats-group">
-        {{ h2h_row('Total Races', athlete1.stats.total_races, athlete2.stats.total_races) }}
-        {{ h2h_row('Wins',        athlete1.stats.wins,        athlete2.stats.wins) }}
-        {{ h2h_row('Podiums',     athlete1.stats.podiums,     athlete2.stats.podiums) }}
+        {% for row in group %}
+        <div class="h2h-stat-row h2h-stat-grid">
+            <div class="h2h-stat-label">{{ row.label }}</div>
+            {% for v in row.vals %}
+            {% set d = row.deltas[loop.index0] %}
+            <div class="h2h-stat-cell {{ 'is-winner' if row.best is not none and v == row.best else 'is-loser' if row.best is not none else '' }}">
+                <span class="h2h-stat-val">{{ v if v is not none else '-' }}</span>
+                {% if d and d.formatted_str %}
+                <span class="h2h-stat-delta rating-change {{ d.css_class }}">{{ d.formatted_str | safe }}</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
     </div>
+    {% endfor %}
 </div>
 
 <!-- Head-to-head races -->
@@ -68,21 +51,21 @@
 
     <!-- Win count summary -->
     <div class="h2h-wins-summary">
+        {% for ath in athletes %}
+        {% set i = loop.index0 %}
+        {% set w = h2h_disc_wins.overall[i] %}
         <div class="h2h-wins-block">
-            <span class="h2h-wins-num h2h-wins-a1 {{ 'h2h-wins-leader' if h2h_disc_wins.overall[0] > h2h_disc_wins.overall[1] else '' }}" data-overall="{{ h2h_disc_wins.overall[0] }}" data-swim="{{ h2h_disc_wins.swim[0] }}" data-bike="{{ h2h_disc_wins.bike[0] }}" data-run="{{ h2h_disc_wins.run[0] }}">{{ h2h_disc_wins.overall[0] }}</span>
-            <span class="h2h-wins-lbl">{{ athlete1.name }}</span>
+            <span class="h2h-wins-num h2h-wins-ath {{ 'h2h-wins-leader' if w > 0 and w == h2h_disc_wins.overall|max else '' }}" style="--ath-color: {{ ath.color }}">{{ w }}</span>
+            <span class="h2h-wins-lbl">{{ ath.name }}</span>
         </div>
+        {% endfor %}
         <div class="h2h-wins-block h2h-wins-total">
-            <span class="h2h-wins-num">{{ head_to_head|length }}</span>
-            <span class="h2h-wins-lbl">races together</span>
-        </div>
-        <div class="h2h-wins-block">
-            <span class="h2h-wins-num h2h-wins-a2 {{ 'h2h-wins-leader' if h2h_disc_wins.overall[1] > h2h_disc_wins.overall[0] else '' }}" data-overall="{{ h2h_disc_wins.overall[1] }}" data-swim="{{ h2h_disc_wins.swim[1] }}" data-bike="{{ h2h_disc_wins.bike[1] }}" data-run="{{ h2h_disc_wins.run[1] }}">{{ h2h_disc_wins.overall[1] }}</span>
-            <span class="h2h-wins-lbl">{{ athlete2.name }}</span>
+            <span class="h2h-wins-num" id="h2h-race-count">{{ head_to_head|length }}</span>
+            <span class="h2h-wins-lbl">{{ 'races together' if n == 2 else 'shared races' }}</span>
         </div>
     </div>
 
-    <!-- Discipline toggle -->
+    <!-- Discipline toggle (and, for 3+ athletes, an "everyone present" filter) -->
     <div class="h2h-disc-picker">
         <div class="radio-chips" id="h2h-disc-chips">
             {% for disc in ['overall', 'swim', 'bike', 'run'] %}
@@ -90,50 +73,57 @@
             <label for="h2h-disc-{{ disc }}">{{ disc.capitalize() }}</label>
             {% endfor %}
         </div>
+        {% if n > 2 %}
+        <div class="radio-chips" id="h2h-presence-chips">
+            <input type="radio" name="h2h-presence" id="h2h-presence-any" value="any" checked>
+            <label for="h2h-presence-any">Any 2+</label>
+            <input type="radio" name="h2h-presence" id="h2h-presence-all" value="all">
+            <label for="h2h-presence-all">All {{ n }}</label>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Race results table -->
-    <div class="table-wrap">
-        <table class="h2h-table" data-disc="overall">
+    <div class="table-wrap h2h-table-wrap">
+        <table class="h2h-table" data-disc="overall" data-presence="any" style="--n: {{ n }}">
             <thead>
                 <tr>
-                    <th class="date-col">Date</th>
                     <th class="race-col">Race</th>
-                    <th class="h2h-pos-th">Pos</th>
-                    <th class="h2h-ath-header">{{ athlete1.name }}</th>
-                    <th class="h2h-pos-th">Pos</th>
-                    <th class="h2h-ath-header">{{ athlete2.name }}</th>
+                    {% for ath in athletes %}
+                    <th class="h2h-ath-header">{{ athlete_head(ath) }}</th>
+                    {% endfor %}
                 </tr>
             </thead>
             <tbody>
                 {% for race in head_to_head %}
-                <tr>
-                    <td class="date-col muted-col">{{ race.race_date.strftime('%-d %b %Y') }}</td>
-                    <td><a href="/race/{{ race.race_id }}" class="link">{{ race.race_name }}</a></td>
-                    <td class="position-col h2h-pos-cell">{{ pos_span(race.athlete1_position, race.athlete1_status) }}</td>
-                    <td class="h2h-time-cell" data-side="a1">
+                <tr data-all-present="{{ '1' if race.all_present else '0' }}">
+                    <td class="race-col">
+                        <a href="/race/{{ race.race_id }}" class="link h2h-race-name">{{ race.race_name }}</a>
+                        <span class="h2h-race-date">{{ race.race_date.strftime('%-d %b %Y') }}</span>
+                    </td>
+                    {% for ath in athletes %}
+                    {% set i = loop.index0 %}
+                    {% set pos, status = race.positions[i] %}
+                    <td class="h2h-time-cell {{ 'h2h-absent-cell' if pos is none and status is none }}">
+                        {% if pos is none and status is none %}
+                        <span class="h2h-absent-mark" title="Did not race">&ndash;</span>
+                        {% else %}
+                        <span class="h2h-pos-cell">{{ pos_span(pos, status) }}</span>
                         {% for disc in ['overall', 'swim', 'bike', 'run'] %}
-                        {% set cell = race.disc_cells[disc] %}
-                        <span class="h2h-disc-val h2h-disc-{{ disc }} {{ cell.a1_time.css_class }}"{% if disc != 'overall' %} hidden{% endif %}>
-                            {{ cell.a1_time.formatted_str }}
-                            <span class="time-behind">{{ cell.a1_behind }}</span>
+                        {% set cell = race.cells[disc][i] %}
+                        <span class="h2h-disc-val h2h-disc-{{ disc }} {{ cell.css_class }}"{% if disc != 'overall' %} hidden{% endif %}>
+                            {{ cell.formatted_str }}
+                            <span class="time-behind">{{ cell.behind }}</span>
                         </span>
                         {% endfor %}
+                        {% endif %}
                     </td>
-                    <td class="position-col h2h-pos-cell">{{ pos_span(race.athlete2_position, race.athlete2_status) }}</td>
-                    <td class="h2h-time-cell" data-side="a2">
-                        {% for disc in ['overall', 'swim', 'bike', 'run'] %}
-                        {% set cell = race.disc_cells[disc] %}
-                        <span class="h2h-disc-val h2h-disc-{{ disc }} {{ cell.a2_time.css_class }}"{% if disc != 'overall' %} hidden{% endif %}>
-                            {{ cell.a2_time.formatted_str }}
-                            <span class="time-behind">{{ cell.a2_behind }}</span>
-                        </span>
-                        {% endfor %}
-                    </td>
+                    {% endfor %}
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
+        <p class="h2h-empty-note" id="h2h-empty-note" hidden>No races with all {{ n }} athletes</p>
     </div>
 
 {% else %}
@@ -178,15 +168,7 @@
     </div>
 </div>
 
-{% block comparison_specific_js %}
-<script id="overall-ratings-data" type="application/json">{{ overall_ratings_chart | tojson }}</script>
-<script id="swim-ratings-data" type="application/json">{{ swim_ratings_chart | tojson }}</script>
-<script id="bike-ratings-data" type="application/json">{{ bike_ratings_chart | tojson }}</script>
-<script id="run-ratings-data" type="application/json">{{ run_ratings_chart | tojson }}</script>
-<script id="transition-ratings-data" type="application/json">{{ transition_ratings_chart | tojson }}</script>
-<script id="overall-rankings-data" type="application/json">{{ overall_rankings_chart | tojson }}</script>
-<script id="swim-rankings-data" type="application/json">{{ swim_rankings_chart | tojson }}</script>
-<script id="bike-rankings-data" type="application/json">{{ bike_rankings_chart | tojson }}</script>
-<script id="run-rankings-data" type="application/json">{{ run_rankings_chart | tojson }}</script>
-<script id="transition-rankings-data" type="application/json">{{ transition_rankings_chart | tojson }}</script>
-{% endblock %}
+{% for disc in ['overall', 'swim', 'bike', 'run', 'transition'] %}
+<script id="{{ disc }}-ratings-data" type="application/json">{{ ratings_charts[disc] | tojson }}</script>
+<script id="{{ disc }}-rankings-data" type="application/json">{{ rankings_charts[disc] | tojson }}</script>
+{% endfor %}
