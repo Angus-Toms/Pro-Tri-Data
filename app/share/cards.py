@@ -220,20 +220,25 @@ def athlete_context(rc: dict, athlete_id: int) -> dict:
 
 
 
-def render_html(design: str, ctx: dict, mode: str, ink: str, photo: str | None = None) -> tuple[str, int, int]:
-    tpl_name, (w, h), _, _ = DESIGNS[design]
+def render_html(design: str, ctx: dict, mode: str, ink: str, photo: str | None = None,
+                size: tuple[int, int] | None = None) -> tuple[str, int, int]:
+    """`size` overrides the design's default; the social carousel needs every
+    card at the same aspect ratio."""
+    tpl_name, default_size, _, _ = DESIGNS[design]
+    w, h = size or default_size
     html = _env.get_template(tpl_name).render(**ctx, mode=mode, ink=ink, photo=photo, W=w, H=h, STATIC_URI=STATIC_URI)
     return html, w, h
 
 
-def render_png(design: str, ctx: dict, mode: str, ink: str, photo: str | None = None, scale: int = 2) -> bytes:
+def render_png(design: str, ctx: dict, mode: str, ink: str, photo: str | None = None, scale: int = 2,
+               size: tuple[int, int] | None = None) -> bytes:
     """Render one card to PNG bytes. `photo` is a data URI for photo mode.
 
     A fresh browser per call: the sync Playwright API is bound to the thread
     that created it, and FastAPI runs sync handlers on a pool. ~0.5s overhead,
     fine for a share button.
     """
-    html, w, h = render_html(design, ctx, mode, ink, photo)
+    html, w, h = render_html(design, ctx, mode, ink, photo, size)
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page(viewport={"width": w, "height": h}, device_scale_factor=scale)

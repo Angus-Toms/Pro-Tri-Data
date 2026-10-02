@@ -21,6 +21,22 @@
   .legs .lbl { display: block; margin-bottom: 10px; }
   .legs .who { font-size: 30px; font-weight: 700; letter-spacing: -0.01em; }
   .legs .t { font-size: 30px; font-weight: 600; color: var(--fg-2); margin-top: 4px; }
+  {% if H < 1500 %}
+  /* 4:5 (social carousel): same layout, tighter scale. */
+  .podium { margin-top: 10px; }
+  .step .face { width: 72%; border-width: 6px; }
+  .step.s1 { padding-bottom: 70px; }
+  .step.s2 { padding-bottom: 30px; }
+  .step .pos { font-size: 120px; margin-top: 4px; }
+  .step.s1 .pos { font-size: 160px; }
+  .step .name { font-size: 34px; }
+  .step.s1 .name { font-size: 40px; }
+  .step .time { font-size: 38px; margin-top: 8px; }
+  .step.s1 .time { font-size: 50px; }
+  .step .behind { font-size: 26px; margin-top: 6px; }
+  .legs { margin-top: 30px; padding-top: 26px; gap: 30px; }
+  .legs .who, .legs .t { font-size: 27px; }
+  {% endif %}
 {% endblock %}
 {% block body %}
   <div class="race">{{ race_title }}<span class="sub">{{ prog }} · {{ venue }} · {{ date }}</span></div>
