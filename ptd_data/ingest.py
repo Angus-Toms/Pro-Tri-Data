@@ -11,6 +11,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from time import sleep
+from datetime import date, timedelta
 from ast import literal_eval
 
 from config import WORLD_TRIATHLON_API_KEY
@@ -525,13 +526,32 @@ class Ingester:
                 "SELECT DISTINCT event_id FROM races"
             ).fetchall()
         )
+        existing_race_ids = set(
+            r[0] for r in self.conn.execute("SELECT race_id FROM races").fetchall()
+        )
         wt_event_ids = {e['event_id'] for e in events}
         existing_event_ids = all_existing & wt_event_ids
+
+        # Multi-day events get ingested the moment any program has results,
+        # which used to freeze them: programs raced on later days (elite at a
+        # Champs Finals after the junior/U23 days, standard-distance AG waves
+        # after the sprint day) never got picked up because the event was
+        # already "in the DB". Re-check any event that finished recently so
+        # the straggler programs land; already-ingested prog_ids are skipped
+        # per program below.
+        recheck_cutoff = (date.today() - timedelta(days=30)).isoformat()
+        recheck_ids = {
+            e['event_id'] for e in events
+            if e['event_id'] in existing_event_ids
+            and str(e.get('event_finish_date') or e.get('event_date') or '') >= recheck_cutoff
+        }
+        existing_event_ids -= recheck_ids
 
         new_count = 0
         checked = 0
         total_new = len(wt_event_ids) - len(existing_event_ids)
-        print(f"  {len(existing_event_ids)} of {len(wt_event_ids)} WT events already in DB, {total_new} to check")
+        print(f"  {len(existing_event_ids)} of {len(wt_event_ids)} WT events already in DB, "
+              f"{total_new} to check ({len(recheck_ids)} recently finished, re-checked for late programs)")
 
         for event in events:
             event_id = event['event_id']
@@ -553,6 +573,8 @@ class Ingester:
 
             for prog in programs:
                 prog_name = prog.get('prog_name', '')
+                if int(prog.get('prog_id', 0)) in existing_race_ids:
+                    continue
 
                 relay_sub = mixed_relay_sub_category(prog_name, str(event.get('event_title', '')))
                 if relay_sub is not None:
@@ -859,7 +881,6 @@ class StartListIngester:
         self.conn = conn
 
     def run(self):
-        from datetime import date, timedelta
         today = date.today()
         end = today + timedelta(days=90)
 
@@ -987,14 +1008,20 @@ class StartListIngester:
         return len(rows)
 
     def _purge_completed(self):
-        """Remove upcoming races that have since been ingested as completed races."""
+        """Remove upcoming races that have since been ingested as completed
+        races, plus anything whose race date has passed. The fetch window is
+        today onward, so a past-dated row is never refreshed again: WT wave
+        sub-programs ("55-59A Open AG") that never get their own results, and
+        programs WT removed, would otherwise sit in "upcoming" forever."""
         self.conn.execute("""
             DELETE FROM start_list_entries
             WHERE race_id IN (SELECT race_id FROM races)
+               OR race_id IN (SELECT race_id FROM upcoming_races WHERE race_date < CURRENT_DATE)
         """)
         self.conn.execute("""
             DELETE FROM upcoming_races
             WHERE race_id IN (SELECT race_id FROM races)
+               OR race_date < CURRENT_DATE
         """)
 
 

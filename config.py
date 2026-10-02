@@ -27,7 +27,7 @@ def _compute_asset_version() -> str:
 # share the same value.
 ASSET_VERSION = _compute_asset_version()
 
-# Runtime data (local: ./data, render: /var/data via DATA_ROOT)
+# Runtime data (local: ./ptd_data, prod: /var/lib/ptd via DATA_ROOT)
 RUNTIME_ATHLETE_IMAGES_DIR = RUNTIME_DATA_DIR / "athlete_imgs"
 
 # DuckDB
@@ -41,8 +41,9 @@ WORLD_TRIATHLON_API_KEY = "aac0df989cb613114241670ca2f5ff75"
 # and must match the key sent when pinging the IndexNow API.
 INDEXNOW_KEY = "41a7559f57e14a1a8e3cbf17dc8146c5"
 
-# Deployment
+# Deployment (Hetzner CX23, see deploy/hetzner/)
 CF_BUCKET    = "ptd-static-assets"
-RENDER_SSH   = "srv-d58kqtemcj7s73ciqqjg@ssh.frankfurt.render.com"
-RENDER_DB    = "/var/data/ptd.duckdb"
+PROD_SSH     = "ptd@77.42.41.185"
+PROD_DB      = "/var/lib/ptd/ptd.duckdb"
+PROD_APP_DIR = "/opt/ptd"
 

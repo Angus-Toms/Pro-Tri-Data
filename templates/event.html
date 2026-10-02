@@ -72,7 +72,7 @@
     <div class="ep-head">
         <div class="ep-head-l">
             <span class="ep-kicker">{{ race.race_date.strftime('%d %B %Y') }}</span>
-            <a href="/race/{{ race.race_id }}" class="ep-title">{{ race.prog_name }}{% if is_upcoming %} <span class="ep-subtitle">Predicted Podium</span>{% endif %}</a>
+            <a href="/race/{{ race.race_id }}" class="ep-title">{{ race.prog_name }}{% if race.is_upcoming %} <span class="ep-subtitle">Predicted Podium</span>{% endif %}</a>
         </div>
         {% if race.standards %}
         <div class="ep-head-stds">
@@ -93,7 +93,7 @@
     <table class="w1-table">
         <thead>
             <tr>
-                {% set pred = 'Pred. ' if is_upcoming else '' %}
+                {% set pred = 'Pred. ' if race.is_upcoming else '' %}
                 <th>#</th>
                 <th>{{ 'Team' if is_relay else 'Athlete' }}</th>
                 {% if is_relay %}
@@ -107,7 +107,7 @@
                 <th class="num w1-num--t">T2</th>
                 <th class="num">{{ pred }}Run</th>
                 {% endif %}
-                <th class="num w1-num--total">{{ 'Predicted' if is_upcoming else 'Total' }}</th>
+                <th class="num w1-num--total">{{ 'Predicted' if race.is_upcoming else 'Total' }}</th>
             </tr>
         </thead>
         <tbody>
@@ -141,7 +141,7 @@
                 {# Total cell: format depends on past vs upcoming. Past races
                    show the actual time + gap-to-winner; upcoming races show
                    the predicted time (no gap, no field-fastest concept). #}
-                <td class="w1-num w1-num--total" data-label="{{ 'Predicted' if is_upcoming else 'Total' }}">
+                <td class="w1-num w1-num--total" data-label="{{ 'Predicted' if race.is_upcoming else 'Total' }}">
                     {% if p.time %}
                     <span class="w1-cell w1-cell--total">
                         <span class="w1-cell-val">{{ p.time }}</span>

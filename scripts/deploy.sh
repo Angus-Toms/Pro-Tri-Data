@@ -1,16 +1,17 @@
 #!/bin/bash
-# deploy.sh - commit/push, upload static assets to R2, copy DB to Render
+# deploy.sh - commit/push, upload static assets to R2, copy DB + code to the
+# Hetzner box, restart the service
 #
 # Usage:
-#   ./deploy.sh                   # run all four steps
-#   ./deploy.sh --no-git          # skip git step
+#   ./deploy.sh                   # run all steps
+#   ./deploy.sh --no-git          # skip git commit/push AND the remote git pull
 #   ./deploy.sh --no-static       # skip Cloudflare R2 upload
 #   ./deploy.sh --no-db           # skip DB copy
-#   ./deploy.sh --no-restart      # skip Render service restart
+#   ./deploy.sh --no-restart      # skip service restart
 #
 # Requires:
 #   - wrangler (npm i -g wrangler) logged in
-#   - scripts/.env with RENDER_API_KEY set (only for the restart step)
+#   - ssh access to PROD_SSH (config.py) with the local ed25519 key
 
 set -euo pipefail
 
@@ -20,17 +21,10 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 STATIC_DIR="$PROJECT_ROOT/static"
 DB_LOCAL="$PROJECT_ROOT/ptd_data/ptd.duckdb"
 _py() { python3 -c "import sys; sys.path.insert(0,'$PROJECT_ROOT'); from config import $1; print($1)"; }
-BUCKET=$(    _py CF_BUCKET)
-RENDER_SSH=$(  _py RENDER_SSH)
-DB_REMOTE=$(   _py RENDER_DB)
-
-# Load local secrets (RENDER_API_KEY etc). Not required for git/static/db steps.
-if [ -f "$SCRIPT_DIR/.env" ]; then
-    set -a
-    # shellcheck source=/dev/null
-    source "$SCRIPT_DIR/.env"
-    set +a
-fi
+BUCKET=$(      _py CF_BUCKET)
+PROD_SSH=$(    _py PROD_SSH)
+DB_REMOTE=$(   _py PROD_DB)
+APP_REMOTE=$(  _py PROD_APP_DIR)
 # ─────────────────────────────────────────────────────────────────────────────
 
 DO_GIT=true; DO_STATIC=true; DO_DB=true; DO_RESTART=true
@@ -140,70 +134,55 @@ if $DO_STATIC; then
     note "If assets look stale, purge the Cloudflare cache for static.protridata.com."
 fi
 
-# ── 3. DB → Render (atomic swap via tmp file) ─────────────────────────────────
+# ── 3. DB → server (atomic swap via tmp file) ────────────────────────────────
 if $DO_DB; then
     DB_SIZE=$(du -sh "$DB_LOCAL" | cut -f1)
-    step "Render: copying DB ($DB_SIZE)"
+    step "Server: copying DB ($DB_SIZE)"
     # Upload to a temp path first, then mv - avoids a window where the app
-    # could open a half-written file. This needs room for two copies of the DB
-    # at once; build_db.sh's compact step keeps the local file small enough
-    # (~150-250MB) that two copies comfortably fit on the 974MB Render disk.
-    # Do NOT go back to overwrite-in-place - with an uncompacted DB that
-    # doubles-up too and fills the disk (see: the incident that added compact).
-    scp "$DB_LOCAL" "$RENDER_SSH:${DB_REMOTE}.new"
-    ssh "$RENDER_SSH" "mv '${DB_REMOTE}.new' '${DB_REMOTE}'"
+    # could open a half-written file.
+    scp "$DB_LOCAL" "$PROD_SSH:${DB_REMOTE}.new"
+    ssh "$PROD_SSH" "mv '${DB_REMOTE}.new' '${DB_REMOTE}'"
     echo "  Copied."
 fi
 
-# ── 4. Restart Render service (so the running app picks up the new DB) ───────
-if $DO_RESTART; then
-    step "Render: restarting service"
-    if [ -z "${RENDER_API_KEY:-}" ]; then
-        echo "  ERROR: RENDER_API_KEY not set. Add it to scripts/.env or pass --no-restart."
-        exit 1
-    fi
-    # Service ID is the part of RENDER_SSH before the @ (e.g. srv-d58k...).
-    RENDER_SERVICE_ID="${RENDER_SSH%%@*}"
-    curl -fsS -X POST \
-        -H "Authorization: Bearer $RENDER_API_KEY" \
-        -H "Accept: application/json" \
-        "https://api.render.com/v1/services/$RENDER_SERVICE_ID/restart" \
-        > /dev/null
-    echo "  Restart triggered for $RENDER_SERVICE_ID."
+# ── 4. Code → server (git pull + pip) ────────────────────────────────────────
+# Render used to rebuild from GitHub on push; now we pull explicitly.
+if $DO_GIT; then
+    step "Server: pulling code"
+    ssh "$PROD_SSH" "cd '$APP_REMOTE' && git pull --ff-only && .venv/bin/pip install -q -r requirements.txt"
+    echo "  Pulled $(ssh "$PROD_SSH" "cd '$APP_REMOTE' && git rev-parse --short HEAD")."
 fi
 
-# ── 5. Prediction-code drift check (data-only deploys) ───────────────────────
+# ── 5. Restart service (picks up new DB and/or code) ─────────────────────────
+if $DO_RESTART; then
+    step "Server: restarting ptd"
+    ssh "$PROD_SSH" "sudo systemctl restart ptd"
+    echo "  Restarted."
+fi
+
+# ── 6. Prediction-code drift check (data-only deploys) ───────────────────────
 # A --no-git deploy ships the DB but not the app code, so the live site can run
 # prediction logic older than the local tree - and the social-post generator
 # renders from the local tree, so the two silently disagree (Edmonton: local
-# had Pye 1st, the month-behind live site had him 6th). Compare Render's live
-# commit to local HEAD across the prediction-model core and warn loudly if they
-# diverge. Only meaningful on --no-git (a git deploy just pushed and Render's
-# rebuild is still in flight). Read-only; never fails the deploy.
+# had Pye 1st, the month-behind live site had him 6th). Compare the server's
+# checked-out commit to local HEAD across the prediction-model core and warn
+# loudly if they diverge. Read-only; never fails the deploy.
 if ! $DO_GIT; then
-    step "Render: checking deployed code vs local"
+    step "Server: checking deployed code vs local"
     # The prediction-model core. Deliberately narrow (not queries.py, which
     # churns for unrelated page/leaderboard work) so the warning stays signal.
     PRED_FILES="app/routers/race_page.py ptd_data/ratings.py ptd_data/form.py"
-    if [ -z "${RENDER_API_KEY:-}" ]; then
-        note "RENDER_API_KEY not set - skipping drift check."
+    LIVE_SHA=$(ssh "$PROD_SSH" "cd '$APP_REMOTE' && git rev-parse HEAD" 2>/dev/null || true)
+    if [ -z "$LIVE_SHA" ]; then
+        echo "  [WARN] CODE DRIFT: could not read the server's commit (ssh issue)."
+    elif ! git cat-file -e "${LIVE_SHA}^{commit}" 2>/dev/null; then
+        echo "  [WARN] CODE DRIFT: server commit ${LIVE_SHA:0:8} not in local history - run 'git fetch' to compare."
+    elif git diff --quiet "$LIVE_SHA" HEAD -- $PRED_FILES; then
+        echo "  Prediction code in sync with server (live ${LIVE_SHA:0:8})."
     else
-        RENDER_SERVICE_ID="${RENDER_SSH%%@*}"
-        LIVE_SHA=$(curl -fsS \
-            -H "Authorization: Bearer $RENDER_API_KEY" -H "Accept: application/json" \
-            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys?limit=20" 2>/dev/null \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(next((x['deploy']['commit']['id'] for x in d if x.get('deploy',{}).get('status')=='live' and x.get('deploy',{}).get('commit')), ''))" 2>/dev/null || true)
-        if [ -z "$LIVE_SHA" ]; then
-            echo "  [WARN] CODE DRIFT: could not read Render's live commit (API/network issue)."
-        elif ! git cat-file -e "${LIVE_SHA}^{commit}" 2>/dev/null; then
-            echo "  [WARN] CODE DRIFT: Render live commit ${LIVE_SHA:0:8} not in local history - run 'git fetch' to compare."
-        elif git diff --quiet "$LIVE_SHA" HEAD -- $PRED_FILES; then
-            echo "  Prediction code in sync with Render (live ${LIVE_SHA:0:8})."
-        else
-            DRIFTED=$(git diff --name-only "$LIVE_SHA" HEAD -- $PRED_FILES | tr '\n' ' ')
-            echo "  [WARN] CODE DRIFT: Render runs ${LIVE_SHA:0:8}, local HEAD $(git rev-parse --short HEAD) - prediction code differs: ${DRIFTED}"
-            echo "  [WARN] Live-site predictions may not match freshly-generated social posts. Run ./deploy.sh (with git) to ship it."
-        fi
+        DRIFTED=$(git diff --name-only "$LIVE_SHA" HEAD -- $PRED_FILES | tr '\n' ' ')
+        echo "  [WARN] CODE DRIFT: server runs ${LIVE_SHA:0:8}, local HEAD $(git rev-parse --short HEAD) - prediction code differs: ${DRIFTED}"
+        echo "  [WARN] Live-site predictions may not match freshly-generated social posts. Run ./deploy.sh (with git) to ship it."
     fi
 fi
 

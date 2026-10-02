@@ -1,5 +1,5 @@
 #!/bin/bash
-# weekly.sh - ingest + ratings extend + DB sync to Render. Run by hand.
+# weekly.sh - ingest + ratings extend + DB sync to the Hetzner box. Run by hand.
 #
 # Sends a macOS notification on non-zero exit. Two log files:
 #   weekly.latest.log   — current run only, cleared on start. Filtered down

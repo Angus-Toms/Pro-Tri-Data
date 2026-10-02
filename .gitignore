@@ -47,3 +47,5 @@ growth/
 
 # Model research / backtest scripts (not part of the live app)
 analysis/
+# Cloudflare Origin CA cert for the Hetzner box
+deploy/hetzner/origin.*

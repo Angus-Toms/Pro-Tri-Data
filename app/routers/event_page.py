@@ -144,6 +144,10 @@ def get_event(request: Request, event_id: int):
     if not event:
         raise HTTPException(status_code=404, detail=f"Event {event_id} not found")
 
+    # A multi-day event (Champs Finals: juniors Thursday, elite Sunday) sits
+    # in both tables mid-week. Render the finished programs with real podiums
+    # and the pending ones with predicted podiums, in one list, rather than
+    # letting a single leftover upcoming row hide every result already in.
     upcoming_races = queries.get_upcoming_event_races_detail(event_id)
     if upcoming_races:
         entries_by_race = queries.get_upcoming_race_entries_bulk(
@@ -164,16 +168,9 @@ def get_event(request: Request, event_id: int):
                 race["standards"]        = None
                 race["standard_classes"] = None
             race["event_id"] = event_id
+            race["is_upcoming"] = True
             race["podium"] = _predicted_podium(
                 entries_by_race.get(race["race_id"], []), race)
-        return templates.TemplateResponse("event.html", {
-            "request":          request,
-            "active_page":      "upcoming",
-            "event":            event,
-            "races":            _sort_races(upcoming_races),
-            "is_upcoming":      True,
-            "course_conditions": {},
-        })
 
     races = queries.get_event_races_detail(event_id)
 
@@ -197,15 +194,18 @@ def get_event(request: Request, event_id: int):
         else:
             race["standards"]        = None
             race["standard_classes"] = None
+        race["is_upcoming"] = False
 
-    sorted_races = _sort_races(races)
-    course_conditions = _event_course_conditions(sorted_races)
+    sorted_races = _sort_races(races + upcoming_races)
+    course_conditions = _event_course_conditions(races)
 
     return templates.TemplateResponse("event.html", {
         "request":          request,
-        "active_page":      "races",
+        "active_page":      "races" if races else "upcoming",
         "event":            event,
         "races":            sorted_races,
-        "is_upcoming":      False,
+        # Hero badge only when nothing has been raced yet; mid-event the
+        # per-race "Predicted Podium" subtitle carries that signal.
+        "is_upcoming":      bool(upcoming_races) and not races,
         "course_conditions": course_conditions,
     })
