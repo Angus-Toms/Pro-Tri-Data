@@ -19,8 +19,10 @@
   #card { --gold: #f5c842; --silver: #c8d8e0; --bronze: #d4a870; }
 
   #card { position: relative; width: {{ W }}px; height: {{ H }}px; overflow: hidden; color: var(--fg); }
-  #card.mode-solid.ink-light { background: radial-gradient(ellipse at 20% 0%, #2c2f55 0%, transparent 55%),
-    radial-gradient(ellipse at 90% 100%, #3a2416 0%, transparent 50%), #1a1a2e; }
+  #card.mode-solid.ink-light { background:
+    radial-gradient(ellipse at 30% 25%, #6b7a99 0%, transparent 55%),
+    radial-gradient(ellipse at 75% 70%, #c97a3a 0%, transparent 50%),
+    linear-gradient(180deg, #2b3550 0%, #141a2a 60%, #0b0e18 100%); }
   #card.mode-solid.ink-dark  { background: #f4f4f2; }
   #card.mode-photo .photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   /* Scrim: dark at both ends where the type lives, open in the middle so the

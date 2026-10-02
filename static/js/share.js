@@ -43,6 +43,7 @@
         if (blobUrl) URL.revokeObjectURL(blobUrl);
         blobUrl = URL.createObjectURL(await res.blob());
         img.src = blobUrl;
+        img.classList.toggle('transparent', s.mode === 'transparent');
         img.classList.remove('loading');
         dl.disabled = false;
     }

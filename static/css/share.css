@@ -7,9 +7,11 @@
 .share-head h2 { margin: 0; font-size: var(--font-size-lg); font-weight: 700; }
 .share-close { border: 0; background: none; font-size: 1.6rem; line-height: 1; cursor: pointer; color: var(--text-light); }
 .share-body { display: grid; grid-template-columns: 300px 1fr; gap: var(--spacing-lg); padding: var(--spacing-lg); }
-.share-preview { background: repeating-conic-gradient(#d9d9d9 0 25%, #f4f4f2 0 50%) 0 0 / 20px 20px; border-radius: var(--border-radius); min-height: 400px;
-    display: flex; align-items: center; justify-content: center; }
-.share-preview img { max-width: 100%; max-height: 70vh; display: block; border-radius: var(--border-radius-sm); cursor: zoom-in; transition: opacity var(--transition-base); }
+.share-preview { display: flex; align-items: flex-start; justify-content: center; min-height: 400px; }
+.share-preview img { max-width: 100%; max-height: 70vh; display: block; border-radius: var(--border-radius-sm); cursor: zoom-in; transition: opacity var(--transition-base);
+    box-shadow: var(--box-shadow); }
+/* Checkerboard sits on the image itself, and only for alpha PNGs, so solid cards never show it. */
+.share-preview img.transparent { background: repeating-conic-gradient(#d9d9d9 0 25%, #f4f4f2 0 50%) 0 0 / 20px 20px; }
 .share-preview img.loading { opacity: 0.4; }
 .share-controls fieldset { border: 0; padding: 0; margin: 0 0 var(--spacing-lg); }
 .share-controls legend { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-light); margin-bottom: var(--spacing-sm); }
