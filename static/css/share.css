@@ -23,3 +23,5 @@
 .share-controls select { width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); font: inherit; }
 .share-note { font-size: 0.8rem; color: var(--text-light); margin: var(--spacing-sm) 0 0; }
 .share-download { width: 100%; }
+.share-photo-row { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-sm); }
+.share-photo-row .share-note { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

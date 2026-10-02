@@ -10,6 +10,7 @@
     const athSel   = document.getElementById('share-athlete');
     const photoField = document.getElementById('share-photo-field');
     const photoIn  = document.getElementById('share-photo');
+    const photoName = document.getElementById('share-photo-name');
     const form     = dlg.querySelector('form');
     let blobUrl = null, seq = 0;
 
@@ -31,6 +32,7 @@
         img.classList.add('loading');
         let res;
         if (s.mode === 'photo') {
+            photoName.textContent = photoIn.files[0] ? photoIn.files[0].name : 'No photo chosen';
             if (!photoIn.files[0]) { img.removeAttribute('src'); img.classList.remove('loading'); return; }
             const fd = new FormData(); fd.append('photo', photoIn.files[0]);
             res = await fetch(`/share/card.png?${q}`, { method: 'POST', body: fd });
@@ -49,6 +51,12 @@
     }
 
     form.addEventListener('change', refresh);
+    // Picking "Your photo" opens the file chooser straight away; the field's
+    // own button only exists to swap the photo afterwards.
+    form.addEventListener('change', (e) => {
+        if (e.target.name === 'style' && e.target.value.startsWith('photo') && !photoIn.files[0]) photoIn.click();
+    });
+    document.getElementById('share-photo-change').addEventListener('click', () => photoIn.click());
     dl.addEventListener('click', () => {
         const s = state();
         const a = document.createElement('a');

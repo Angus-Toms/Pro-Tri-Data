@@ -44,10 +44,14 @@
                 </fieldset>
                 <fieldset id="share-photo-field" hidden>
                     <legend>Photo</legend>
-                    <input type="file" name="photo" id="share-photo" accept="image/*">
+                    <input type="file" name="photo" id="share-photo" accept="image/*" hidden>
+                    <div class="share-photo-row">
+                        <span id="share-photo-name" class="share-note"></span>
+                        <button type="button" class="btn-table-action" id="share-photo-change">Change photo</button>
+                    </div>
                     <p class="share-note">Your photo is used once to build the card and is not stored.</p>
                 </fieldset>
-                <button type="button" class="btn-search share-download" id="share-download" disabled>Download PNG</button>
+                <button type="button" class="btn-search share-download" id="share-download" disabled>Download</button>
             </div>
         </div>
     </form>
