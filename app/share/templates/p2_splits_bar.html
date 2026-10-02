@@ -1,0 +1,38 @@
+{% extends "_base.html" %}
+{# Splits bar: the race as one proportional strip. Swim / bike / run in
+   accent tints, transitions as thin breaks. Under each leg: time and the
+   rank for that leg in the field. #}
+{% block css %}
+  .content { justify-content: flex-end; }
+  .name { font-size: 64px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+  .race { margin-top: 20px; }
+  .total { display: flex; align-items: baseline; gap: 30px; margin-top: 70px; }
+  .total .t { font-size: 150px; }
+  .total .p { font-size: 48px; font-weight: 700; color: var(--accent); }
+  .bar { display: flex; height: 64px; margin-top: 50px; border-radius: 10px; overflow: hidden; gap: 4px; }
+  .bar div { height: 100%; }
+  .bar .swim { background: var(--accent); opacity: 0.55; }
+  .bar .bike { background: var(--accent); opacity: 0.8; }
+  .bar .run  { background: var(--accent); }
+  .bar .t1, .bar .t2 { background: var(--fg-3); }
+  .legs { display: flex; margin-top: 30px; }
+  .leg { padding-right: 20px; }
+  .leg .v { font-size: 52px; margin-top: 10px; }
+  .leg .rk { font-size: 28px; font-weight: 600; color: var(--fg-2); margin-top: 10px; }
+  .leg .rk.fast { color: var(--accent); }
+{% endblock %}
+{% block body %}
+  <div class="name">{{ me.name }}{{ flag(me) }}</div>
+  <div class="race">{{ race_title }}<span class="sub">{{ prog }} · {{ date }}</span></div>
+  <div class="total"><div class="t num">{{ me.time }}</div><div class="p">{{ me.pos_ord }}</div></div>
+  <div class="bar">{% for s in segs %}<div class="{{ s.key }}" style="flex:{{ '%.4f' % s.frac }}"></div>{% endfor %}</div>
+  <div class="legs">
+    {% for s in segs if s.key in ('swim', 'bike', 'run') %}
+    <div class="leg" style="flex:{{ '%.4f' % s.frac }}">
+      <span class="lbl">{{ s.label }}</span>
+      <div class="v num">{{ s.time }}</div>
+      <div class="rk{% if s.fastest %} fast{% endif %}">{% if s.fastest %}Fastest{% else %}{{ s.rank }}{{ ('th' if 10 <= s.rank % 100 <= 20 else {1:'st',2:'nd',3:'rd'}.get(s.rank % 10, 'th')) }} · {{ s.behind }}{% endif %}</div>
+    </div>
+    {% endfor %}
+  </div>
+{% endblock %}

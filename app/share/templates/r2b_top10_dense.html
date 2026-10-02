@@ -1,0 +1,33 @@
+{% extends "_base.html" %}
+{# Dense top ten: surname only, swim / bike / run / total. No gaps. A split in
+   accent is the fastest of the whole race. #}
+{% block css %}
+  .tbl { margin-top: 60px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+  .r { display: grid; grid-template-columns: 56px 1fr 130px 130px 130px 180px; align-items: baseline;
+    padding: 14px 0; border-bottom: 2px solid var(--rule); font-variant-numeric: tabular-nums; }
+  .r.h { border-bottom-width: 3px; padding-bottom: 10px; }
+  .r.h span { font-size: 22px; font-weight: 600; color: var(--fg-2); text-align: right; }
+  .r:last-child { border-bottom: 0; }
+  .r .p { font-size: 30px; font-weight: 700; color: var(--fg-2); }
+  .r .n { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; }
+  .r .s { font-size: 28px; font-weight: 600; text-align: right; color: var(--fg-2); }
+  .r .s.f { color: var(--accent); font-weight: 700; }
+  .r .t { font-size: 36px; font-weight: 700; text-align: right; letter-spacing: -0.02em; }
+  .r.w .t, .r.w .p { color: var(--accent); }
+{% endblock %}
+{% block body %}
+  <div class="race">{{ race_title }}<span class="sub">{{ prog }} · {{ date }}</span></div>
+  <div class="tbl">
+    <div class="r h"><span></span><span></span><span>Swim</span><span>Bike</span><span>Run</span><span>Total</span></div>
+    {% for a in top10 %}
+    <div class="r{% if loop.first %} w{% endif %}">
+      <div class="p">{{ a.position }}</div>
+      <div class="n">{{ a.last }}{{ flag(a) }}</div>
+      <div class="s{% if a.swim_fastest %} f{% endif %}">{{ a.swim }}</div>
+      <div class="s{% if a.bike_fastest %} f{% endif %}">{{ a.bike }}</div>
+      <div class="s{% if a.run_fastest %} f{% endif %}">{{ a.run }}</div>
+      <div class="t">{{ a.time }}</div>
+    </div>
+    {% endfor %}
+  </div>
+{% endblock %}

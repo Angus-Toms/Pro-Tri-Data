@@ -1,0 +1,49 @@
+{% extends "_base.html" %}
+{# Rating card: what this one race did to the ratings. Overall rating and its
+   change lead; below, each discipline's rating and signed change. #}
+{% block css %}
+  .content { justify-content: flex-end; }
+  .name { font-size: 64px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+  .race { margin-top: 20px; }
+  .rating { display: flex; align-items: baseline; gap: 30px; margin-top: 80px; }
+  .rating .v { font-size: 190px; }
+  .rating .d { font-size: 72px; font-weight: 800; color: var(--accent); letter-spacing: -0.02em; }
+  .rating .d.down { color: var(--fg-2); }
+  .rank { margin-top: 14px; font-size: 32px; font-weight: 600; color: var(--fg-2); }
+  .rank b { color: var(--fg); font-weight: 700; }
+  svg.spark { width: 100%; height: 170px; margin-top: 60px; overflow: visible; }
+  .spark path { fill: none; stroke: var(--fg); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+  .spark .area { fill: var(--accent); opacity: 0.16; stroke: none; }
+  .spark circle { fill: var(--accent); stroke: var(--fg); stroke-width: 5; }
+  .year { display: flex; justify-content: space-between; margin-top: 16px; font-size: 28px; font-weight: 600; color: var(--fg-2); }
+  .year b { color: var(--fg); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .discs { margin-top: 60px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px 40px; }
+  .disc .lbl { display: block; }
+  .disc .c { font-size: 76px; margin-top: 8px; }
+  .disc .c.down { color: var(--fg-2); }
+  .disc .c.up { color: var(--accent); }
+  .disc .r { font-size: 28px; font-weight: 600; color: var(--fg-2); margin-top: 10px; font-variant-numeric: tabular-nums; }
+{% endblock %}
+{% block body %}
+  {% set r = rating %}
+  <div class="name">{{ me.name }}{{ flag(me) }}</div>
+  <div class="race">{{ race_title }}<span class="sub">{{ prog }} · {{ me.pos_ord }} · {{ me.time }}</span></div>
+  <div class="rating"><div class="v num">{{ r.overall }}</div><div class="d num{% if r.change < 0 %} down{% endif %}">{{ '%+d' % r.change }}</div></div>
+  <div class="rank">World <b>#{{ r.world_rank }}</b>{% if r.world_rank_prev and r.world_rank_prev != r.world_rank %}, from #{{ r.world_rank_prev }}{% endif %}</div>
+  {% set pts = r.spark %}{% set W_ = 912 %}{% set H_ = 160 %}
+  <svg class="spark" viewBox="0 0 {{ W_ }} {{ H_ }}">
+    <path class="area" d="M0,{{ H_ }} {% for p in pts %}L{{ '%.1f' % (p.x*W_) }},{{ '%.1f' % (p.y*H_) }} {% endfor %}L{{ W_ }},{{ H_ }}Z"/>
+    <path d="{% for p in pts %}{{ 'M' if loop.first else 'L' }}{{ '%.1f' % (p.x*W_) }},{{ '%.1f' % (p.y*H_) }} {% endfor %}"/>
+    <circle cx="{{ W_ }}" cy="{{ '%.1f' % (pts[-1].y*H_) }}" r="12"/>
+  </svg>
+  <div class="year"><span>Last 12 months · {{ r.year_races }} races</span><span><b>{{ '%+d' % r.year_change }}</b></span></div>
+  <div class="discs">
+    {% for d in r.discs %}{% set dir = 'up' if d.change > 0 else 'down' %}
+    <div class="disc">
+      <span class="lbl">{{ d.label }}</span>
+      <div class="c num {{ dir }}">{{ '%+d' % d.change }}</div>
+      <div class="r">{{ d.rating }}</div>
+    </div>
+    {% endfor %}
+  </div>
+{% endblock %}

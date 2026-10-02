@@ -1,0 +1,71 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  @font-face { font-family: 'PJS'; font-weight: 400 800; font-display: block;
+    src: url('{{ STATIC_URI }}/fonts/plus-jakarta-sans/LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko70yygg_vbd-E.woff2') format('woff2'); }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: {{ W }}px; height: {{ H }}px; background: transparent;
+    font-family: 'PJS', 'Plus Jakarta Sans', sans-serif; -webkit-font-smoothing: antialiased; }
+
+  /* Ink: every design only ever uses these five colours. --------------------
+     light = white text (navy card, photo, transparent-on-dark)
+     dark  = navy text  (cream card, transparent-on-light) */
+  #card.ink-light { --fg: #ffffff; --fg-2: rgba(255,255,255,0.62); --fg-3: rgba(255,255,255,0.28);
+                    --rule: rgba(255,255,255,0.18); --accent: #ff7a1a; }
+  #card.ink-dark  { --fg: #1a1a2e; --fg-2: #6b7280; --fg-3: #c9ccd3;
+                    --rule: rgba(26,26,46,0.14); --accent: #e85d04; }
+  /* Podium metals, same in both inks. */
+  #card { --gold: #f5c842; --silver: #c8d8e0; --bronze: #d4a870; }
+
+  #card { position: relative; width: {{ W }}px; height: {{ H }}px; overflow: hidden; color: var(--fg); }
+  #card.mode-solid.ink-light { background: #1a1a2e; }
+  #card.mode-solid.ink-dark  { background: #f4f4f2; }
+  #card.mode-photo .photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  /* Scrim: dark at both ends where the type lives, open in the middle so the
+     photo still reads as a photo. */
+  #card.mode-photo .scrim { position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(10,12,24,0.72) 0%, rgba(10,12,24,0.15) 38%,
+                                        rgba(10,12,24,0.15) 55%, rgba(10,12,24,0.85) 100%); }
+  /* Over an unknown background the type needs an edge. */
+  #card.mode-photo, #card.mode-transparent { text-shadow: 0 2px 14px rgba(0,0,0,0.45); }
+  #card.mode-transparent.ink-dark { text-shadow: 0 2px 14px rgba(255,255,255,0.6); }
+
+  /* Content sits inside the Instagram story safe area (~220px top/bottom). */
+  .content { position: absolute; inset: 0; padding: {{ 220 if H > 1500 else 90 }}px 84px {{ 380 if H > 1500 else 230 }}px;
+    display: flex; flex-direction: column; }
+
+  /* Overlay layouts hug the bottom so the photo shows; on a solid card
+     there is nothing to show, so centre them instead. */
+  #card.mode-solid .content { justify-content: center; }
+
+  /* Race line: the "where" of the card. Plain text, two weights, no label. */
+  .race { font-size: 36px; font-weight: 600; line-height: 1.25; letter-spacing: -0.01em; }
+  .race .sub { display: block; font-weight: 500; color: var(--fg-2); font-size: 30px; margin-top: 4px; }
+
+  .num { font-variant-numeric: tabular-nums; letter-spacing: -0.04em; font-weight: 800; line-height: 0.9; }
+  .lbl { font-size: 24px; font-weight: 600; color: var(--fg-2); letter-spacing: 0.02em; }
+
+  img.flag { height: 0.6em; vertical-align: -0.02em; border-radius: 3px; margin-left: 0.3em;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.12); }
+  .face { width: 100%; aspect-ratio: 1; border-radius: 50%; object-fit: cover; background: var(--fg-3); display: block; }
+
+  /* Footer: logo tile + wordmark, bottom left, always. */
+  .brand { position: absolute; left: 84px; right: 84px; bottom: {{ 220 if H > 1500 else 84 }}px;
+    display: flex; align-items: center; gap: 22px; }
+  .brand img { width: 72px; height: 72px; border-radius: 16px; display: block;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25); }
+  .brand .word { font-size: 28px; font-weight: 800; letter-spacing: 0.14em; line-height: 1; }
+  .brand .url  { font-size: 22px; font-weight: 500; color: var(--fg-2); margin-top: 8px; letter-spacing: 0.02em; }
+  {% block css %}{% endblock %}
+</style>
+</head><body>
+<div id="card" class="mode-{{ mode }} ink-{{ ink }}">
+  {% if mode == 'photo' %}<img class="photo" src="{{ photo }}"><div class="scrim"></div>{% endif %}
+  <div class="content">{% block body %}{% endblock %}</div>
+  <div class="brand">
+    <img src="{{ STATIC_URI }}/imgs/logo.svg" alt="">
+    <div><div class="word">PRO TRI DATA</div><div class="url">protridata.com</div></div>
+  </div>
+</div>
+</body></html>

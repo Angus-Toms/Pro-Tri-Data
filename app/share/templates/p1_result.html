@@ -1,0 +1,27 @@
+{% extends "_base.html" %}
+{# Result hero. Built for the transparent and photo modes: everything hugs
+   the bottom, leaving the middle of the story for the user's picture.
+   Position is the headline, then name, time, three splits. #}
+{% block css %}
+  .content { justify-content: flex-end; }
+  .pos { font-size: 300px; color: var(--accent); }
+  .pos sup { font-size: 0.32em; vertical-align: 1.25em; letter-spacing: 0; font-weight: 700; margin-left: 6px; }
+  .name { font-size: 76px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; margin-top: 30px; }
+  .race { margin-top: 24px; }
+  .time { font-size: 120px; margin-top: 60px; }
+  .time .b { font-size: 40px; font-weight: 600; color: var(--fg-2); letter-spacing: 0; margin-left: 24px; }
+  .splits { display: flex; gap: 70px; margin-top: 48px; }
+  .splits .v { font-size: 56px; }
+  .splits .lbl { display: block; margin-bottom: 12px; }
+{% endblock %}
+{% block body %}
+  <div class="pos num">{{ me.position }}<sup>{{ me.pos_ord[-2:] }}</sup></div>
+  <div class="name">{{ me.name }}{{ flag(me) }}</div>
+  <div class="race">{{ race_title }}<span class="sub">{{ prog }} · {{ date }}</span></div>
+  <div class="time num">{{ me.time }}{% if me.behind %}<span class="b">{{ me.behind }}</span>{% endif %}</div>
+  <div class="splits">
+    <div><span class="lbl">Swim</span><div class="v num">{{ me.swim }}</div></div>
+    <div><span class="lbl">Bike</span><div class="v num">{{ me.bike }}</div></div>
+    <div><span class="lbl">Run</span><div class="v num">{{ me.run }}</div></div>
+  </div>
+{% endblock %}

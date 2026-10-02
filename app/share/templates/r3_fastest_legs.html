@@ -1,0 +1,30 @@
+{% extends "_base.html" %}
+{# Three legs, three leaders. Each leg is a block: big split, leader's face
+   and name, then the two chasers with their gap. #}
+{% block css %}
+  .legs { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; margin-top: 30px; }
+  .leg { display: grid; grid-template-columns: 150px 1fr auto; column-gap: 34px; align-items: center; }
+  .leg .lbl { font-size: 26px; display: block; margin-bottom: 8px; }
+  .leg .lead { font-size: 44px; font-weight: 700; letter-spacing: -0.02em; }
+  .leg .lead .f { font-weight: 500; }
+  .leg .t { font-size: 76px; text-align: right; }
+  .chase { grid-column: 2 / span 2; display: flex; gap: 60px; margin-top: 14px; font-size: 28px; font-weight: 600; color: var(--fg-2); }
+  .chase span { font-variant-numeric: tabular-nums; }
+  .chase b { font-weight: 700; color: var(--fg); }
+  .leg .face { border: 6px solid var(--accent); }
+{% endblock %}
+{% block body %}
+  <div class="race">{{ race_title }}<span class="sub">{{ prog }} · Fastest splits</span></div>
+  <div class="legs">
+    {% for leg in legs %}{% set l = leg.rows[0] %}
+    <div class="leg">
+      {{ face(l) }}
+      <div><span class="lbl">{{ leg.label }}</span><div class="lead"><span class="f">{{ l.first }}</span> {{ l.last }}{{ flag(l) }}</div></div>
+      <div class="t num">{{ l.time }}</div>
+      <div class="chase">
+        {% for c in leg.rows[1:] %}<span><b>{{ c.last }}</b> {{ c.behind or 'level' }}</span>{% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+{% endblock %}

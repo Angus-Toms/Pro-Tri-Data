@@ -172,6 +172,7 @@
                             <a href="/athlete/{{ athlete.athlete_id }}" class="link">
                                 {{ athlete.name }} {{ flag(athlete.country_alpha3) }}
                             </a>
+                            {% if athlete.position %}<button type="button" class="share-row-btn" data-share="{{ athlete.athlete_id }}" title="Share this result" aria-label="Share {{ athlete.name }}'s result"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg></button>{% endif %}
                         </td>
                         <td class="yob-col" data-value="{{ athlete.year_of_birth if athlete.year_of_birth else 0 }}">
                             {{"{} ({})".format(athlete.year_of_birth, athlete.age) if athlete.year_of_birth else "" }}

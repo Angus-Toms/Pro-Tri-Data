@@ -1,0 +1,2 @@
+{% macro flag(a) %}<img class="flag" src="{{ STATIC_URI }}/flags/{{ a.alpha3 }}.svg" alt="">{% endmacro %}
+{% macro face(a) %}{% if a.face %}<img class="face" src="{{ a.face }}" alt="">{% else %}<div class="face"></div>{% endif %}{% endmacro %}

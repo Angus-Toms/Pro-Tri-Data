@@ -10,6 +10,7 @@ from config import ASSET_VERSION, STATIC_BASE_URL
 from app.display_helpers import flag, program_label, title_words
 
 from ptd_data import queries
+from app.share.cards import DESIGNS as SHARE_DESIGNS
 from app.routers.router_utils import format_time, format_time_behind, format_rating, format_rating_change, format_course_conditions
 
 templates = Jinja2Templates(directory="templates")
@@ -429,10 +430,15 @@ def get_race(request: Request, race_id: int, partial: bool = False):
         race[f"{disc}_increase_athlete_id"] = best_perf[f"{disc}_athlete_id"] or 0
 
     template = "race_partial.html" if partial else "race.html"
+    share_designs = {
+        "race":    [(k, v[3]) for k, v in SHARE_DESIGNS.items() if v[2] == "race"],
+        "athlete": [(k, v[3]) for k, v in SHARE_DESIGNS.items() if v[2] == "athlete"],
+    }
     return templates.TemplateResponse(template, headers=_race_cache_headers(race["race_date"]), context={
         "request":        request,
         "active_page":    "races",
         "race":           race,
+        "share_designs":  share_designs,
         "race_location":  race_location,
         "race_country":   race_country,
         "event_id":       event_id,

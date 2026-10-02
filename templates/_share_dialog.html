@@ -1,0 +1,50 @@
+{# Share dialog: pick a card, a style, optionally a photo, preview, download. #}
+<dialog class="share-dialog" id="share-dialog" data-race-id="{{ race.race_id }}">
+    <form method="dialog" class="share-panel">
+        <div class="share-head">
+            <h2>Share</h2>
+            <button type="submit" class="share-close" aria-label="Close">&times;</button>
+        </div>
+        <div class="share-body">
+            <div class="share-preview"><img id="share-img" alt="Card preview"></div>
+            <div class="share-controls">
+                <fieldset>
+                    <legend>Card</legend>
+                    <div class="share-opts" id="share-design">
+                        {% for key, label in share_designs.race %}
+                        <label><input type="radio" name="design" value="{{ key }}" data-subject="race"{% if loop.first %} checked{% endif %}><span>{{ label }}</span></label>
+                        {% endfor %}
+                        <span class="share-sep"></span>
+                        {% for key, label in share_designs.athlete %}
+                        <label><input type="radio" name="design" value="{{ key }}" data-subject="athlete"><span>{{ label }}</span></label>
+                        {% endfor %}
+                    </div>
+                </fieldset>
+                <fieldset id="share-athlete-field" hidden>
+                    <legend>Athlete</legend>
+                    <select name="athlete" id="share-athlete">
+                        {% for a in splits_data if a.position %}
+                        <option value="{{ a.athlete_id }}">{{ a.position }}. {{ a.name }}</option>
+                        {% endfor %}
+                    </select>
+                </fieldset>
+                <fieldset>
+                    <legend>Style</legend>
+                    <div class="share-opts">
+                        <label><input type="radio" name="style" value="solid:light" checked><span>Navy</span></label>
+                        <label><input type="radio" name="style" value="solid:dark"><span>Cream</span></label>
+                        <label><input type="radio" name="style" value="photo:light"><span>Your photo</span></label>
+                        <label><input type="radio" name="style" value="transparent:light"><span>Transparent, white text</span></label>
+                        <label><input type="radio" name="style" value="transparent:dark"><span>Transparent, dark text</span></label>
+                    </div>
+                </fieldset>
+                <fieldset id="share-photo-field" hidden>
+                    <legend>Photo</legend>
+                    <input type="file" name="photo" id="share-photo" accept="image/*">
+                    <p class="share-note">Your photo is used once to build the card and is not stored.</p>
+                </fieldset>
+                <button type="button" class="btn-search share-download" id="share-download" disabled>Download PNG</button>
+            </div>
+        </div>
+    </form>
+</dialog>

@@ -1,0 +1,28 @@
+{% extends "_base.html" %}
+{# Top ten as a ledger. Position column is small, names carry the weight,
+   times right-aligned and tabular. Winner row in accent. #}
+{% block css %}
+  .list { margin-top: 70px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+  .r { display: grid; grid-template-columns: 70px 1fr auto auto; align-items: baseline; column-gap: 28px;
+    padding: 16px 0; border-bottom: 2px solid var(--rule); }
+  .r:last-child { border-bottom: 0; }
+  .r .p { font-size: 34px; font-weight: 700; color: var(--fg-2); font-variant-numeric: tabular-nums; }
+  .r .n { font-size: 40px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .r .n .f { font-weight: 500; }
+  .r .t { font-size: 40px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+  .r .b { font-size: 30px; font-weight: 600; color: var(--fg-2); font-variant-numeric: tabular-nums; min-width: 150px; text-align: right; }
+  .r.w .p, .r.w .t { color: var(--accent); }
+{% endblock %}
+{% block body %}
+  <div class="race">{{ race_title }}<span class="sub">{{ prog }} · {{ date }}</span></div>
+  <div class="list">
+    {% for a in top10 %}
+    <div class="r{% if loop.first %} w{% endif %}">
+      <div class="p">{{ a.position }}</div>
+      <div class="n"><span class="f">{{ a.first }}</span> {{ a.last }}{{ flag(a) }}</div>
+      <div class="t">{{ a.time }}</div>
+      <div class="b">{{ a.behind }}</div>
+    </div>
+    {% endfor %}
+  </div>
+{% endblock %}
