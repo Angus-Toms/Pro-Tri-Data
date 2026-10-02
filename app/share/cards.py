@@ -28,7 +28,7 @@ PORTRAIT = (1080, 1350)
 
 # design -> (template, size, subject, label). Race-level first, then individual.
 DESIGNS = {
-    "r1_podium":       ("r1_podium.html",       STORY,    "race",    "Podium"),
+    "r1_podium":       ("r1_podium.html",       PORTRAIT, "race",    "Podium"),
     "r2_top10":        ("r2_top10.html",        PORTRAIT, "race",    "Top ten"),
     "r2b_top10_dense": ("r2b_top10_dense.html", PORTRAIT, "race",    "Top ten with splits"),
     "r3_fastest_legs": ("r3_fastest_legs.html", PORTRAIT, "race",    "Fastest splits"),

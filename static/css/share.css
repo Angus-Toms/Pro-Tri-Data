@@ -23,12 +23,12 @@
 .share-controls select { width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); font: inherit; }
 .share-note { font-size: 0.8rem; color: var(--text-light); margin: var(--spacing-sm) 0 0; }
 .share-download { width: 100%; }
-/* Share column: last in the results table, no heading. On the stacked
-   mobile layout it follows the splits chevron (same order as the toggle,
-   later in DOM order) and stays before the expanded-splits line break. */
+/* Share column: last in the results table, no heading. Hidden on the
+   stacked mobile layout; there the hero Share link opens the dialog and the
+   athlete is picked from its dropdown. */
 .results-table th.share-col, .results-table td.share-col { width: 2.75rem; min-width: 2.75rem; padding: 0 0.5rem 0 0.25rem; text-align: center; }
 .share-row-btn { border: 0; background: none; padding: 0.25rem; color: var(--text-lighter); cursor: pointer; display: inline-flex; align-items: center; }
 .share-row-btn:hover { color: var(--primary-color); }
 .share-row-btn svg { width: 1.2rem; height: 1.2rem; }
-@media (max-width: 768px) { .results-table td.share-col { order: 2; } }
+@media (max-width: 768px) { .results-table td.share-col { display: none; } }
 @media (max-width: 720px) { .share-body { grid-template-columns: 1fr; } }
