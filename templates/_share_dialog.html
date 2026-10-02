@@ -9,12 +9,16 @@
             <div class="share-preview"><img id="share-img" alt="Card preview"></div>
             <div class="share-controls">
                 <fieldset>
-                    <legend>Card</legend>
-                    <div class="share-opts" id="share-design">
+                    <legend>Race cards</legend>
+                    <div class="share-opts">
                         {% for key, label in share_designs.race %}
                         <label><input type="radio" name="design" value="{{ key }}" data-subject="race"{% if loop.first %} checked{% endif %}><span>{{ label }}</span></label>
                         {% endfor %}
-                        <span class="share-sep"></span>
+                    </div>
+                </fieldset>
+                <fieldset>
+                    <legend>Athlete cards</legend>
+                    <div class="share-opts">
                         {% for key, label in share_designs.athlete %}
                         <label><input type="radio" name="design" value="{{ key }}" data-subject="athlete"><span>{{ label }}</span></label>
                         {% endfor %}

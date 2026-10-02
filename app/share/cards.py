@@ -175,21 +175,14 @@ def athlete_context(rc: dict, athlete_id: int) -> dict:
     rank_now, rank_prev = ranks[i]["world_overall"], (ranks[i - 1]["world_overall"] if i else None)
     discs = [{"label": d.title(), "rating": round(rating[f"{d}_rating"]), "change": round(rating[f"{d}_change"])}
              for d in ("swim", "bike", "run", "transition")]
-    # Twelve months of overall rating ending at this race, for the sparkline.
-    race_date = rc["_race"]["race_date"]
-    year = [h for h in reversed(queries.get_athlete_rating_history(athlete_id))
-            if race_date - dt.timedelta(days=365) <= h["race_date"] <= race_date and not h["is_relay"]]
-    vals = [h["overall_rating"] for h in year]
-    lo, hi = min(vals), max(vals)
-    spark = [{"x": j / max(len(vals) - 1, 1), "y": 1 - (v - lo) / max(hi - lo, 1)} for j, v in enumerate(vals)]
     rating_ctx = {
         "overall": round(rating["overall_rating"]), "change": round(rating["overall_change"]),
         "world_rank": rank_now, "world_rank_prev": rank_prev, "discs": discs,
-        "spark": spark, "year_change": round(vals[-1] - vals[0]), "year_races": len(vals),
     }
 
     # Milestones: career markers this race set ------------------------------
     distance = rc["_race"]["distance"]
+    dist_label = {"standard": "Olympic distance", "sprint": "Sprint distance"}.get(distance, f"{distance} distance")
     conn = queries._get_conn()
     dist_by_race = dict(conn.execute("SELECT race_id, distance FROM races").fetchall())
     hist_all = [h for h in queries.get_athlete_race_history(athlete_id)
@@ -198,12 +191,12 @@ def athlete_context(rc: dict, athlete_id: int) -> dict:
     milestones = []
     if me["overall_s"] <= min(h["overall_s"] for h in same_dist):
         milestones.append({"icon": "stopwatch", "big": format_time(me["overall_s"]),
-                           "text": f"Career-best {distance} distance finish time"})
+                           "text": f"{dist_label} PB"})
     for label, key in (("swim", "swim_s"), ("bike", "bike_s"), ("run", "run_s")):
         best = min((h[key] for h in same_dist if h[key]), default=None)
         if best and me[key] <= best:
             milestones.append({"icon": label, "big": format_time(me[key]),
-                               "text": f"Career-best {distance} distance {label} split"})
+                               "text": f"{dist_label} {label} PB"})
     wins    = sum(1 for h in hist_all if h["position"] == 1)
     podiums = sum(1 for h in hist_all if h["position"] and h["position"] <= 3)
     if me["position"] == 1:
@@ -215,7 +208,7 @@ def athlete_context(rc: dict, athlete_id: int) -> dict:
                            "text": f"World ranking, up from #{rank_prev}"})
     peak = min(r["world_overall"] for r in ranks[: i + 1])
     if rank_now == peak and (rank_prev is None or rank_now < rank_prev):
-        milestones[-1]["text"] = f"World ranking, up from #{rank_prev}. Career high"
+        milestones[-1]["text"] = f"Career-high world ranking, up from #{rank_prev}"
 
     return {
         **{k: v for k, v in rc.items() if not k.startswith("_")},

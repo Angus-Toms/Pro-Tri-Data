@@ -18,7 +18,6 @@
 .share-opts input { position: absolute; opacity: 0; }
 .share-opts span { display: inline-block; padding: 0.35rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); font-size: var(--font-size-sm); font-weight: 500; }
 .share-opts input:checked + span { background: var(--navy); color: var(--white); border-color: var(--navy); }
-.share-sep { flex-basis: 100%; height: 0; }
 .share-controls select { width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); font: inherit; }
 .share-note { font-size: 0.8rem; color: var(--text-light); margin: var(--spacing-sm) 0 0; }
 .share-download { width: 100%; }
