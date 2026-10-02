@@ -66,11 +66,11 @@ def face_uri(athlete_id: int) -> str | None:
 
 def short_title(race: dict) -> str:
     # "2024 World Triathlon Championship Series Cagliari" is too long for a
-    # hero line; strip the series boilerplate, keep year + venue.
+    # hero line; shorten the series names but keep year, series and venue.
     t = race["race_title"]
-    for noise in ("World Triathlon Championship Series", "World Triathlon Cup",
-                  "World Triathlon", "Championship Series"):
-        t = t.replace(noise, "")
+    for noise, short in (("World Triathlon Championship Series", "WTCS"), ("World Triathlon Cup", "World Cup"),
+                         ("World Triathlon Para Series", "Para Series"), ("World Triathlon", "")):
+        t = t.replace(noise, short)
     return " ".join(t.split())
 
 
@@ -147,6 +147,39 @@ def race_context(race_id: int) -> dict:
         "year":       date.year,
         "podium": podium, "top10": top10, "legs": legs,
         "_finishers": finishers, "_race": race,
+    }
+
+
+def predicted_race_context(race_id: int) -> dict:
+    """Same shape as race_context, built from the precomputed predictions for
+    an upcoming race, so the race-level designs render unchanged with
+    `predicted` set for the templates to label."""
+    race = queries.get_upcoming_race_info(race_id)
+    entries = {e["athlete_id"]: e for e in queries.get_upcoming_race_entries(race_id)}
+    stored = [r for r in queries.get_race_predictions(race_id) if r["athlete_id"] in entries and r["overall_s"]]
+    stored.sort(key=lambda r: r["overall_s"])
+    for i, r in enumerate(stored):
+        r["position"] = i + 1
+        r["name"], r["country_alpha3"] = entries[r["athlete_id"]]["name"], entries[r["athlete_id"]]["country_alpha3"]
+    best = {k: min(r[k] for r in stored if r[k]) for k in ("overall_s", "swim_s", "bike_s", "run_s")}
+
+    def row(r):
+        return {**person(r),
+                "time":   format_time(r["overall_s"]), "behind": format_time_behind(r["overall_s"] - best["overall_s"]),
+                "swim": format_time(r["swim_s"]), "bike": format_time(r["bike_s"]), "run": format_time(r["run_s"]),
+                **{f"{k}_fastest": r[f"{k}_s"] == best[f"{k}_s"] for k in ("swim", "bike", "run")}}
+    legs = []
+    for label, key in (("Swim", "swim_s"), ("Bike", "bike_s"), ("Run", "run_s")):
+        ranked = sorted([r for r in stored if r[key]], key=lambda r: r[key])
+        legs.append({"label": label, "rows": [{**person(r), "time": format_time(r[key]),
+                                               "behind": format_time_behind(r[key] - best[key])} for r in ranked[:3]]})
+    date = race["race_date"]
+    return {
+        "race_id": race_id, "predicted": True,
+        "race_title": short_title(race), "race_full": race["race_title"],
+        "prog": race["prog_name"], "venue": race["location"],
+        "date": date.strftime("%-d %B %Y"), "year": date.year,
+        "podium": [row(r) for r in stored[:3]], "top10": [row(r) for r in stored[:10]], "legs": legs,
     }
 
 

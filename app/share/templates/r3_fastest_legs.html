@@ -14,7 +14,7 @@
   .leg .face { border: 6px solid var(--accent); }
 {% endblock %}
 {% block body %}
-  <div class="race">{{ race_title }}<span class="sub">{{ prog }} · Fastest splits</span></div>
+  <div class="race">{{ race_title }}<span class="sub">{{ prog }} · {% if predicted %}Predicted fastest splits{% else %}Fastest splits{% endif %}</span></div>
   <div class="legs">
     {% for leg in legs %}{% set l = leg.rows[0] %}
     <div class="leg">

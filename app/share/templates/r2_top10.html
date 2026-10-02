@@ -14,7 +14,7 @@
   .r.w .p, .r.w .t { color: var(--accent); }
 {% endblock %}
 {% block body %}
-  <div class="race">{{ race_title }}<span class="sub">{{ prog }} · {{ date }}</span></div>
+  <div class="race">{{ race_title }}<span class="sub">{% if predicted %}Predicted top ten · {% endif %}{{ prog }} · {{ date }}</span></div>
   <div class="list">
     {% for a in top10 %}
     <div class="r{% if loop.first %} w{% endif %}">

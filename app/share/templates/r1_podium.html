@@ -39,7 +39,7 @@
   {% endif %}
 {% endblock %}
 {% block body %}
-  <div class="race">{{ race_title }}<span class="sub">{{ prog }} · {{ venue }} · {{ date }}</span></div>
+  <div class="race">{{ race_title }}<span class="sub">{% if predicted %}Predicted podium · {% endif %}{{ prog }} · {{ venue }} · {{ date }}</span></div>
   <div class="podium">
     {% for idx in [1, 0, 2] %}{% set a = podium[idx] %}
     <div class="step s{{ idx + 1 }}">
@@ -53,7 +53,7 @@
   </div>
   <div class="legs">
     {% for leg in legs %}
-    <div><span class="lbl">Fastest {{ leg.label|lower }}</span>
+    <div><span class="lbl">{% if predicted %}Predicted fastest{% else %}Fastest{% endif %} {{ leg.label|lower }}</span>
       <div class="who">{{ leg.rows[0].last }}</div><div class="t num">{{ leg.rows[0].time }}</div></div>
     {% endfor %}
   </div>
