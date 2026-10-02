@@ -58,7 +58,7 @@
     });
     img.addEventListener('click', () => { if (blobUrl) window.open(blobUrl, '_blank'); });
 
-    // Openers: hero link (race cards) and per-row icons (preselect the athlete).
+    // Openers: hero link (race cards) and table-header buttons (preselect athlete + design).
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-share]');
         if (!btn) return;
@@ -66,7 +66,9 @@
         const athleteId = btn.dataset.share;
         if (athleteId) {
             athSel.value = athleteId;
-            form.querySelector('input[name=design][data-subject=athlete]').checked = true;
+            const design = btn.dataset.shareDesign;
+            (form.querySelector(`input[name=design][value="${design}"]`)
+                || form.querySelector('input[name=design][data-subject=athlete]')).checked = true;
         } else {
             form.querySelector('input[name=design][data-subject=race]').checked = true;
         }
