@@ -49,3 +49,6 @@ growth/
 analysis/
 # Cloudflare Origin CA cert for the Hetzner box
 deploy/hetzner/origin.*
+
+# Local symlink to data/athlete_imgs so the dev server serves faces
+ptd_data/athlete_imgs
