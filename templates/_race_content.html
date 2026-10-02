@@ -78,13 +78,14 @@
 <div class="results-section-head">
     <div class="page-section-head" id="results-section-title"><span><span class="section-label">Race Results</span> {{ help_icon('race-results') }}</span></div>
     <div class="results-section-controls">
-        {% with download_url = "/download/races/" ~ race.race_id ~ "/results" %}{% include "partials/download_button.html" %}{% endwith %}
         {% if has_predictions %}
         <div class="race-view-toggle">
             <button class="race-view-btn" data-view="predictions">Predictions</button>
             <button class="race-view-btn active" data-view="results">Results</button>
         </div>
         {% endif %}
+        <div class="table-actions">
+        {% with download_url = "/download/races/" ~ race.race_id ~ "/results" %}{% include "partials/download_button.html" %}{% endwith %}
         {% set _course = 'long' if race_distance in ('middle','t100','long') else 'short' %}
         <button id="add-prediction-btn" class="btn-add-prediction btn-table-action"
                 data-gender="{{ race.gender }}" data-course="{{ _course }}"
@@ -104,6 +105,7 @@
             <span class="btn-table-action-label">Share</span>
         </button>
         {% endif %}
+        </div>
     </div>
 </div>
 <div id="prediction-modal" class="prediction-modal hidden" role="dialog" aria-modal="true" aria-labelledby="prediction-modal-title">
