@@ -31,6 +31,8 @@ def _png(race: int, design: str, mode: str, ink: str, athlete: int | None, photo
         if not any(f["athlete_id"] == athlete for f in rc["_finishers"]):
             raise HTTPException(404, "athlete did not finish this race")
         ctx = cards.athlete_context(rc, athlete)
+        if design == "p4_rating" and ctx["rating"] is None:
+            raise HTTPException(404, "no ratings for this race")
     else:
         ctx = {k: v for k, v in rc.items() if not k.startswith("_")}
     return cards.render_png(design, ctx, mode, ink, photo)

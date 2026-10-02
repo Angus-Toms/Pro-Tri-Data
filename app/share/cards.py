@@ -202,23 +202,30 @@ def athlete_context(rc: dict, athlete_id: int) -> dict:
         })
 
     # Rating + world rank move, this race only -----------------------------
-    rating = next(r for r in queries.get_race_ratings(rc["race_id"]) if r["athlete_id"] == athlete_id)
-    ranks = queries.get_athlete_rankings_data(athlete_id)
-    i = next(i for i, r in enumerate(ranks) if r["race_id"] == rc["race_id"])
-    rank_now, rank_prev = ranks[i]["world_overall"], (ranks[i - 1]["world_overall"] if i else None)
-    discs = [{"label": d.title(), "rating": round(rating[f"{d}_rating"]), "change": round(rating[f"{d}_change"])}
-             for d in ("swim", "bike", "run", "transition")]
-    rating_ctx = {
-        "overall": round(rating["overall_rating"]), "change": round(rating["overall_change"]),
-        "world_rank": rank_now, "world_rank_prev": rank_prev, "discs": discs,
-    }
+    # Ignored races have no ratings rows; rankings are course-scoped, so look
+    # the race up in the right bucket. Either can be missing, in which case
+    # the rating card is unavailable and the milestones skip the rank marker.
+    rating = next((r for r in queries.get_race_ratings(rc["race_id"]) if r["athlete_id"] == athlete_id), None)
+    course = queries.course_for_distance(rc["_race"]["distance"]) or "short"
+    ranks = queries.get_athlete_rankings_data(athlete_id, course=course)
+    i = next((i for i, r in enumerate(ranks) if r["race_id"] == rc["race_id"]), None)
+    rank_now = ranks[i]["world_overall"] if i is not None else None
+    rank_prev = ranks[i - 1]["world_overall"] if i else None
+    rating_ctx = None
+    if rating:
+        rating_ctx = {
+            "overall": round(rating["overall_rating"]), "change": round(rating["overall_change"]),
+            "world_rank": rank_now, "world_rank_prev": rank_prev,
+            "discs": [{"label": d.title(), "rating": round(rating[f"{d}_rating"]), "change": round(rating[f"{d}_change"])}
+                      for d in ("swim", "bike", "run", "transition")],
+        }
 
     # Milestones: career markers this race set ------------------------------
     distance = rc["_race"]["distance"]
     dist_label = {"standard": "Olympic distance", "sprint": "Sprint distance"}.get(distance, f"{distance} distance")
     conn = queries._get_conn()
     dist_by_race = dict(conn.execute("SELECT race_id, distance FROM races").fetchall())
-    hist_all = [h for h in queries.get_athlete_race_history(athlete_id)
+    hist_all = [h for h in queries.get_athlete_race_history(athlete_id, course=course)
                 if h["status"] == "Finished" and h["race_date"] <= rc["_race"]["race_date"]]
     same_dist = [h for h in hist_all if dist_by_race.get(h["race_id"]) == distance and h["overall_s"] > 0]
     milestones = []
@@ -236,12 +243,10 @@ def athlete_context(rc: dict, athlete_id: int) -> dict:
         milestones.append({"icon": "medal", "big": ordinal(wins), "text": "Career win"})
     elif me["position"] <= 3:
         milestones.append({"icon": "medal", "big": ordinal(podiums), "text": "Career podium"})
-    if rank_prev and rank_now < rank_prev:
-        milestones.append({"icon": "trend", "big": f"#{rank_now}",
-                           "text": f"World ranking, up from #{rank_prev}"})
-    peak = min(r["world_overall"] for r in ranks[: i + 1])
-    if rank_now == peak and (rank_prev is None or rank_now < rank_prev):
-        milestones[-1]["text"] = f"Career-high world ranking, up from #{rank_prev}"
+    if rank_prev and rank_now and rank_now < rank_prev:
+        peak = min(r["world_overall"] for r in ranks[: i + 1])
+        text = f"{'Career-high world' if rank_now == peak else 'World'} ranking, up from #{rank_prev}"
+        milestones.append({"icon": "trend", "big": f"#{rank_now}", "text": text})
 
     return {
         **{k: v for k, v in rc.items() if not k.startswith("_")},

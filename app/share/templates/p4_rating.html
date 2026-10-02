@@ -23,7 +23,7 @@
   <div class="name">{{ me.name }}{{ flag(me) }}</div>
   <div class="race">{{ race_title }}<span class="sub">{{ prog }} · {{ me.pos_ord }} · {{ me.time }}</span></div>
   <div class="rating"><div class="v num">{{ r.overall }}</div><div class="d num{% if r.change < 0 %} down{% endif %}">{{ '%+d' % r.change }}</div></div>
-  <div class="rank">World <b>#{{ r.world_rank }}</b>{% if r.world_rank_prev and r.world_rank_prev != r.world_rank %}, from #{{ r.world_rank_prev }}{% endif %}</div>
+  {% if r.world_rank %}<div class="rank">World <b>#{{ r.world_rank }}</b>{% if r.world_rank_prev and r.world_rank_prev != r.world_rank %}, from #{{ r.world_rank_prev }}{% endif %}</div>{% endif %}
   <div class="discs">
     {% for d in r.discs %}{% set dir = 'up' if d.change > 0 else 'down' %}
     <div class="disc">
