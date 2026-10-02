@@ -43,6 +43,16 @@ note() { echo -e "${YELLOW}    $*${RESET}"; }
 
 cd "$PROJECT_ROOT"
 
+# The server pulls main, so a deploy from any other branch either fails at
+# the push (no upstream) or ships a DB built against code the server never
+# sees. Refuse up front rather than part-way through.
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$BRANCH" != "main" ]; then
+    echo -e "${RED}Refusing to deploy from branch '$BRANCH' - the server runs main.${RESET}"
+    echo "  git checkout main   (merge or cherry-pick what you want to ship first)"
+    exit 1
+fi
+
 # ── 1. Git commit + push ──────────────────────────────────────────────────────
 if $DO_GIT; then
     step "Git"
