@@ -24,6 +24,10 @@ mkdir -p /opt/ptd && chown ptd:ptd /opt/ptd
 [ -d /opt/ptd/.git ] || sudo -u ptd git clone https://github.com/Angus-Toms/Pro-Tri-Data.git /opt/ptd
 [ -d /opt/ptd/.venv ] || sudo -u ptd python3 -m venv /opt/ptd/.venv
 sudo -u ptd /opt/ptd/.venv/bin/pip install -q -r /opt/ptd/requirements.txt
+# Headless Chromium for the share-card renderer (app/share). System libs go
+# in as root; the browser itself lives in ptd's home so the service can find it.
+/opt/ptd/.venv/bin/playwright install-deps chromium
+sudo -u ptd /opt/ptd/.venv/bin/playwright install chromium
 
 # ptd can restart its own service from deploy.sh without a password
 echo "ptd ALL=(root) NOPASSWD: /bin/systemctl restart ptd" > /etc/sudoers.d/ptd

@@ -159,7 +159,7 @@ fi
 # Render used to rebuild from GitHub on push; now we pull explicitly.
 if $DO_GIT; then
     step "Server: pulling code"
-    ssh "$PROD_SSH" "cd '$APP_REMOTE' && git pull --ff-only && .venv/bin/pip install -q -r requirements.txt"
+    ssh "$PROD_SSH" "cd '$APP_REMOTE' && git pull --ff-only && .venv/bin/pip install -q -r requirements.txt && .venv/bin/playwright install chromium"
     echo "  Pulled $(ssh "$PROD_SSH" "cd '$APP_REMOTE' && git rev-parse --short HEAD")."
 fi
 
