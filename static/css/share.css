@@ -23,7 +23,12 @@
 .share-controls select { width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); font: inherit; }
 .share-note { font-size: 0.8rem; color: var(--text-light); margin: var(--spacing-sm) 0 0; }
 .share-download { width: 100%; }
-.share-row-btn { border: 0; background: none; padding: 0 0.3rem; color: var(--text-lighter); cursor: pointer; vertical-align: middle; }
+/* Share column: last in the results table, no heading. On the stacked
+   mobile layout it follows the splits chevron (same order as the toggle,
+   later in DOM order) and stays before the expanded-splits line break. */
+.results-table th.share-col, .results-table td.share-col { width: 2.4rem; padding-left: 0.25rem; padding-right: 0.5rem; text-align: center; }
+.share-row-btn { border: 0; background: none; padding: 0.25rem; color: var(--text-lighter); cursor: pointer; display: inline-flex; align-items: center; }
 .share-row-btn:hover { color: var(--primary-color); }
-.share-row-btn svg { width: 0.9em; height: 0.9em; }
+.share-row-btn svg { width: 1rem; height: 1rem; }
+@media (max-width: 768px) { .results-table td.share-col { order: 2; } }
 @media (max-width: 720px) { .share-body { grid-template-columns: 1fr; } }
