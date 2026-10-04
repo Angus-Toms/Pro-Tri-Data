@@ -5,6 +5,7 @@
     if (!dlg) return;
     const raceId   = dlg.dataset.raceId;
     const img      = document.getElementById('share-img');
+    const preview  = img.parentElement;
     const dl       = document.getElementById('share-download');
     const athField = document.getElementById('share-athlete-field');
     const athSel   = document.getElementById('share-athlete');
@@ -29,11 +30,11 @@
         if (s.subject === 'athlete') q.set('athlete', s.athlete);
         const my = ++seq;
         dl.disabled = true;
-        img.classList.add('loading');
+        preview.classList.add('loading');
         let res;
         if (s.mode === 'photo') {
             photoName.textContent = photoIn.files[0] ? photoIn.files[0].name : 'No photo chosen';
-            if (!photoIn.files[0]) { img.removeAttribute('src'); img.classList.remove('loading'); return; }
+            if (!photoIn.files[0]) { img.removeAttribute('src'); preview.classList.remove('loading'); return; }
             const fd = new FormData(); fd.append('photo', photoIn.files[0]);
             res = await fetch(`/share/card.png?${q}`, { method: 'POST', body: fd });
         } else {
@@ -41,12 +42,12 @@
             res = await fetch(`/share/card.png?${q}`);
         }
         if (my !== seq) return;
-        if (!res.ok) { img.classList.remove('loading'); throw new Error(`card render failed: ${res.status}`); }
+        if (!res.ok) { preview.classList.remove('loading'); throw new Error(`card render failed: ${res.status}`); }
         if (blobUrl) URL.revokeObjectURL(blobUrl);
         blobUrl = URL.createObjectURL(await res.blob());
         img.src = blobUrl;
         img.classList.toggle('transparent', s.mode === 'transparent');
-        img.classList.remove('loading');
+        preview.classList.remove('loading');
         dl.disabled = false;
     }
 
