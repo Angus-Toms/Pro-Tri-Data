@@ -77,7 +77,7 @@
             {% for label, champ, course in champ_cards %}
             <a href="/athlete/{{ champ.athlete_id }}" class="champ-card">
                 <div class="champ-card-header">
-                    <span class="champ-badge">2025 {{ "Men" if champ.gender == "male" else "Women" }}'s {{ label }} World Champion</span>
+                    <span class="champ-badge">{{ "2026" if label == "WT" else "2025"}} {{ "Men" if champ.gender == "male" else "Women" }}'s {{ label }} World Champion</span>
                 </div>
                 <div class="champ-card-body">
                     <img
