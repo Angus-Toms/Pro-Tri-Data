@@ -2,6 +2,25 @@ import os
 import time
 from pathlib import Path
 
+PROJECT_ROOT_FOR_ENV = Path(__file__).resolve().parent
+
+
+def load_dotenv(path: Path = PROJECT_ROOT_FOR_ENV / ".env") -> None:
+    """Load KEY=VALUE lines from the project-root .env into the environment
+    (existing variables win). Holds the R2 token and Meta API keys, so any
+    script that imports config can talk to Cloudflare without a shell source."""
+    if not path.exists():
+        return
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+
+
+load_dotenv()
+
 # Project paths
 PROJECT_ROOT = Path(__file__).resolve().parent
 STATIC_DIR = PROJECT_ROOT / "static"
