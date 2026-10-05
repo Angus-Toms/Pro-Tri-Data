@@ -85,7 +85,6 @@
         </div>
         {% endif %}
         <div class="table-actions">
-        {% with download_url = "/download/races/" ~ race.race_id ~ "/results" %}{% include "partials/download_button.html" %}{% endwith %}
         {% set _course = 'long' if race_distance in ('middle','t100','long') else 'short' %}
         <button id="add-prediction-btn" class="btn-add-prediction btn-table-action"
                 data-gender="{{ race.gender }}" data-course="{{ _course }}"
@@ -98,6 +97,7 @@
             </svg>
             <span class="btn-table-action-label">Add athlete</span>
         </button>
+        {% with download_url = "/download/races/" ~ race.race_id ~ "/results" %}{% include "partials/download_button.html" %}{% endwith %}
         {% set _first = (splits_data | selectattr('position') | list | first) %}
         {% if _first %}
         <button type="button" class="btn-table-action" data-share="{{ _first.athlete_id }}" data-share-design="p1_result" title="Share a result card">
