@@ -155,6 +155,17 @@ if $DO_DB; then
     echo "  Copied."
 fi
 
+# ── 3b. Athlete images → server ──────────────────────────────────────────────
+# The share-card renderer reads faces from disk (Cloudflare refuses CDN
+# requests coming from the box itself). Only new files travel; the set is
+# ~100MB in total.
+if $DO_DB; then
+    step "Server: syncing athlete images"
+    IMG_LOCAL=$(_py RUNTIME_ATHLETE_IMAGES_DIR)
+    IMG_REMOTE=$(dirname "$DB_REMOTE")/athlete_imgs
+    rsync -a --ignore-existing --stats "$IMG_LOCAL/128" "$IMG_LOCAL/512" "$PROD_SSH:$IMG_REMOTE/" | grep -E "files transferred|Number of files" | sed 's/^/  /'
+fi
+
 # ── 4. Code → server (git pull + pip) ────────────────────────────────────────
 # Render used to rebuild from GitHub on push; now we pull explicitly.
 if $DO_GIT; then
