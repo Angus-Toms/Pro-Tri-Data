@@ -334,7 +334,7 @@ def get_athlete(request: Request, athlete_id: int,
             race_hist = sorted(race_hist + relay_hist,
                                key=lambda r: (r["race_date"], r["race_id"]), reverse=True)
     rating_hist  = queries.get_athlete_rating_history(athlete_id, category, course=course) if has_ratings else []
-    times_data    = queries.get_athlete_times_data(athlete_id)                              if has_ratings else []
+    times_data    = queries.get_athlete_times_data(athlete_id, category, course=course)    if has_ratings else []
     ratings_data  = queries.get_athlete_ratings_data(athlete_id, category, course=course)  if has_ratings else []
     rankings_data = queries.get_athlete_rankings_data(athlete_id, category, course=course) if has_ratings else []
 

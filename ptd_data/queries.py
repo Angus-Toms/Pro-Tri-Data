@@ -2314,20 +2314,22 @@ def get_athlete_rating_history(athlete_id, category='elite', course='short'):
     """, [athlete_id, category]))
 
 
-def get_athlete_times_data(athlete_id):
+def get_athlete_times_data(athlete_id, category='elite', course='short'):
     """
     Corrected times + pct-behind-leader per race, for chart rendering.
     pct_behind = (time - fastest) / fastest, or None if time is 0.
-    Splits and per-race mins both use auto-corrected values.
+    Splits and per-race mins both use auto-corrected values. Scoped to the
+    selected category and course like the rest of the athlete page.
     Returns list of dicts ordered by race_date asc (chronological for charts).
     """
     conn = _get_conn()
+    course_in = _course_in(course)
     cols = [
         "race_id", "race_date", "race_title",
         "overall_s", "swim_s", "bike_s", "run_s",
         "overall_pct_behind", "swim_pct_behind", "bike_pct_behind", "run_pct_behind",
     ]
-    return _dicts(cols, conn.execute("""
+    return _dicts(cols, conn.execute(f"""
         WITH corr AS (
             SELECT race_id, athlete_id, discipline,
                    MAX(value) FILTER (WHERE source='auto') AS value
@@ -2376,9 +2378,9 @@ def get_athlete_times_data(athlete_id):
             FROM corrected
             GROUP BY race_id
         ) w ON res.race_id = w.race_id
-        WHERE res.athlete_id = ?
+        WHERE res.athlete_id = ? AND r.category = ? AND r.distance IN {course_in}
         ORDER BY r.race_date ASC, res.race_id ASC
-    """, [athlete_id]))
+    """, [athlete_id, category]))
 
 
 def get_athlete_ratings_data(athlete_id, category='elite', course='short'):
