@@ -60,7 +60,7 @@ PY
 # from build_db.sh start with "==>"; ingest progress prints "Done." /
 # "Checked"; explicit OK/FAIL markers from this script; the start/end
 # banners; rebuild-step summary lines that already contain counts.
-LATEST_FILTER='^(==>|====|  Run |  Baseline|  Final|  Net:|\[OK\]|\[FAIL\]|Done\.|Checked |Ingested |Loaded |Rule-based |Recurring fallback|Rebuilding |Wrote |Skipped |Compacted DB)'
+LATEST_FILTER='^(==>|====|  Run |  Baseline|  Final|  Net:|\[OK\]|\[FAIL\]|\[WARN\]|Done\.|Checked |Ingested |Loaded |Rule-based |Recurring fallback|Rebuilding |Wrote |Skipped |Compacted DB|Found |Downloaded |Processed |Uploaded )'
 
 notify_fail() {
     osascript -e "display notification \"$1\" with title \"PTD weekly FAILED\" sound name \"Basso\"" >/dev/null 2>&1 || true
@@ -116,6 +116,20 @@ if [ $rc -ne 0 ]; then
         echo "[FAIL] build_db.sh exited $rc"
     } | tee -a "$LATEST_LOG" "$VERBOSE_LOG" >/dev/null
     notify_fail "build_db.sh exited $rc. tail $LATEST_LOG"
+fi
+
+# New athletes arrive with a photo URL but no converted image on R2; the
+# templates assume one exists, so sync before the DB ships. Non-fatal: a
+# broken image is a cosmetic problem, a missed deploy is not.
+if [ "$STATUS" = "success" ]; then
+    run_step "sync_images" python -m ptd_data.sync_images
+    rc=$?
+    if [ $rc -ne 0 ]; then
+        {
+            echo "[WARN] sync_images exited $rc"
+        } | tee -a "$LATEST_LOG" "$VERBOSE_LOG" >/dev/null
+        notify_warn "sync_images exited $rc. tail $LATEST_LOG"
+    fi
 fi
 
 if [ "$STATUS" = "success" ]; then
