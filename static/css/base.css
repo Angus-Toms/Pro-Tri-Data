@@ -3605,7 +3605,8 @@ body.help-tour-open { overflow: hidden; }
    TABLE DOWNLOAD BUTTON + FORMAT MODAL
    Same chrome as .btn-filter-toggle; collapses
    to icon-only on small displays. */
-.btn-download {
+.btn-download,
+.btn-table-action {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
@@ -3623,14 +3624,17 @@ body.help-tour-open { overflow: hidden; }
     font-family: inherit;
 }
 
-.btn-download:hover {
+.btn-download:hover,
+.btn-table-action:hover {
     color: var(--primary-color);
     border-color: var(--primary-color);
 }
 
-@media (max-width: 640px) {
-    .btn-download { padding: 0.4rem 0.55rem; }
-    .btn-download .btn-download-label { display: none; }
+/* Download / add athlete / share sit as one tight group; icon-only below desktop. */
+.table-actions { display: inline-flex; gap: 0.35rem; }
+@media (max-width: 1024px) {
+    .btn-download, .btn-table-action { padding: 0.4rem 0.55rem; }
+    .btn-download .btn-download-label, .btn-table-action .btn-table-action-label { display: none; }
 }
 
 .dl-modal[hidden] { display: none; }

@@ -28,6 +28,22 @@ function initSortIcons() {
 document.addEventListener('DOMContentLoaded', initSortIcons);
 if (document.readyState !== 'loading') { initSortIcons(); }
 
+// --- Athlete image fallback ---
+// Templates build CDN paths from the athlete's source photo URL, so an athlete
+// whose image hasn't been synced yet 404s. Swap any failed athlete image for
+// the default avatar; sized to match the slot it came from.
+(function initAthleteImageFallback() {
+    function fallback(img) {
+        const m = img.src.match(/^(.*\/)athlete_imgs\/(\d+)\//);
+        if (!m || img.dataset.fallback) return;
+        img.dataset.fallback = '1';
+        img.src = m[1] + 'imgs/' + (m[2] === '512' ? 'default_user.jpg' : 'default_user_64.webp');
+    }
+    document.addEventListener('error', (e) => { if (e.target.tagName === 'IMG') fallback(e.target); }, true);
+    // Images that failed before this script ran.
+    for (const img of document.images) if (img.complete && img.naturalWidth === 0) fallback(img);
+})();
+
 // --- Download modal: format picker for table download buttons ---
 // Buttons carry data-download-url; the modal appends &format=csv|json.
 function initDownloadButtons() {

@@ -13,8 +13,8 @@ templates.env.globals["STATIC_BASE_URL"] = STATIC_BASE_URL
 templates.env.globals["ASSET_VERSION"] = ASSET_VERSION
 templates.env.globals["flag"]          = flag
 
-MEN_CHAMP_ID      = 80795
-WOMEN_CHAMP_ID    = 79065
+MEN_CHAMP_ID      = 86042
+WOMEN_CHAMP_ID    = 63163
 MEN_IM_CHAMP_ID   = 76434     # Casper Stornes - 2025 Ironman World Champion (Nice)
 WOMEN_IM_CHAMP_ID = 94515     # Solveig Løvseth - 2025 Ironman World Champion (Kona)
 

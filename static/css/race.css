@@ -439,31 +439,6 @@
     margin-bottom: 0;   /* parent owns the margin */
 }
 
-.btn-add-prediction {
-    flex-shrink: 0;
-    background: var(--primary-color);
-    color: #fff;
-    border: none;
-    border-radius: var(--border-radius);
-    padding: 0.4rem;
-    width: 2rem;
-    height: 2rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: background var(--transition-fast), transform var(--transition-fast);
-}
-
-.btn-add-prediction .lucide-user-plus {
-    width: 1.1rem;
-    height: 1.1rem;
-}
-
-.btn-add-prediction:hover {
-    background: var(--primary-hover);
-}
-
 /* Full-screen modal overlay */
 .prediction-modal {
     position: fixed;
