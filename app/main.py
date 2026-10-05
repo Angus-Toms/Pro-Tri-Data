@@ -12,6 +12,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.routers import index, athlete_search, race_search, athlete_page, race_page, event_page, leaderboard, race_leaderboard, comparison, race_comparison, about, robots, series_page, country_page, upcoming_page, download, share
 from config import RUNTIME_DATA_DIR, STATIC_BASE_URL, ASSET_VERSION
 from app.display_helpers import flag, program_label, title_words
+from app.share import cards as share_cards
 
 BASE_DIR = Path(__file__).resolve().parent.parent # Project root
 ALLOWED_HOSTS = {"protridata.com", "www.protridata.com", "127.0.0.1:8000"}
@@ -27,6 +28,7 @@ THREADPOOL_LIMIT = int(os.getenv("THREADPOOL_LIMIT", "4"))
 async def lifespan(app: FastAPI):
     anyio.to_thread.current_default_thread_limiter().total_tokens = THREADPOOL_LIMIT
     yield
+    share_cards.shutdown_renderer()
 
 
 app = FastAPI(lifespan=lifespan)

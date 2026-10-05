@@ -9,7 +9,10 @@ from __future__ import annotations
 
 import base64
 import datetime as dt
+import queue
 import tempfile
+import threading
+from concurrent.futures import Future
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -268,24 +271,68 @@ def render_html(design: str, ctx: dict, mode: str, ink: str, photo: str | None =
     return html, w, h
 
 
+class _Renderer(threading.Thread):
+    """One Chromium kept alive on its own thread, renders serialised through
+    a queue. The sync Playwright API is bound to the thread that created it
+    and FastAPI runs sync handlers on a pool, so the browser can't be shared
+    directly; handlers hand a job over and wait on a Future instead. Launch
+    is the expensive part (seconds on the Hetzner box), a page is ~0.3s.
+    """
+
+    def __init__(self):
+        super().__init__(name="share-renderer", daemon=True)
+        self.jobs: queue.Queue = queue.Queue()
+
+    def run(self):
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            while (job := self.jobs.get()) is not None:
+                fut, html, w, h, scale, transparent = job
+                if not browser.is_connected():   # crashed between jobs: relaunch rather than fail forever
+                    browser = p.chromium.launch()
+                page = browser.new_page(viewport={"width": w, "height": h}, device_scale_factor=scale)
+                try:
+                    # Loaded from a file:// document so the font, flag and logo
+                    # subresources (also file://) are allowed; set_content blocks them.
+                    with tempfile.NamedTemporaryFile("w", suffix=".html", delete_on_close=False) as f:
+                        f.write(html); f.close()
+                        page.goto(Path(f.name).as_uri(), wait_until="load")
+                        page.evaluate("document.fonts.ready")
+                        fut.set_result(page.locator("#card").screenshot(omit_background=transparent))
+                except Exception as e:  # hand the failure to the waiting request; the thread must keep serving
+                    fut.set_exception(e)
+                finally:
+                    page.close()
+            browser.close()
+
+    def render(self, html: str, w: int, h: int, scale: int, transparent: bool) -> bytes:
+        fut: Future = Future()
+        self.jobs.put((fut, html, w, h, scale, transparent))
+        return fut.result(timeout=60)
+
+
+_renderer: _Renderer | None = None
+_renderer_lock = threading.Lock()
+
+
+def _get_renderer() -> _Renderer:
+    global _renderer
+    with _renderer_lock:
+        if _renderer is None or not _renderer.is_alive():
+            _renderer = _Renderer()
+            _renderer.start()
+        return _renderer
+
+
+def shutdown_renderer() -> None:
+    """Close the browser cleanly; called from the app lifespan."""
+    if _renderer is not None and _renderer.is_alive():
+        _renderer.jobs.put(None)
+        _renderer.join(timeout=10)
+
+
 def render_png(design: str, ctx: dict, mode: str, ink: str, photo: str | None = None, scale: int = 2,
                size: tuple[int, int] | None = None) -> bytes:
-    """Render one card to PNG bytes. `photo` is a data URI for photo mode.
-
-    A fresh browser per call: the sync Playwright API is bound to the thread
-    that created it, and FastAPI runs sync handlers on a pool. ~0.5s overhead,
-    fine for a share button.
-    """
+    """Render one card to PNG bytes. `photo` is a data URI for photo mode."""
     html, w, h = render_html(design, ctx, mode, ink, photo, size)
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        page = browser.new_page(viewport={"width": w, "height": h}, device_scale_factor=scale)
-        # Loaded from a file:// document so the font, flag and logo
-        # subresources (also file://) are allowed; set_content blocks them.
-        with tempfile.NamedTemporaryFile("w", suffix=".html", delete_on_close=False) as f:
-            f.write(html); f.close()
-            page.goto(Path(f.name).as_uri(), wait_until="networkidle")
-            page.evaluate("document.fonts.ready")
-            png = page.locator("#card").screenshot(omit_background=(mode == "transparent"))
-        browser.close()
-    return png
+    return _get_renderer().render(html, w, h, scale, mode == "transparent")
