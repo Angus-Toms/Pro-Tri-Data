@@ -15,7 +15,7 @@ from app.share import cards
 
 router = APIRouter()
 
-MAX_PHOTO_BYTES = 12 * 1024 * 1024
+MAX_PHOTO_BYTES = 30 * 1024 * 1024   # phone photos run 5-15MB; leave headroom
 
 
 def _card(race: int, design: str, mode: str, ink: str, athlete: int | None, photo: str | None) -> Response:
