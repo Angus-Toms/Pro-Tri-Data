@@ -26,8 +26,10 @@ mkdir -p /opt/ptd && chown ptd:ptd /opt/ptd
 sudo -u ptd /opt/ptd/.venv/bin/pip install -q -r /opt/ptd/requirements.txt
 # Headless Chromium for the share-card renderer (app/share). System libs go
 # in as root; the browser itself lives in ptd's home so the service can find it.
+# Playwright has no build for Ubuntu 26.04, so install the 24.04 one.
+export PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64
 /opt/ptd/.venv/bin/playwright install-deps chromium
-sudo -u ptd /opt/ptd/.venv/bin/playwright install chromium
+sudo -u ptd env PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64 /opt/ptd/.venv/bin/playwright install chromium
 
 # ptd can restart its own service from deploy.sh without a password
 echo "ptd ALL=(root) NOPASSWD: /bin/systemctl restart ptd" > /etc/sudoers.d/ptd
