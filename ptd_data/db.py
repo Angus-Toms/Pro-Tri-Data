@@ -2,6 +2,7 @@ import csv
 import datetime as _dt
 import os
 import pathlib
+import re
 import threading
 import zlib
 
@@ -106,7 +107,21 @@ def create_schema(conn):
             nickname        VARCHAR NOT NULL DEFAULT '',
             -- FFTRI licence id (e.g. 'A16528'), set by the French Grand Prix
             -- ingest. Same role as pto_slug: a sticky per-source identity link.
-            fftri_id        VARCHAR
+            fftri_id        VARCHAR,
+            -- Instagram handle (no @). Filled by data/instagram.csv (manual,
+            -- via the /admin/instagram tool) or, for athletes first seen in
+            -- an elite race, the WT athlete profile at ingest.
+            instagram       VARCHAR NOT NULL DEFAULT ''
+        )
+    """)
+
+    # Athletes the admin tool looked for and found no Instagram page. Loaded
+    # from data/instagram.csv rows with an empty handle; keeps them out of the
+    # review queue.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS instagram_skips (
+            athlete_id  INTEGER PRIMARY KEY,
+            skipped_at  DATE NOT NULL
         )
     """)
 
@@ -453,7 +468,11 @@ def create_schema(conn):
             cat_ids         VARCHAR NOT NULL DEFAULT '[]',
             race_handle     VARCHAR NOT NULL DEFAULT '',
             event_spec_ids  VARCHAR NOT NULL DEFAULT '[]',
-            last_fetched    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            last_fetched    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            -- distance_enum value for hand-entered long-course start lists
+            -- (data/startlists/*.json). NULL for WT rows, whose distance is
+            -- derived from event_spec_ids.
+            distance        VARCHAR
         )
     """)
 
@@ -831,13 +850,13 @@ def apply_athlete_merges(conn):
     applied = 0
     for keep_id, merge_id in pairs:
         merge_row = conn.execute(
-            "SELECT pto_slug, height_cm, weight_kg, nickname, fftri_id FROM athletes WHERE athlete_id = ?",
+            "SELECT pto_slug, height_cm, weight_kg, nickname, fftri_id, instagram FROM athletes WHERE athlete_id = ?",
             [merge_id],
         ).fetchone()
         if merge_row is None:
             continue  # Already merged on a previous run.
         keep_row = conn.execute(
-            "SELECT pto_slug, height_cm, weight_kg, nickname, fftri_id FROM athletes WHERE athlete_id = ?",
+            "SELECT pto_slug, height_cm, weight_kg, nickname, fftri_id, instagram FROM athletes WHERE athlete_id = ?",
             [keep_id],
         ).fetchone()
         if keep_row is None:
@@ -849,10 +868,11 @@ def apply_athlete_merges(conn):
         new_weight = keep_row[2] or merge_row[2]
         new_nick   = keep_row[3] or merge_row[3]
         new_fftri  = keep_row[4] or merge_row[4]
-        if (new_slug, new_height, new_weight, new_nick, new_fftri) != keep_row:
+        new_insta  = keep_row[5] or merge_row[5]
+        if (new_slug, new_height, new_weight, new_nick, new_fftri, new_insta) != keep_row:
             conn.execute(
-                "UPDATE athletes SET pto_slug=?, height_cm=?, weight_kg=?, nickname=?, fftri_id=? WHERE athlete_id=?",
-                [new_slug, new_height, new_weight, new_nick, new_fftri, keep_id],
+                "UPDATE athletes SET pto_slug=?, height_cm=?, weight_kg=?, nickname=?, fftri_id=?, instagram=? WHERE athlete_id=?",
+                [new_slug, new_height, new_weight, new_nick, new_fftri, new_insta, keep_id],
             )
 
         # Re-point athlete_id in tables sharing a (race_id, athlete_id, …) PK.
@@ -1202,6 +1222,156 @@ def load_doping_bans(conn):
         rows,
     )
     print(f"Loaded {len(rows)} doping ban(s) ({skipped} skipped - athlete not in DB)")
+
+
+# Current active world rank (either course), then elite starts in the last two
+# years, among athletes with a recent elite start. Ranks put the names people
+# look for first; raw start counts favour prolific continental-cup racers.
+INSTAGRAM_PRIORITY_SQL = """
+    WITH recent AS (
+        SELECT r.athlete_id, COUNT(*) AS recent_elite
+        FROM results r
+        JOIN races ra ON ra.race_id = r.race_id
+        WHERE ra.category = 'elite' AND ra.race_date >= CURRENT_DATE - INTERVAL 730 DAY
+        GROUP BY r.athlete_id
+    ),
+    latest_rank AS (
+        SELECT DISTINCT ON (rk.athlete_id) rk.athlete_id, rk.active_world_overall
+        FROM rankings rk
+        JOIN races ra ON ra.race_id = rk.race_id
+        WHERE rk.category = 'elite'
+        ORDER BY rk.athlete_id, ra.race_date DESC, rk.race_id DESC
+    )
+    SELECT a.athlete_id, rc.recent_elite, lr.active_world_overall
+    FROM athletes a
+    JOIN recent rc ON rc.athlete_id = a.athlete_id
+    LEFT JOIN latest_rank lr ON lr.athlete_id = a.athlete_id
+    ORDER BY COALESCE(lr.active_world_overall, 999999), rc.recent_elite DESC, a.athlete_id
+"""
+
+INSTAGRAM_CSV_COLUMNS = ["athlete_id", "name", "handle", "updated_at"]
+
+_INSTAGRAM_HANDLE_RE = re.compile(r"^[A-Za-z0-9._]{1,30}$")
+
+
+def normalize_instagram_handle(raw):
+    """'https://www.instagram.com/kristianblu/?hl=en', '@kristianblu' and
+    'kristianblu' all become 'kristianblu'. Returns None when what's left
+    isn't a valid handle (WT profiles sometimes hold a full name or a URL to
+    somewhere else entirely)."""
+    s = raw.strip()
+    s = re.sub(r"^(https?://)?(www\.)?instagram\.com/", "", s, flags=re.I)
+    s = s.split("?")[0].split("/")[0].lstrip("@").strip().lower()
+    return s if _INSTAGRAM_HANDLE_RE.match(s) else None
+
+
+
+def load_instagram_csv(conn):
+    """Apply data/instagram.csv: rows with a handle set athletes.instagram
+    (manual always wins), rows with an empty handle mark the athlete as
+    looked-for-and-not-found in instagram_skips. The CSV is the only source
+    for skips, so the table is rebuilt from it each run."""
+    conn.execute("DELETE FROM instagram_skips")
+    path = _DATA_DIR / 'instagram.csv'
+    if not path.exists():
+        print("No instagram.csv - skipping")
+        return
+    set_n = skip_n = 0
+    with open(path, newline='', encoding='utf-8') as f:
+        for row in csv.DictReader(f):
+            athlete_id = int(row['athlete_id'])
+            if row['handle']:
+                conn.execute("UPDATE athletes SET instagram = ? WHERE athlete_id = ?",
+                             [row['handle'], athlete_id])
+                set_n += 1
+            else:
+                conn.execute("INSERT OR REPLACE INTO instagram_skips VALUES (?, ?)",
+                             [athlete_id, row['updated_at'][:10]])
+                skip_n += 1
+    print(f"instagram.csv: {set_n} handles, {skip_n} skips")
+
+
+def merge_instagram_pending(pending_path):
+    """Fold the admin tool's append-only pending file (pulled from prod by
+    weekly.sh) into data/instagram.csv. Later rows win per athlete, so a
+    re-entered handle or an undo-then-redo resolves to the last action. An
+    undo row (empty name and handle) that ends up last drops the athlete
+    entirely, putting them back in the queue."""
+    pending_path = pathlib.Path(pending_path)
+    path = _DATA_DIR / 'instagram.csv'
+    rows = {}
+    for src in (path, pending_path):
+        if not src.exists():
+            continue
+        with open(src, newline='', encoding='utf-8') as f:
+            for row in csv.DictReader(f):
+                rows[int(row['athlete_id'])] = row
+    with open(path, 'w', newline='', encoding='utf-8') as f:
+        w = csv.DictWriter(f, fieldnames=INSTAGRAM_CSV_COLUMNS)
+        w.writeheader()
+        rows = {aid: r for aid, r in rows.items() if r['name']}
+        for aid in sorted(rows):
+            w.writerow({k: rows[aid][k] for k in INSTAGRAM_CSV_COLUMNS})
+    print(f"instagram.csv: {len(rows)} rows after merging {pending_path}")
+
+
+STARTLISTS_DIR = _DATA_DIR / 'startlists'
+
+
+def load_manual_startlists(conn):
+    """Load hand-entered long-course start lists (data/startlists/*.json,
+    written by /admin/startlist and pulled by weekly.sh) into events /
+    upcoming_races / start_list_entries so they flow through predictions and
+    the upcoming pages like WT start lists. Ids are minted the way pto_ingest
+    mints them (slug_id of the PTO race slug + year + gender), so when the
+    PTO results land they replace the upcoming row under the same race_id.
+    Past-dated files are left alone: the start-list purge handles them."""
+    import json
+    from ptd_data.pto_ingest import _short_race_handle, _country_to_continent
+    files = sorted(STARTLISTS_DIR.glob('*.json')) if STARTLISTS_DIR.exists() else []
+    today = _dt.date.today()
+    loaded = 0
+    for path in files:
+        data = json.loads(path.read_text())
+        ev = data['event']
+        year = int(ev['date'][:4])
+        if _dt.date.fromisoformat(ev['date']) < today:
+            continue
+        event_id = slug_id(f"{ev['slug']}-{year}")
+        upsert_nationality(conn, ev['country'])
+        insert_event(conn, event_id=event_id, name=ev['name'], venue=ev['venue'], country=ev['country'],
+                     continent=_country_to_continent(ev['country']), start_date=ev['date'], end_date=ev['date'],
+                     longitude=0, latitude=0, brand=ev['brand'], prize_money_usd=int(ev.get('prize_usd') or 0))
+        for gender, entries in data['races'].items():
+            if not entries:
+                continue
+            race_id = slug_id(f"{ev['slug']}-{year}-{gender}")
+            conn.execute("""
+                INSERT OR REPLACE INTO upcoming_races
+                    (race_id, event_id, race_title, prog_name, race_date, gender, category,
+                     cat_ids, race_handle, event_spec_ids, last_fetched, distance)
+                VALUES (?, ?, ?, ?, ?, ?, 'elite', '[]', ?, '[]', CURRENT_TIMESTAMP, ?)
+            """, [race_id, event_id, ev['name'], 'Pro Men' if gender == 'male' else 'Pro Women',
+                  ev.get(f'date_{gender}') or ev['date'], gender,
+                  _short_race_handle(ev['name'], ev['slug'], year), ev['distance']])
+            rows = []
+            for e in entries:
+                athlete_id = e['athlete_id']
+                if athlete_id is None:
+                    # New athlete: mint a PTO-style slug so a later PTO ingest
+                    # resolves to this row via athletes.pto_slug.
+                    pto_slug = e['pto_slug']
+                    athlete_id = slug_id(pto_slug)
+                    upsert_nationality(conn, e['country'])
+                    upsert_athlete(conn, athlete_id, e['name'], e['country'], int(e.get('yob') or 0), '', gender)
+                    conn.execute("UPDATE athletes SET pto_slug = ? WHERE athlete_id = ? AND pto_slug IS NULL",
+                                 [pto_slug, athlete_id])
+                rows.append((race_id, athlete_id, int(e.get('start_num') or 0)))
+            conn.execute("DELETE FROM start_list_entries WHERE race_id = ?", [race_id])
+            conn.executemany("INSERT OR IGNORE INTO start_list_entries VALUES (?, ?, ?)", rows)
+            loaded += 1
+            print(f"  {ev['name']} {gender}: {len(rows)} entries")
+    print(f"Manual start lists: {loaded} races from {len(files)} files")
 
 
 def social_already_posted(conn, race_id, post_type):

@@ -114,6 +114,12 @@
                 {% if athlete.nickname %}
                 <span class="hero-meta-dot">·</span> <span class="athlete-hero-nickname">"{{ athlete.nickname }}"</span>
                 {% endif %}
+                {% if athlete.instagram %}
+                <span class="hero-meta-dot">·</span>
+                <a href="https://www.instagram.com/{{ athlete.instagram }}/" class="athlete-hero-instagram" target="_blank" rel="noopener noreferrer nofollow" aria-label="{{ athlete.name }} on Instagram">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>@{{ athlete.instagram }}
+                </a>
+                {% endif %}
                 <span class="hero-meta-dot">·</span>
                 <a href="/athlete-compare?athlete1={{ athlete.athlete_id }}&course={{ course }}" rel="nofollow" class="athlete-compare-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="compare-ic"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg><span class="athlete-compare-label">Compare</span></a>
             </div>

@@ -1471,7 +1471,7 @@ def get_athlete_info(athlete_id):
                COALESCE(l.country_full, a.country_full) AS country_full,
                a.year_of_birth, a.gender, a.profile_img,
                n.alpha3 AS country_alpha3,
-               a.height_cm, a.weight_kg, a.nickname
+               a.height_cm, a.weight_kg, a.nickname, a.instagram
         FROM athletes a
         LEFT JOIN latest l ON l.athlete_id = a.athlete_id AND l.rn = 1
         JOIN nationalities n ON n.country_full = COALESCE(l.country_full, a.country_full)
@@ -1481,8 +1481,51 @@ def get_athlete_info(athlete_id):
         return None
     cols = ["athlete_id", "name", "country_full", "year_of_birth",
             "gender", "profile_img", "country_alpha3",
-            "height_cm", "weight_kg", "nickname"]
+            "height_cm", "weight_kg", "nickname", "instagram"]
     return dict(zip(cols, row))
+
+
+def get_instagram_queue(exclude_ids, limit=5):
+    """Highest-priority athletes with no handle and not skipped, for the
+    admin tool. exclude_ids covers entries pending in the local file that
+    the DB doesn't know about yet."""
+    conn = _get_conn()
+    ids = list(exclude_ids) or [-1]
+    cols = ["athlete_id", "name", "gender", "year_of_birth", "profile_img", "country_full",
+            "country_alpha3", "recent_elite", "active_world_overall"]
+    rows = conn.execute(f"""
+        SELECT a.athlete_id, a.name, a.gender, a.year_of_birth, a.profile_img, a.country_full,
+               n.alpha3, p.recent_elite, p.active_world_overall
+        FROM ({db.INSTAGRAM_PRIORITY_SQL}) p
+        JOIN athletes a ON a.athlete_id = p.athlete_id
+        JOIN nationalities n ON n.country_full = a.country_full
+        WHERE a.instagram = ''
+          AND a.athlete_id NOT IN (SELECT athlete_id FROM instagram_skips)
+          AND a.athlete_id NOT IN ({",".join("?" * len(ids))})
+        ORDER BY COALESCE(p.active_world_overall, 999999), p.recent_elite DESC, a.athlete_id
+        LIMIT ?
+    """, ids + [limit])
+    return _dicts(cols, rows)
+
+
+def get_instagram_stats():
+    """(athletes with a handle, skipped, still in the queue) per the deployed DB."""
+    conn = _get_conn()
+    return conn.execute(f"""
+        SELECT
+            (SELECT COUNT(*) FROM athletes WHERE instagram <> ''),
+            (SELECT COUNT(*) FROM instagram_skips),
+            (SELECT COUNT(*) FROM ({db.INSTAGRAM_PRIORITY_SQL}) p
+             JOIN athletes a ON a.athlete_id = p.athlete_id
+             WHERE a.instagram = '' AND a.athlete_id NOT IN (SELECT athlete_id FROM instagram_skips))
+    """).fetchone()
+
+
+def get_instagram_owner(handle):
+    """Athlete already holding this handle in the deployed DB, or None."""
+    row = _get_conn().execute(
+        "SELECT athlete_id, name FROM athletes WHERE lower(instagram) = lower(?)", [handle]).fetchone()
+    return {"athlete_id": row[0], "name": row[1]} if row else None
 
 
 # An athlete page is worth indexing if the athlete has at least 2 results or
@@ -4609,14 +4652,44 @@ def get_upcoming_event_races_detail(event_id, course='short'):
     return races
 
 
+def get_startlist_candidates(gender):
+    """Every athlete of a gender with at least one elite result, for matching
+    pasted start-list names in /admin/startlist. Name matching happens in
+    Python (accent folding), so this is one bulk pull per request."""
+    conn = _get_conn()
+    cols = ["athlete_id", "name", "country_full", "country_alpha3", "year_of_birth",
+            "pto_slug", "last_race", "long_starts"]
+    return _dicts(cols, conn.execute("""
+        SELECT a.athlete_id, a.name, a.country_full, n.alpha3, a.year_of_birth, a.pto_slug,
+               MAX(ra.race_date),
+               COUNT(*) FILTER (WHERE ra.distance IN ('middle', 't100', 'long'))
+        FROM athletes a
+        JOIN nationalities n ON n.country_full = a.country_full
+        JOIN results r ON r.athlete_id = a.athlete_id
+        JOIN races ra ON ra.race_id = r.race_id AND ra.category = 'elite'
+        WHERE a.gender = ?
+        GROUP BY ALL
+    """, [gender]))
+
+
+def get_nationalities():
+    """[(country_full, alpha3)] sorted by name."""
+    return _get_conn().execute(
+        "SELECT country_full, alpha3 FROM nationalities ORDER BY country_full").fetchall()
+
+
 def get_upcoming_race_distance_type(race_id):
-    """Return 'sprint', 'standard', or None from upcoming_races.event_spec_ids."""
+    """Return the distance_enum value for an upcoming race, or None.
+    Hand-entered long-course rows carry it directly; WT rows derive
+    sprint/standard from event_spec_ids."""
     conn = _get_conn()
     row = conn.execute(
-        "SELECT event_spec_ids FROM upcoming_races WHERE race_id = ?", [race_id]
+        "SELECT event_spec_ids, distance FROM upcoming_races WHERE race_id = ?", [race_id]
     ).fetchone()
     if not row:
         return None
+    if row[1]:
+        return row[1]
     spec = row[0]
     has_sprint   = '376' in spec
     has_standard = '377' in spec

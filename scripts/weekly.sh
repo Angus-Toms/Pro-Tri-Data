@@ -108,6 +108,41 @@ run_step() {
 
 STATUS=success
 
+# Handles entered in the /admin/instagram tool accumulate in an append-only
+# file on the box. Rotate it (atomic mv, so a save landing mid-pull isn't
+# lost: the app recreates the file on its next write), pull it, fold it into
+# the tracked data/instagram.csv so this build picks it up, then drop the
+# rotated copy. Remember to commit data/instagram.csv.
+pull_instagram() {
+    local prod_ssh pending remote
+    prod_ssh=$(python3 -c "from config import PROD_SSH; print(PROD_SSH)")
+    remote=$(python3 -c "from config import PROD_DB; import os; print(os.path.dirname(PROD_DB))")/instagram_pending.csv
+    pending="$SCRIPT_DIR/instagram_pending.pulled.csv"
+    if ! ssh "$prod_ssh" "test -s '$remote'"; then
+        echo "No pending Instagram entries on prod."
+        return 0
+    fi
+    ssh "$prod_ssh" "mv '$remote' '$remote.pulled'"
+    scp "$prod_ssh:$remote.pulled" "$pending"
+    python3 -c "from ptd_data import db; db.merge_instagram_pending('$pending')"
+    ssh "$prod_ssh" "rm '$remote.pulled'"
+    rm "$pending"
+}
+run_step "instagram pull" pull_instagram
+
+# Hand-entered long-course start lists (/admin/startlist) land as one JSON per
+# event on the box. Pull them into the tracked data/startlists/ (files are
+# moved, so the admin page's "saved" list empties once a pull has happened).
+# Remember to commit data/startlists/.
+pull_startlists() {
+    local prod_ssh remote
+    prod_ssh=$(python3 -c "from config import PROD_SSH; print(PROD_SSH)")
+    remote=$(python3 -c "from config import PROD_DB; import os; print(os.path.dirname(PROD_DB))")/startlists_pending/
+    mkdir -p ptd_data/data/startlists
+    rsync -a --remove-source-files "$prod_ssh:$remote" ptd_data/data/startlists/ 2>/dev/null || echo "No pending start lists on prod."
+}
+run_step "startlists pull" pull_startlists
+
 run_step "build_db --extend" "$SCRIPT_DIR/build_db.sh" --extend
 rc=$?
 if [ $rc -ne 0 ]; then

@@ -55,6 +55,11 @@ DB_PATH = RUNTIME_DATA_DIR / "ptd.duckdb"
 # WorldTriathlon API
 WORLD_TRIATHLON_API_KEY = "aac0df989cb613114241670ca2f5ff75"
 
+# Admin tool (/admin/*). Long random secret from .env; visiting
+# /admin/login?token=<ADMIN_TOKEN> once sets the cookie. Unset = admin
+# routes 404 like any unknown page.
+ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")
+
 # IndexNow. Bing verifies ownership by fetching this key back from the domain
 # root, so /<key>.txt must stay publicly reachable (served by routers/robots.py)
 # and must match the key sent when pinging the IndexNow API.

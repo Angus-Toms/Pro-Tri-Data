@@ -411,8 +411,11 @@ def rebuild(conn=None):
     # shows predictions without an elite gate; race/event pages keep theirs.
     upcoming_ids = [r[0] for r in conn.execute("SELECT race_id FROM upcoming_races").fetchall()]
     for rid in tqdm(upcoming_ids, desc="upcoming races"):
-        race    = queries.get_upcoming_race_info(rid)
-        entries = queries.get_upcoming_race_entries(rid)
+        race     = queries.get_upcoming_race_info(rid)
+        distance = queries.get_upcoming_race_distance_type(rid)
+        # Ratings must come from the race's own course: a 70.3 start list
+        # predicted off short-course ratings is meaningless.
+        entries  = queries.get_upcoming_race_entries(rid, course=queries.course_for_distance(distance) or 'short')
         if not entries:
             continue
         preds, distance = _upcoming_race_preds(race, entries, models)

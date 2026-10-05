@@ -148,10 +148,18 @@ def get_event(request: Request, event_id: int):
     # in both tables mid-week. Render the finished programs with real podiums
     # and the pending ones with predicted podiums, in one list, rather than
     # letting a single leftover upcoming row hide every result already in.
-    upcoming_races = queries.get_upcoming_event_races_detail(event_id)
+    # Standards and ratings must come from the event's own course: a hand-
+    # entered 70.3 start list read off short-course ratings looks like a
+    # field of novices. One distance per event is enough.
+    upcoming_ids = [r["race_id"] for r in queries.get_upcoming_races_by_event(event_id)]
+    upcoming_course = 'short'
+    if upcoming_ids:
+        upcoming_course = queries.course_for_distance(
+            queries.get_upcoming_race_distance_type(upcoming_ids[0])) or 'short'
+    upcoming_races = queries.get_upcoming_event_races_detail(event_id, course=upcoming_course)
     if upcoming_races:
         entries_by_race = queries.get_upcoming_race_entries_bulk(
-            [r["race_id"] for r in upcoming_races])
+            [r["race_id"] for r in upcoming_races], course=upcoming_course)
         thresholds_by_gender = {
             g: queries.get_race_standard_thresholds(g)
             for g in {r["gender"] for r in upcoming_races if r.get("gender") in ("male", "female")}

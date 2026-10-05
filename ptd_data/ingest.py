@@ -622,6 +622,14 @@ class Ingester:
         results = response.json().get('data', {}).get('results', [])
         return results if results else []
 
+    def _fetch_instagram(self, athlete_id):
+        """GET /athletes/{id} and return the normalised Instagram handle, or ''."""
+        resp = _session.get(f"{BASE_URL}/athletes/{athlete_id}")
+        if resp.status_code != 200:
+            return ''
+        data = resp.json().get('data') or {}
+        return db.normalize_instagram_handle(data.get('instagram') or '') or ''
+
     def _insert_program(self, event, prog, results, gender, category):
         """Insert a race + its athletes + results into the DB.
 
@@ -655,7 +663,14 @@ class Ingester:
 
             # Upsert nationality + athlete + record this race's country observation
             db.upsert_nationality(self.conn, country_name)
+            is_new = self.conn.execute("SELECT 1 FROM athletes WHERE athlete_id = ?", [athlete_id]).fetchone() is None
             db.upsert_athlete(self.conn, athlete_id, name, country_name, yob, profile_img, gender)
+            # Socials only live on the per-athlete profile endpoint, so one
+            # extra call the first time an elite athlete shows up.
+            if is_new and category == 'elite':
+                handle = self._fetch_instagram(athlete_id)
+                if handle:
+                    self.conn.execute("UPDATE athletes SET instagram = ? WHERE athlete_id = ?", [handle, athlete_id])
             if race_date_str:
                 db.record_athlete_nationality(self.conn, athlete_id, country_name, race_date_str)
 

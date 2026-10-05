@@ -4,6 +4,7 @@
 # Steps (in order):
 #   1. ingest       - fetch from World Triathlon API, upsert races/athletes/results
 #   2. startlist    - fetch upcoming events + start lists for /upcoming page
+#   2b. startlists  - load hand-entered long-course start lists (data/startlists/)
 #   3. fgp          - fetch French Grand Prix (triathlonseries.fr) results;
 #                     runs after WT (matches against the fresh WT roster) and
 #                     before PTO (so PTO matching sees FGP athletes)
@@ -13,6 +14,7 @@
 #   4. pto          - scrape stats.protriathletes.org for long-course results
 #   4. merges       - apply manual athlete merges from data/athlete_merges.csv,
 #                     then undo rejected auto-links from data/athlete_no_merge.csv
+#   4c. instagram   - apply data/instagram.csv (manual handles + skips)
 #   5. ignored      - auto-detect subset/oversized races, then apply manual ignored.csv overrides
 #   6. stages       - flag combined rows of multi-stage events (heats/semis/A-B finals);
 #                     must run after ignored (writes to ignored_races)
@@ -34,6 +36,7 @@
 #   ./build_db.sh --skip-bundesliga   # skip German Bundesliga fetch
 #   ./build_db.sh --skip-pto          # skip PTO scrape
 #   ./build_db.sh --skip-merges       # skip manual athlete merges
+#   ./build_db.sh --skip-instagram    # skip instagram.csv load
 #   ./build_db.sh --skip-stages       # skip multi-stage flagging
 #   ./build_db.sh --skip-ignored      # skip ignored-race detection
 #   ./build_db.sh --skip-series       # skip series membership rebuild
@@ -59,7 +62,7 @@ step()    { echo -e "\n${GREEN}${BOLD}==> $*${RESET}"; }
 note()    { echo -e "${YELLOW}    $*${RESET}"; }
 elapsed() { echo -e "    done in ${BOLD}$(( SECONDS - $1 ))s${RESET}"; }
 
-DO_INGEST=true; DO_STARTLIST=true; DO_FGP=true; DO_BUNDESLIGA=true; DO_PTO=true; DO_MERGES=true; DO_STAGES=true; DO_IGNORED=true; DO_SERIES=true; DO_RECURRING=true; DO_AUTOCORR=true; DO_RATINGS=true; DO_PREDICTIONS=true; DO_COMPACT=true
+DO_INGEST=true; DO_STARTLIST=true; DO_FGP=true; DO_BUNDESLIGA=true; DO_PTO=true; DO_MERGES=true; DO_INSTAGRAM=true; DO_STAGES=true; DO_IGNORED=true; DO_SERIES=true; DO_RECURRING=true; DO_AUTOCORR=true; DO_RATINGS=true; DO_PREDICTIONS=true; DO_COMPACT=true
 EXTEND=false
 
 for arg in "$@"; do
@@ -70,6 +73,7 @@ for arg in "$@"; do
         --skip-bundesliga) DO_BUNDESLIGA=false ;;
         --skip-pto)       DO_PTO=false ;;
         --skip-merges)    DO_MERGES=false ;;
+        --skip-instagram) DO_INSTAGRAM=false ;;
         --skip-stages)    DO_STAGES=false ;;
         --skip-ignored)   DO_IGNORED=false ;;
         --skip-series)    DO_SERIES=false ;;
@@ -78,7 +82,7 @@ for arg in "$@"; do
         --skip-ratings)   DO_RATINGS=false ;;
         --skip-predictions) DO_PREDICTIONS=false ;;
         --skip-compact)   DO_COMPACT=false ;;
-        --ratings-only)   DO_INGEST=false; DO_STARTLIST=false; DO_FGP=false; DO_BUNDESLIGA=false; DO_PTO=false; DO_MERGES=false; DO_STAGES=false; DO_IGNORED=false; DO_SERIES=false; DO_RECURRING=false ;;
+        --ratings-only)   DO_INGEST=false; DO_STARTLIST=false; DO_FGP=false; DO_BUNDESLIGA=false; DO_PTO=false; DO_MERGES=false; DO_INSTAGRAM=false; DO_STAGES=false; DO_IGNORED=false; DO_SERIES=false; DO_RECURRING=false ;;
         --extend)         EXTEND=true ;;
     esac
 done
@@ -101,6 +105,16 @@ if $DO_STARTLIST; then
     step "Start lists - fetch upcoming events (next 90 days) + entries"
     T=$SECONDS
     python3 -m ptd_data.ingest --start-lists
+    elapsed $T
+fi
+
+# ── 2b. Manual long-course start lists ───────────────────────────────────────
+# Hand-entered via /admin/startlist, pulled by weekly.sh into data/startlists/.
+# Same tables as the WT start lists, so predictions and /upcoming just work.
+if $DO_STARTLIST; then
+    step "Manual start lists - load data/startlists/*.json"
+    T=$SECONDS
+    python3 -c "from ptd_data import db; conn = db.get_conn(read_only=False); db.load_manual_startlists(conn); conn.close()"
     elapsed $T
 fi
 
@@ -166,6 +180,16 @@ if $DO_MERGES; then
     step "Doping bans - load data/doping_bans.csv"
     T=$SECONDS
     python3 -c "from ptd_data import db; conn = db.get_conn(read_only=False); db.load_doping_bans(conn); conn.close()"
+    elapsed $T
+fi
+
+# ── 4c. Instagram handles ─────────────────────────────────────────────────────
+# Manual handles and skips from data/instagram.csv; these always win over the
+# WT-sourced handle the ingest picks up for new elite athletes.
+if $DO_INSTAGRAM; then
+    step "Instagram - load data/instagram.csv"
+    T=$SECONDS
+    python3 -c "from ptd_data import db; conn = db.get_conn(read_only=False); db.load_instagram_csv(conn); conn.close()"
     elapsed $T
 fi
 

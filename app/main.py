@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.routers import index, athlete_search, race_search, athlete_page, race_page, event_page, leaderboard, race_leaderboard, comparison, race_comparison, about, robots, series_page, country_page, upcoming_page, download, share
+from app.routers import index, athlete_search, race_search, athlete_page, race_page, event_page, leaderboard, race_leaderboard, comparison, race_comparison, about, robots, series_page, country_page, upcoming_page, download, share, admin
 from config import RUNTIME_DATA_DIR, STATIC_BASE_URL, ASSET_VERSION
 from app.display_helpers import flag, program_label, title_words
 from app.share import cards as share_cards
@@ -156,6 +156,8 @@ app.include_router(series_page.router)
 app.include_router(country_page.router)
 app.include_router(upcoming_page.router)
 app.include_router(download.router)
+app.include_router(admin.router)
+app.include_router(admin.login_router)
 
 if __name__ == "__main__":
     import uvicorn

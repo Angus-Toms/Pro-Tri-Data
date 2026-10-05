@@ -1,0 +1,55 @@
+/* Admin tools (/admin/*). Shared by the Instagram and start-list pages. */
+.adm-wrap { max-width: 920px; margin: 0 auto; }
+.adm-wrap.two-col { display: grid; grid-template-columns: 1fr 300px; gap: 1.5rem; }
+.adm-nav { display: flex; gap: 1rem; margin: 0 0 1rem; font-size: 0.85rem; }
+.adm-nav a { color: var(--text-light); text-decoration: none; }
+.adm-nav a.active, .adm-nav a:hover { color: var(--primary-color); }
+.adm-stats { display: flex; gap: 1.5rem; margin: 0 0 1rem; color: var(--text-light); font-size: 0.9rem; }
+.adm-stats b { color: var(--text-color); font-size: 1.1rem; }
+.adm-card { background: var(--white); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+.adm-card h2 { margin: 0 0 1rem; font-size: 1.2rem; }
+.adm-error { color: var(--error-color); font-weight: 600; margin: 0 0 0.75rem; }
+.adm-hint { color: var(--text-lighter); font-size: 0.8rem; margin: 0.75rem 0 0; }
+.adm-btn { font: inherit; font-weight: 600; padding: 0.6rem 1.1rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--white); cursor: pointer; }
+.adm-btn.primary { background: var(--primary-color); border-color: var(--primary-color); color: #fff; }
+.adm-btn.link { border: none; background: none; color: var(--text-light); text-decoration: underline; padding: 0; font-size: 0.8rem; font-weight: 500; }
+.adm-side h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-light); margin: 0 0 0.5rem; }
+.adm-side ul { list-style: none; margin: 0 0 1.5rem; padding: 0; }
+.adm-side li { display: flex; justify-content: space-between; gap: 0.5rem; padding: 0.4rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.88rem; }
+.adm-side li form { margin: 0; }
+.adm-muted { color: var(--text-light); font-variant-numeric: tabular-nums; }
+.adm-muted.skip { font-style: italic; }
+
+/* Instagram */
+.ig-athlete { display: flex; gap: 1.25rem; align-items: center; }
+.ig-athlete img { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; background: var(--bg-color); }
+.ig-athlete h2 { margin: 0 0 0.25rem; font-size: 1.5rem; }
+.ig-athlete .ig-meta { color: var(--text-light); font-size: 0.9rem; }
+.ig-links { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1.25rem 0; }
+.ig-links a { font-size: 0.85rem; font-weight: 600; padding: 0.4rem 0.8rem; border: 1px solid var(--border-color); border-radius: 999px; text-decoration: none; color: var(--text-color); }
+.ig-links a:hover { border-color: var(--primary-color); color: var(--primary-color); }
+.ig-form { display: flex; gap: 0.5rem; }
+.ig-form input[type=text] { flex: 1; font: inherit; font-size: 1.1rem; padding: 0.6rem 0.8rem; border: 1px solid var(--border-color); border-radius: 8px; }
+
+/* Start lists */
+.sl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem 1rem; }
+.sl-grid label, .sl-lists label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem; font-weight: 600; color: var(--text-light); }
+.sl-grid input, .sl-grid select, .sl-lists textarea, .sl-row input, .sl-row select {
+    font: inherit; font-size: 0.95rem; padding: 0.45rem 0.6rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--white); color: var(--text-color);
+}
+.sl-lists { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
+.sl-lists textarea { min-height: 260px; font-family: ui-monospace, monospace; font-size: 0.85rem; }
+.sl-actions { margin-top: 1rem; display: flex; gap: 0.5rem; align-items: center; }
+.sl-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.sl-table th { text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-light); padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border-color); }
+.sl-table td { padding: 0.5rem; border-bottom: 1px solid var(--border-color); vertical-align: top; }
+.sl-row .sl-opt { display: flex; gap: 0.4rem; align-items: baseline; padding: 0.15rem 0; }
+.sl-row .sl-opt .adm-muted { font-size: 0.8rem; }
+.sl-new { display: none; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.4rem; }
+.sl-row:has(input[value=new]:checked) .sl-new { display: flex; }
+.sl-status { display: inline-block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; padding: 0.1rem 0.45rem; border-radius: 999px; }
+.sl-status.exact { background: #d1fae5; color: #065f46; }
+.sl-status.ambiguous, .sl-status.fuzzy { background: #fef3c7; color: #92400e; }
+.sl-status.none { background: #fee2e2; color: #991b1b; }
+.sl-summary { display: flex; gap: 1.5rem; margin: 0 0 1rem; color: var(--text-light); font-size: 0.9rem; }
+@media (max-width: 760px) { .adm-wrap.two-col, .sl-lists { grid-template-columns: 1fr; } }

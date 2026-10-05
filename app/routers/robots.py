@@ -66,6 +66,7 @@ Disallow: /download/
 
 # Static assets & internal paths
 Disallow: /static/
+Disallow: /admin/
 Disallow: /favicon.ico
 
 # Sitemap index

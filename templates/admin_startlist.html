@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Long-course start lists - Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/admin.css?v={{ ASSET_VERSION }}">
+{% endblock %}
+
+{% block content %}
+<div class="adm-wrap">
+    {% include "partials/admin_nav.html" %}
+
+    {% if saved %}<p class="adm-hint" style="color: var(--success-color); font-weight: 600;">Saved {{ saved }}. It ships with the next weekly build.</p>{% endif %}
+
+    <form method="post" action="/admin/startlist/review" class="adm-card">
+        <h2>Race</h2>
+        <div class="sl-grid">
+            <label>Event name <input type="text" name="name" required placeholder="Ironman 70.3 Oceanside"></label>
+            <label>PTO race slug <input type="text" name="slug" placeholder="im-703-oceanside (from the stats.protriathletes.org URL)"></label>
+            <label>Venue <input type="text" name="venue" placeholder="Oceanside, CA"></label>
+            <label>Country
+                <select name="country" required>
+                    <option value="">-</option>
+                    {% for cf, a3 in nationalities %}<option value="{{ cf }}">{{ cf }}</option>{% endfor %}
+                </select>
+            </label>
+            <label>Date (men) <input type="date" name="date" required></label>
+            <label>Date (women, if different) <input type="date" name="date_female"></label>
+            <label>Distance
+                <select name="distance">{% for d in distances %}<option value="{{ d }}">{{ d }}</option>{% endfor %}</select>
+            </label>
+            <label>Brand
+                <select name="brand">{% for b in brands %}<option value="{{ b }}">{{ b }}</option>{% endfor %}</select>
+            </label>
+            <label>Prize money (USD) <input type="number" name="prize_usd" min="0" step="1000"></label>
+        </div>
+        <p class="adm-hint">Give the PTO slug when the race already exists on stats.protriathletes.org: the ids then line up with the results ingest, so the race page can show predicted vs actual. Without it the slug is derived from the name.</p>
+
+        <div class="sl-lists">
+            <label>Pro Men <textarea name="list_male" placeholder="One athlete per line. Bib, name and 3-letter country code in any order:&#10;1  Kristian Blummenfelt  NOR&#10;Sam Laidlow (FRA)&#10;Ditlev, Magnus, DEN"></textarea></label>
+            <label>Pro Women <textarea name="list_female"></textarea></label>
+        </div>
+        <div class="sl-actions">
+            <button type="submit" class="adm-btn primary">Match athletes</button>
+        </div>
+    </form>
+
+    <div class="adm-card adm-side">
+        <h3>Saved, awaiting next build</h3>
+        <ul>
+            {% for f in saved_files %}
+            <li>
+                <span>{{ f.name }} <span class="adm-muted">{{ f.date }} · {{ f.men }} men · {{ f.women }} women</span></span>
+                <form method="post" action="/admin/startlist/save">
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="file" value="{{ f.file }}">
+                    <button type="submit" class="adm-btn link">delete</button>
+                </form>
+            </li>
+            {% else %}
+            <li><span class="adm-muted">Nothing yet</span></li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

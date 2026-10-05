@@ -125,6 +125,22 @@
     color: rgba(255, 255, 255, 0.75);
 }
 
+.athlete-hero-instagram {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(232, 93, 4, 0.55);
+    padding-bottom: 1px;
+    transition: color 0.15s, border-color 0.15s;
+}
+.athlete-hero-instagram svg { width: 0.95em; height: 0.95em; }
+.athlete-hero-instagram:hover {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
 /* Stat numbers - white, bolder */
 .hero-stat-n {
     font-weight: 600;

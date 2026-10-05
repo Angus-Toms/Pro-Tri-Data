@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Review start list - Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/admin.css?v={{ ASSET_VERSION }}">
+{% endblock %}
+
+{% block content %}
+<div class="adm-wrap">
+    {% include "partials/admin_nav.html" %}
+
+    <form method="post" action="/admin/startlist/save">
+        <input type="hidden" name="event" value='{{ event|tojson|forceescape }}'>
+        <div class="adm-card">
+            <h2>{{ event.name }} <span class="adm-muted" style="font-weight: 500; font-size: 0.9rem;">{{ event.date }} · {{ event.venue }} · {{ event.country }} · {{ event.distance }} · {{ event.brand }} · slug {{ event.slug }}</span></h2>
+            {% set ns = namespace(exact=0, review=0) %}
+            {% for g, rows in races.items() %}{% for r in rows %}{% if r.status == 'exact' %}{% set ns.exact = ns.exact + 1 %}{% else %}{% set ns.review = ns.review + 1 %}{% endif %}{% endfor %}{% endfor %}
+            <div class="sl-summary"><span><b>{{ ns.exact }}</b> matched</span><span><b>{{ ns.review }}</b> need a look</span></div>
+            <p class="adm-hint">Pick the right athlete per row. "New athlete" mints a PTO-style record so a later PTO ingest links to it; "Drop" leaves them off the list.</p>
+        </div>
+
+        {% for g, label in (('male', 'Pro Men'), ('female', 'Pro Women')) %}
+        {% set rows = races[g] %}
+        {% if rows %}
+        <div class="adm-card">
+            <h2>{{ label }} <span class="adm-muted" style="font-weight: 500; font-size: 0.9rem;">{{ rows|length }} athletes</span></h2>
+            <input type="hidden" name="n_{{ g }}" value="{{ rows|length }}">
+            <table class="sl-table">
+                <thead><tr><th>Bib</th><th>Pasted</th><th>Match</th></tr></thead>
+                <tbody>
+                {% for r in rows %}
+                {% set i = loop.index0 %}
+                <tr class="sl-row">
+                    <td><input type="number" name="num_{{ g }}_{{ i }}" value="{{ r.start_num or '' }}" style="width: 4.5rem;"></td>
+                    <td>
+                        <input type="hidden" name="name_{{ g }}_{{ i }}" value="{{ r.name }}">
+                        {{ r.name }}{% if r.code %} <span class="adm-muted">{{ r.code }}</span>{% endif %}<br>
+                        <span class="sl-status {{ r.status }}">{{ r.status }}</span>
+                    </td>
+                    <td>
+                        {% for c in r.candidates %}
+                        <label class="sl-opt">
+                            <input type="radio" name="m_{{ g }}_{{ i }}" value="{{ c.athlete_id }}" {% if loop.first and r.status != 'fuzzy' %}checked{% endif %}>
+                            <span><a href="/athlete/{{ c.athlete_id }}" target="_blank">{{ c.name }}</a> {{ flag(c.country_alpha3, c.country_full) }}
+                                <span class="adm-muted">{% if c.year_of_birth %}b. {{ c.year_of_birth }} · {% endif %}{{ c.long_starts }} LC starts · last {{ c.last_race }}</span></span>
+                        </label>
+                        {% endfor %}
+                        <label class="sl-opt">
+                            <input type="radio" name="m_{{ g }}_{{ i }}" value="new" {% if not r.candidates %}checked{% endif %}> <span>New athlete</span>
+                        </label>
+                        <div class="sl-new">
+                            <select name="country_{{ g }}_{{ i }}">
+                                <option value="">country</option>
+                                {% for cf, a3 in nationalities %}<option value="{{ cf }}" {% if cf == r.country_guess %}selected{% endif %}>{{ cf }}</option>{% endfor %}
+                            </select>
+                            <input type="number" name="yob_{{ g }}_{{ i }}" placeholder="yob" style="width: 5rem;">
+                            <input type="text" name="slug_{{ g }}_{{ i }}" value="{{ r.pto_slug }}" title="PTO slug" style="width: 12rem;">
+                        </div>
+                        <label class="sl-opt"><input type="radio" name="m_{{ g }}_{{ i }}" value="drop"> <span class="adm-muted">Drop</span></label>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+        {% endfor %}
+
+        <div class="sl-actions">
+            <button type="submit" class="adm-btn primary">Save start list</button>
+            <a href="/admin/startlist" class="adm-btn">Back</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
