@@ -694,10 +694,14 @@
 .race-view.hidden { display: none; }
 
 /* Position diff badges */
+/* Fixed-width, centred: "-" and "^25" occupy the same box so the badges line
+   up row to row and the athlete name next to them doesn't shift. */
 .pos-diff {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.25em;
+    min-width: 2.4em;
     font-size: 0.65rem;
     font-weight: 700;
     margin-left: 3px;
