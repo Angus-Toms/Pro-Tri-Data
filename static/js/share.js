@@ -13,6 +13,7 @@
     const photoIn  = document.getElementById('share-photo');
     const photoName = document.getElementById('share-photo-name');
     const form     = dlg.querySelector('form');
+    const MAX_PHOTO_BYTES = 30 * 1024 * 1024;
     let blobUrl = null, blobExt = 'png', seq = 0;
 
     function state() {
@@ -33,8 +34,15 @@
         preview.classList.add('loading');
         let res;
         if (s.mode === 'photo') {
-            photoName.textContent = photoIn.files[0] ? photoIn.files[0].name : 'No photo chosen';
-            if (!photoIn.files[0]) { img.removeAttribute('src'); preview.classList.remove('loading'); return; }
+            const file = photoIn.files[0];
+            photoName.textContent = file ? file.name : 'No photo chosen';
+            photoName.classList.remove('share-error');
+            if (!file) { img.removeAttribute('src'); preview.classList.remove('loading'); return; }
+            if (file.size > MAX_PHOTO_BYTES) {   // mirrors the server cap so the user hears it before the upload
+                photoName.textContent = `${file.name} is too big (${(file.size / 1048576).toFixed(0)}MB, max 30MB). Choose a smaller photo.`;
+                photoName.classList.add('share-error');
+                img.removeAttribute('src'); preview.classList.remove('loading'); return;
+            }
             const fd = new FormData(); fd.append('photo', photoIn.files[0]);
             res = await fetch(`/share/card?${q}`, { method: 'POST', body: fd });
         } else {
@@ -42,7 +50,11 @@
             res = await fetch(`/share/card?${q}`);
         }
         if (my !== seq) return;
-        if (!res.ok) { preview.classList.remove('loading'); throw new Error(`card render failed: ${res.status}`); }
+        if (!res.ok) {
+            preview.classList.remove('loading');
+            if (res.status === 413) { photoName.textContent = 'Photo too big (max 30MB). Choose a smaller photo.'; photoName.classList.add('share-error'); return; }
+            throw new Error(`card render failed: ${res.status}`);
+        }
         if (blobUrl) URL.revokeObjectURL(blobUrl);
         const blob = await res.blob();
         blobExt = blob.type === 'image/jpeg' ? 'jpg' : 'png';

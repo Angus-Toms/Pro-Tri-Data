@@ -30,3 +30,4 @@
 .share-download { width: 100%; }
 .share-photo-row { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-sm); }
 .share-photo-row .share-note { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.share-photo-row .share-note.share-error { color: var(--error-color); white-space: normal; }
