@@ -37,6 +37,23 @@
     line-height: 1.15;
 }
 
+/* Odometer digits (built by index.js). The window is padded past 1em with a faded
+   mask so neighbouring digits roll in and out of view rather than being hard-clipped. */
+.stat-counter { display: inline-flex; }
+
+.odo-cell {
+    display: inline-block;
+    height: 1.24em;
+    padding: 0.12em 0;
+    margin: -0.12em 0;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22%, #000 78%, transparent 100%);
+            mask-image: linear-gradient(to bottom, transparent 0, #000 22%, #000 78%, transparent 100%);
+}
+
+.odo-strip { display: flex; flex-direction: column; }
+.odo-strip span { height: 1em; line-height: 1; }
+
 .home-intro {
     margin: 2rem auto 0;
     max-width: 72ch;
