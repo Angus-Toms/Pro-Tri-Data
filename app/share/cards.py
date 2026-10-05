@@ -287,7 +287,7 @@ class _Renderer(threading.Thread):
         with sync_playwright() as p:
             browser = p.chromium.launch()
             while (job := self.jobs.get()) is not None:
-                fut, html, w, h, scale, transparent = job
+                fut, html, w, h, scale, fmt, quality = job
                 if not browser.is_connected():   # crashed between jobs: relaunch rather than fail forever
                     browser = p.chromium.launch()
                 page = browser.new_page(viewport={"width": w, "height": h}, device_scale_factor=scale)
@@ -298,16 +298,17 @@ class _Renderer(threading.Thread):
                         f.write(html); f.close()
                         page.goto(Path(f.name).as_uri(), wait_until="load")
                         page.evaluate("document.fonts.ready")
-                        fut.set_result(page.locator("#card").screenshot(omit_background=transparent))
+                        fut.set_result(page.locator("#card").screenshot(
+                            type=fmt, quality=quality, omit_background=(fmt == "png")))
                 except Exception as e:  # hand the failure to the waiting request; the thread must keep serving
                     fut.set_exception(e)
                 finally:
                     page.close()
             browser.close()
 
-    def render(self, html: str, w: int, h: int, scale: int, transparent: bool) -> bytes:
+    def render(self, html: str, w: int, h: int, scale: float, fmt: str, quality: int | None) -> bytes:
         fut: Future = Future()
-        self.jobs.put((fut, html, w, h, scale, transparent))
+        self.jobs.put((fut, html, w, h, scale, fmt, quality))
         return fut.result(timeout=60)
 
 
@@ -333,6 +334,19 @@ def shutdown_renderer() -> None:
 
 def render_png(design: str, ctx: dict, mode: str, ink: str, photo: str | None = None, scale: int = 2,
                size: tuple[int, int] | None = None) -> bytes:
-    """Render one card to PNG bytes. `photo` is a data URI for photo mode."""
+    """Full-quality PNG at 2x, for the social poster where time doesn't matter."""
     html, w, h = render_html(design, ctx, mode, ink, photo, size)
-    return _get_renderer().render(html, w, h, scale, mode == "transparent")
+    return _get_renderer().render(html, w, h, scale, "png", None)
+
+
+def render_card(design: str, ctx: dict, mode: str, ink: str, photo: str | None = None) -> tuple[bytes, str]:
+    """Card for the share dialog: (bytes, media type).
+
+    Chromium's PNG encoder dominates render time (3s for a 2x card on the
+    box against 0.7s for JPEG), so opaque cards ship as JPEG at 2x and only
+    transparent ones pay for PNG, at 1.5x to keep it under two seconds.
+    """
+    html, w, h = render_html(design, ctx, mode, ink, photo)
+    if mode == "transparent":
+        return _get_renderer().render(html, w, h, 1.5, "png", None), "image/png"
+    return _get_renderer().render(html, w, h, 2, "jpeg", 90), "image/jpeg"

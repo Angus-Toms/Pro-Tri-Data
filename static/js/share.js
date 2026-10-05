@@ -1,4 +1,4 @@
-// Race page share dialog: builds a /share/card.png request from the form,
+// Race page share dialog: builds a /share/card request from the form,
 // previews it, and downloads the result.
 (function () {
     const dlg = document.getElementById('share-dialog');
@@ -13,7 +13,7 @@
     const photoIn  = document.getElementById('share-photo');
     const photoName = document.getElementById('share-photo-name');
     const form     = dlg.querySelector('form');
-    let blobUrl = null, seq = 0;
+    let blobUrl = null, blobExt = 'png', seq = 0;
 
     function state() {
         const d = form.elements.design.value;
@@ -36,15 +36,17 @@
             photoName.textContent = photoIn.files[0] ? photoIn.files[0].name : 'No photo chosen';
             if (!photoIn.files[0]) { img.removeAttribute('src'); preview.classList.remove('loading'); return; }
             const fd = new FormData(); fd.append('photo', photoIn.files[0]);
-            res = await fetch(`/share/card.png?${q}`, { method: 'POST', body: fd });
+            res = await fetch(`/share/card?${q}`, { method: 'POST', body: fd });
         } else {
             q.set('mode', s.mode);
-            res = await fetch(`/share/card.png?${q}`);
+            res = await fetch(`/share/card?${q}`);
         }
         if (my !== seq) return;
         if (!res.ok) { preview.classList.remove('loading'); throw new Error(`card render failed: ${res.status}`); }
         if (blobUrl) URL.revokeObjectURL(blobUrl);
-        blobUrl = URL.createObjectURL(await res.blob());
+        const blob = await res.blob();
+        blobExt = blob.type === 'image/jpeg' ? 'jpg' : 'png';
+        blobUrl = URL.createObjectURL(blob);
         img.src = blobUrl;
         img.classList.toggle('transparent', s.mode === 'transparent');
         preview.classList.remove('loading');
@@ -62,7 +64,7 @@
         const s = state();
         const a = document.createElement('a');
         a.href = blobUrl;
-        a.download = `ptd-${raceId}-${s.design}${s.subject === 'athlete' ? '-' + s.athlete : ''}.png`;
+        a.download = `ptd-${raceId}-${s.design}${s.subject === 'athlete' ? '-' + s.athlete : ''}.${blobExt}`;
         a.click();
     });
     img.addEventListener('click', () => { if (blobUrl) window.open(blobUrl, '_blank'); });

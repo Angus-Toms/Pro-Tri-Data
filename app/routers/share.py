@@ -1,7 +1,7 @@
 """Share-card PNGs for the race page share dialog.
 
-GET  /share/card.png  cacheable: solid and transparent cards.
-POST /share/card.png  multipart with the user's photo for photo mode; the
+GET  /share/card  cacheable: solid and transparent cards (JPEG, or PNG when transparent).
+POST /share/card  multipart with the user's photo for photo mode; the
                       image never leaves the request.
 """
 from __future__ import annotations
@@ -18,7 +18,7 @@ router = APIRouter()
 MAX_PHOTO_BYTES = 12 * 1024 * 1024
 
 
-def _png(race: int, design: str, mode: str, ink: str, athlete: int | None, photo: str | None) -> bytes:
+def _card(race: int, design: str, mode: str, ink: str, athlete: int | None, photo: str | None) -> Response:
     if design not in cards.DESIGNS or mode not in cards.MODES or ink not in cards.INKS:
         raise HTTPException(400, "unknown design, mode or ink")
     if mode == "photo" and photo is None:
@@ -35,20 +35,21 @@ def _png(race: int, design: str, mode: str, ink: str, athlete: int | None, photo
             raise HTTPException(404, "no ratings for this race")
     else:
         ctx = {k: v for k, v in rc.items() if not k.startswith("_")}
-    return cards.render_png(design, ctx, mode, ink, photo)
+    data, media_type = cards.render_card(design, ctx, mode, ink, photo)
+    return Response(data, media_type=media_type,
+                    headers={"Cache-Control": "no-store" if mode == "photo" else "public, max-age=0, s-maxage=86400"})
 
 
-@router.get("/share/card.png")
+@router.get("/share/card")
 def share_card(race: int, design: str, mode: str = "solid", ink: str = "light", athlete: int | None = None):
     if mode == "photo":
         raise HTTPException(400, "photo mode is POST only")
-    return Response(_png(race, design, mode, ink, athlete, None), media_type="image/png",
-                    headers={"Cache-Control": "public, max-age=0, s-maxage=86400"})
+    return _card(race, design, mode, ink, athlete, None)
 
 
 # Sync on purpose: Playwright's sync API must stay off the event loop, and
 # sync handlers run on the threadpool.
-@router.post("/share/card.png")
+@router.post("/share/card")
 def share_card_photo(race: int, design: str, photo: UploadFile, ink: str = "light", athlete: int | None = None):
     raw = photo.file.read()
     if len(raw) > MAX_PHOTO_BYTES:
@@ -56,5 +57,4 @@ def share_card_photo(race: int, design: str, photo: UploadFile, ink: str = "ligh
     if not (photo.content_type or "").startswith("image/"):
         raise HTTPException(400, "photo must be an image")
     uri = f"data:{photo.content_type};base64," + base64.b64encode(raw).decode()
-    return Response(_png(race, design, "photo", ink, athlete, uri), media_type="image/png",
-                    headers={"Cache-Control": "no-store"})
+    return _card(race, design, "photo", ink, athlete, uri)
