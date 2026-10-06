@@ -21,11 +21,14 @@ SITE_BASE_URL = (
 
 # User-system Postgres. Local dev defaults to the Homebrew instance; prod must
 # set DATABASE_URL explicitly - crash at import rather than run without it.
+# The role is taken from the real uid rather than left to libpq's USER/LOGNAME
+# lookup, which app launchers sometimes leave unset or wrong.
 DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL is None:
     if ENV in {"prod", "production"}:
         raise RuntimeError("DATABASE_URL must be set in production")
-    DATABASE_URL = "postgresql://localhost:5432/ptd_users"
+    import pwd
+    DATABASE_URL = f"postgresql://{pwd.getpwuid(os.getuid()).pw_name}@localhost:5432/ptd_users"
 
 # Resend email API key. Unset means dev mode: magic links are printed to stdout.
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")

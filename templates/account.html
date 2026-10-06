@@ -6,99 +6,142 @@
 <link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/users.css?v={{ ASSET_VERSION }}">
 {% endblock %}
 
+{% block hero %}
+<div class="page-hero page-hero--user">
+    <div class="page-hero-inner">
+        <div>
+            <h1>Account</h1>
+            <p class="page-hero-subtitle page-hero-subtitle--left">{{ user.email }}</p>
+        </div>
+        <form method="post" action="/auth/logout" onsubmit="window.ptdUser.invalidate()">
+            <button type="submit" class="btn-hero">Log out</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
 {% block content %}
 <div class="account-page">
-    <div class="account-section">
-        <h2 class="account-section-title">Profile</h2>
-        {% if saved %}<p class="account-saved">Saved.</p>{% endif %}
-        {% if error %}<p class="auth-error">{{ error }}</p>{% endif %}
-        <form method="post" action="/account/update" class="account-form" onsubmit="window.ptdUser.invalidate()">
-            <div class="account-field">
-                <label class="account-label" for="display_name">Display name</label>
-                <input type="text" id="display_name" name="display_name" class="account-input" value="{{ user.display_name }}" minlength="2" maxlength="40" required>
+    <section class="account-section">
+        <div class="page-section-head">
+            <span>Profile</span>
+            {% if saved %}<span class="account-saved">Saved</span>{% endif %}
+        </div>
+        <div class="account-card">
+            {% if error %}<p class="auth-error">{{ error }}</p>{% endif %}
+            <div class="account-photo">
+                {{ user_avatar(user.user_id, user.display_name, user.avatar_version, 'lg') }}
+                <div class="account-photo-main">
+                    <span class="account-label">Photo</span>
+                    <div class="account-photo-actions">
+                        <form method="post" action="/account/avatar" enctype="multipart/form-data">
+                            <label class="btn-secondary btn-small">
+                                {{ 'Change photo' if user.avatar_version else 'Upload photo' }}
+                                <input type="file" name="photo" accept="image/*" class="account-photo-input" onchange="this.form.submit()">
+                            </label>
+                        </form>
+                        {% if user.avatar_version %}
+                        <form method="post" action="/account/avatar/remove">
+                            <button type="submit" class="comment-action">Remove</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    <span class="account-help">Shown next to your comments. Cropped to a square.</span>
+                </div>
             </div>
-            <div class="account-field">
-                <span class="account-label">Email</span>
-                <span class="account-email">{{ user.email }}</span>
-            </div>
-            <div class="account-field">
-                <label class="account-label" for="country">Country (shown next to your comments)</label>
-                <select id="country" name="country" class="account-select">
-                    <option value="">None</option>
-                    {% for name, a3 in countries %}
-                    <option value="{{ a3 }}"{% if user.country == a3 %} selected{% endif %}>{{ name }}</option>
+            <form method="post" action="/account/update" class="account-form" onsubmit="window.ptdUser.invalidate()">
+                <div class="account-grid">
+                    <div class="account-field">
+                        <label class="account-label" for="display_name">Display name</label>
+                        <input type="text" id="display_name" name="display_name" class="account-input" value="{{ user.display_name }}" minlength="2" maxlength="40" required>
+                        <span class="account-help">Shown next to your comments.</span>
+                    </div>
+                    <div class="account-field">
+                        <label class="account-label" for="country">Country</label>
+                        <select id="country" name="country" class="account-select">
+                            <option value="">None</option>
+                            {% for name, a3 in countries %}
+                            <option value="{{ a3 }}"{% if user.country == a3 %} selected{% endif %}>{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                        <span class="account-help">Optional. A flag next to your name.</span>
+                    </div>
+                </div>
+                <label class="account-check">
+                    <input type="checkbox" name="email_digest" value="true"{% if user.email_digest %} checked{% endif %}>
+                    <span>Weekly digest email with results and upcoming races for the athletes you follow</span>
+                </label>
+                <div class="account-form-actions">
+                    <button type="submit" class="btn-primary">Save changes</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section class="account-section" id="following">
+        <div class="page-section-head">
+            <span>Following <span class="page-section-sub">{{ followed_athletes | length }} athlete{{ '' if followed_athletes | length == 1 else 's' }}, {{ followed_races | length }} race{{ '' if followed_races | length == 1 else 's' }}</span></span>
+            <a href="/feed" class="section-link">Open feed</a>
+        </div>
+        <div class="follow-grid">
+            <div class="account-card">
+                <div class="follow-card-title">Athletes</div>
+                {% if followed_athletes %}
+                <ul class="follow-list">
+                    {% for a in followed_athletes %}
+                    <li class="follow-list-item">
+                        <div class="follow-list-main">
+                            <a href="/athlete/{{ a.athlete_id }}" class="follow-list-link">{{ a.name }} {{ flag(a.country_alpha3, a.country_full) }}</a>
+                            <span class="follow-list-sub">{{ a.country_full }}</span>
+                        </div>
+                        <form method="post" action="/account/unfollow" onsubmit="window.ptdUser.invalidate()">
+                            <input type="hidden" name="kind" value="athlete">
+                            <input type="hidden" name="ref_id" value="{{ a.athlete_id }}">
+                            <button type="submit" class="btn-secondary btn-small">Unfollow</button>
+                        </form>
+                    </li>
                     {% endfor %}
-                </select>
+                </ul>
+                {% else %}
+                <p class="follow-empty">No athletes yet. Find some on the <a href="/athlete-leaderboard">leaderboard</a>.</p>
+                {% endif %}
             </div>
-            <label class="account-check">
-                <input type="checkbox" name="email_digest" value="true"{% if user.email_digest %} checked{% endif %}>
-                Weekly digest email with results and upcoming races for athletes you follow
-            </label>
-            <div>
-                <button type="submit" class="btn-primary">Save</button>
+            <div class="account-card">
+                <div class="follow-card-title">Races</div>
+                {% if followed_races %}
+                <ul class="follow-list">
+                    {% for r in followed_races %}
+                    <li class="follow-list-item">
+                        <div class="follow-list-main">
+                            <a href="/race/{{ r.race_id }}" class="follow-list-link">{{ r.race_title }}</a>
+                            <span class="follow-list-sub">{{ r.prog_name }} <span class="feed-dot">·</span> {{ r.race_date.strftime('%d %b %Y') }}</span>
+                        </div>
+                        <form method="post" action="/account/unfollow" onsubmit="window.ptdUser.invalidate()">
+                            <input type="hidden" name="kind" value="race">
+                            <input type="hidden" name="ref_id" value="{{ r.race_id }}">
+                            <button type="submit" class="btn-secondary btn-small">Unfollow</button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="follow-empty">No races yet. Browse <a href="/upcoming">upcoming races</a>.</p>
+                {% endif %}
             </div>
-        </form>
-    </div>
+        </div>
+    </section>
 
-    <div class="account-section">
-        <h2 class="account-section-title">Followed athletes</h2>
-        {% if followed_athletes %}
-        <ul class="follow-list">
-            {% for a in followed_athletes %}
-            <li class="follow-list-item">
-                <a href="/athlete/{{ a.athlete_id }}" class="follow-list-link">{{ a.name }} {{ flag(a.country_alpha3, a.country_full) }}</a>
-                <form method="post" action="/account/unfollow" onsubmit="window.ptdUser.invalidate()">
-                    <input type="hidden" name="kind" value="athlete">
-                    <input type="hidden" name="ref_id" value="{{ a.athlete_id }}">
-                    <button type="submit" class="btn-secondary">Unfollow</button>
-                </form>
-            </li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <p class="follow-empty">You are not following any athletes yet. Find some on the <a href="/athlete-leaderboard">leaderboard</a>.</p>
-        {% endif %}
-    </div>
-
-    <div class="account-section">
-        <h2 class="account-section-title">Followed races</h2>
-        {% if followed_races %}
-        <ul class="follow-list">
-            {% for r in followed_races %}
-            <li class="follow-list-item">
-                <span>
-                    <a href="/race/{{ r.race_id }}" class="follow-list-link">{{ r.race_title }}</a>
-                    <span class="follow-list-sub">{{ r.prog_name }} · {{ r.race_date.strftime('%d %b %Y') }}</span>
-                </span>
-                <form method="post" action="/account/unfollow" onsubmit="window.ptdUser.invalidate()">
-                    <input type="hidden" name="kind" value="race">
-                    <input type="hidden" name="ref_id" value="{{ r.race_id }}">
-                    <button type="submit" class="btn-secondary">Unfollow</button>
-                </form>
-            </li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <p class="follow-empty">You are not following any races yet. Browse <a href="/upcoming">upcoming races</a>.</p>
-        {% endif %}
-    </div>
-
-    <div class="account-section">
-        <h2 class="account-section-title">Log out</h2>
-        <form method="post" action="/auth/logout" onsubmit="window.ptdUser.invalidate()">
-            <button type="submit" class="btn-secondary">Log out</button>
-        </form>
-    </div>
-
-    <div class="account-section danger-zone">
-        <h2 class="account-section-title">Delete account</h2>
-        <p class="danger-text">Hard delete: your account, sessions, follows and comments are removed permanently. Type "{{ delete_phrase }}" to confirm.</p>
-        <form method="post" action="/account/delete" class="account-form" onsubmit="window.ptdUser.invalidate()">
-            <input type="text" name="confirm" class="account-input" placeholder="{{ delete_phrase }}" required>
-            <div>
+    <section class="account-section">
+        <div class="page-section-head">
+            <span>Delete account</span>
+        </div>
+        <div class="account-card danger-zone">
+            <p class="danger-text">This permanently removes your account, sessions, follows and comments. There is no undo. Type <strong>{{ delete_phrase }}</strong> to confirm.</p>
+            <form method="post" action="/account/delete" class="danger-form" onsubmit="window.ptdUser.invalidate()">
+                <input type="text" name="confirm" class="account-input" placeholder="{{ delete_phrase }}" autocomplete="off" required>
                 <button type="submit" class="btn-danger">Delete my account</button>
-            </div>
-        </form>
-    </div>
+            </form>
+        </div>
+    </section>
 </div>
 {% endblock %}

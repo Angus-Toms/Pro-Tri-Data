@@ -93,3 +93,28 @@ def format_1yr_rating_change(change: float) -> dict:
         "formatted_str": f"{_SVG_DOWN}{int(round(-change))}",
         "css_class": "negative"
     }
+
+# --- avatars ------------------------------------------------------------------
+# Users without a photo get their initial on a tone picked from their id, so a
+# person keeps the same colour everywhere. Muted tones keep orange meaning "action".
+_AVATAR_TONES = ["#1a1a2e", "#475569", "#0f766e", "#9a3412", "#4338ca", "#7c2d12"]
+
+
+def user_avatar(user_id, name, version, size="md"):
+    from markupsafe import Markup, escape
+    if user_id is None:
+        # Removed comment: keeps the column shape without pointing at anyone.
+        return Markup(f'<span class="avatar avatar-{size} avatar--empty" aria-hidden="true"></span>')
+    if version:
+        return Markup(f'<img class="avatar avatar-{size}" src="/avatar/{user_id}.webp?v={version}" '
+                      f'alt="" loading="lazy">')
+    tone = _AVATAR_TONES[user_id % len(_AVATAR_TONES)]
+    return Markup(f'<span class="avatar avatar-{size}" style="background:{tone}" aria-hidden="true">'
+                  f'{escape(name[:1].upper())}</span>')
+
+
+def athlete_img_url(athlete_id, profile_img):
+    from config import STATIC_BASE_URL
+    if profile_img:
+        return f"{STATIC_BASE_URL}athlete_imgs/128/{athlete_id}.webp"
+    return f"{STATIC_BASE_URL}imgs/default_user_64.webp"

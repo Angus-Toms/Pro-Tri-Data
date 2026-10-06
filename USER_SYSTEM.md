@@ -85,12 +85,15 @@ create table follows (
 create table comments (
     comment_id bigint generated always as identity primary key,
     race_id    bigint not null,            -- validated against DuckDB at write time
-    user_id    bigint not null references users on delete cascade,
-    body       text not null check (char_length(body) between 1 and 2000),
+    user_id    bigint references users on delete cascade,  -- null once removed
+    body       text not null check (char_length(body) <= 2000),  -- '' once removed
     created_at timestamptz not null default now(),
-    hidden_at  timestamptz                 -- set by auto-hide or moderator
+    hidden_at  timestamptz,                -- set by auto-hide or moderator
+    deleted_at timestamptz,                -- removed but kept as a placeholder for its replies
+    parent_id  bigint references comments on delete cascade  -- any depth of replies
 );
 create index comments_by_race on comments (race_id, created_at desc);
+create index comments_by_parent on comments (parent_id, created_at) where parent_id is not null;
 
 create table comment_reports (
     comment_id bigint not null references comments on delete cascade,
@@ -98,6 +101,26 @@ create table comment_reports (
     created_at timestamptz not null default now(),
     primary key (comment_id, user_id)
 );
+
+
+create table comment_reactions (
+    comment_id bigint not null references comments on delete cascade,
+    user_id    bigint not null references users on delete cascade,
+    kind       text not null check (kind in ('agree', 'insightful', 'impressive', 'funny')),
+    created_at timestamptz not null default now(),
+    primary key (comment_id, user_id, kind)
+);
+
+create table notifications (
+    notification_id bigint generated always as identity primary key,
+    user_id    bigint not null references users on delete cascade,     -- recipient
+    comment_id bigint not null references comments on delete cascade,  -- the reply or mention
+    kind       text not null check (kind in ('reply', 'mention')),
+    created_at timestamptz not null default now(),
+    read_at    timestamptz,
+    unique (user_id, comment_id)
+);
+create index notifications_by_user on notifications (user_id, created_at desc);
 ```
 
 `ref_id` and `race_id` get existence-checked against DuckDB in the route before insert.
@@ -154,17 +177,71 @@ Comments (`app/routers/comments.py`)
 - `POST /comments/{id}/delete` - own comment or admin
 - `POST /comments/{id}/report` - 3 unique reports auto-hides pending review
 - `GET /admin/moderation` - reported and hidden queue, is_admin only
-- Races only, per the decision; athlete pages stay comment-free. Flat, no threads.
+- Races only, per the decision; athlete pages stay comment-free.
+- Replies nest to any depth in the data (`comments.parent_id`) and stay on the
+  parent's race. Display is YouTube-style: under each top-level comment, every
+  reply in its thread sits in one flat list, oldest first, collapsed behind an
+  "N replies" toggle. A reply box opens pre-filled with a tag of the person being
+  answered, which is what shows who answers whom. One reply box is open at a time;
+  posting keeps the thread open. The partial loads a race's whole comment set and
+  groups it in Python; pagination is by top-level thread.
+- Every comment shows the author's photo, or their initial on a colour picked
+  from their user id. Photos are uploaded on the account page, centre-cropped to
+  128px webp with Pillow and stored in `users.avatar` (bytea), so they survive
+  deploys and are backed up with the database. Served from `/avatar/{id}.webp?v=`,
+  where the version bumps on every upload so the URL can be cached forever.
+- Deleting a comment with replies blanks it to a placeholder (body emptied, author
+  cleared, reactions and notifications dropped) so the thread survives. Only a
+  top-level placeholder is ever shown, as "Comment removed" above its replies;
+  removed replies simply drop out of the flat list. Account deletion does the same
+  for the user's comments that have replies; the rest cascade away.
+- Reactions: thumbs up and thumbs down (mutually exclusive) are always shown with
+  their own counts. Three tri reactions, Rapid (stopwatch), Pain cave (flame) and
+  Podium (trophy), appear once used and are added from a "+" picker. One row per
+  (comment, user, kind) in `comment_reactions`; `POST /comments/{id}/react` toggles
+  and returns the comment's full reaction state. Delete and Report sit in a "more"
+  menu so each comment's footer is a single row.
+- Tagging: typing `@` in the comment box opens a picker of people, athletes and
+  races (`GET /comments/mention-search?race_id=&q=`). People are limited to those
+  who have commented on that race, so there is no browsable user directory. The
+  comment box is contenteditable, so a pick inserts the same chip the posted
+  comment shows; chips serialise to `@[Label](kind:id)` tokens. The server
+  validates every id, rewrites the label to the canonical name, and renders
+  athlete and race tags as links. Athlete chips show the athlete's photo and
+  flag. User chips render the user's current name
+  ("deleted user" once gone) and do not link, since profiles are not public.
+  At most 10 tags per comment.
+
+Notifications
+- Two kinds, written in the same transaction as the comment: the author of the
+  comment directly above a reply gets "X replied to your comment on Y race"; each
+  tagged user gets "X mentioned you in a comment". Nobody is notified about their
+  own comment, and a parent author who is also tagged gets only the reply.
+- Header bell for logged-in users with an unread badge; the count rides on `/me`.
+  Opening the panel fetches `GET /notifications` (latest 20) and marks all read
+  (`POST /notifications/read`). Each item links to `/race/{id}#comment-{id}`,
+  which scrolls to and highlights the comment.
 
 ## 6. Extras worth adding
 
 - Weekly digest email (high value, cheap): after the weekly build finishes, send each
   opted-in user their followed athletes' results and upcoming races. One script in
   scripts/ called at the end of weekly.sh. The unsubscribe link flips email_digest.
+- Podium picks: before a followed upcoming race, the user picks a podium; after the
+  weekly build the picks are scored against results and against the model's own
+  prediction. One table `podium_picks (user_id, race_id, picks, score)`, a pick widget
+  on the upcoming race page, a "your picks" strip on the feed and a per-season user
+  leaderboard. Gives a reason to return before and after every race.
+- Pre-race threads and a calendar feed: open comments on upcoming races (ids are
+  stable across the upcoming/past boundary so the thread carries over to the results
+  page) and expose a per-user ICS subscription of followed athletes' starts and
+  followed races. The site then surfaces in the user's own calendar on race day.
+- Milestones: derive career events at build time (new peak rating, first win, top-10
+  debut, first elite start) into a DuckDB table and surface them as feed items and
+  digest lines for followed athletes. Keeps the feed alive in weeks with no starts.
 - Saved comparisons: trivial later (one table, a Save button on the comparison page).
 - Deliberately skipped: OAuth providers (magic link is sufficient and keyless), public
-  profile pages (privacy and moderation burden for near-zero value), avatars (display
-  name plus optional flag), threaded comments, likes/reactions, push notifications.
+  profile pages (privacy and moderation burden for near-zero value), push notifications.
 
 ## 7. Build order
 
@@ -185,5 +262,3 @@ Phases 1-2 ship together as the smallest useful unit; 3 is the retention payoff;
 - Email provider: Resend (simplest) vs SES (already have AWS tooling)?
 - Display names: enforce uniqueness (handles, needed only if profiles ever go public)
   or freeform with the user_id as the real identity?
-- Comment policy line: do DNF/DQ discussions about named athletes count as athlete
-  commentary?

@@ -141,4 +141,5 @@ async def me(request: Request):
         "country":      user["country"],
         "is_admin":     user["is_admin"],
         "follows":      follows,
+        "unread":       await uq.unread_notification_count(user["user_id"]),
     }, headers={"Cache-Control": "no-store"})

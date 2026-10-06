@@ -6,14 +6,17 @@ from config import ASSET_VERSION, STATIC_BASE_URL, flag
 from ptd_data import queries
 from ptd_users import queries as uq
 from ptd_users.auth import current_user
-from app.routers.router_utils import format_rating_change, format_time, rel_time
+from app.routers.router_utils import format_rating_change, format_time, rel_time, user_avatar
 from app.routers.upcoming_page import _build_podium
+from app.routers.comments import render_comment_body, tag_refs
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 templates.env.globals["STATIC_BASE_URL"] = STATIC_BASE_URL
 templates.env.globals["ASSET_VERSION"] = ASSET_VERSION
 templates.env.globals["flag"]          = flag
+templates.env.globals["render_comment_body"] = render_comment_body
+templates.env.globals["user_avatar"]   = user_avatar
 
 
 @router.get("/feed", response_class=HTMLResponse)
@@ -59,8 +62,9 @@ async def feed(request: Request):
 
     # --- recent comments on followed races ---
     comments = await uq.get_recent_comments_for_races(follows["races"])
+    comment_races = queries.get_races_brief_bulk({c["race_id"] for c in comments})
     for c in comments:
-        race = races_brief.get(c["race_id"])
+        race = comment_races.get(c["race_id"])
         c["race_title"] = race["race_title"] if race else f"Race {c['race_id']}"
         c["when"] = rel_time(c["created_at"])
 
@@ -69,7 +73,10 @@ async def feed(request: Request):
         "active_page":    "feed",
         "user":           user,
         "has_follows":    bool(follows["athletes"] or follows["races"]),
+        "n_athletes":     len(follows["athletes"]),
+        "n_races":        len(follows["races"]),
         "upcoming_races": upcoming_races,
         "recent_results": recent_results,
         "comments":       comments,
+        "mention_refs":   await tag_refs([c["body"] for c in comments]),
     }, headers={"Cache-Control": "no-store"})

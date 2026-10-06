@@ -129,6 +129,7 @@ def search_athletes(query, gender=None, course='all', require_programs=None):
             a.gender,
             n.alpha3   AS country_alpha3,
             a.country_full,
+            a.profile_img,
             latest.overall AS rating,
             COALESCE(t.has_elite_short, FALSE) AS has_elite_short,
             COALESCE(t.has_elite_long,  FALSE) AS has_elite_long,
@@ -150,7 +151,7 @@ def search_athletes(query, gender=None, course='all', require_programs=None):
     """, params).fetchall()
 
     cols = ["athlete_id", "name", "year_of_birth", "gender", "country_alpha3",
-            "country_full", "rating",
+            "country_full", "profile_img", "rating",
             "has_elite_short", "has_elite_long", "has_ag"]
     return [dict(zip(cols, r)) for r in rows]
 
@@ -5126,18 +5127,19 @@ def get_nationality_options():
 
 
 def get_athletes_brief_bulk(athlete_ids):
-    """{athlete_id: {name, country_full, country_alpha3}} for follow lists."""
+    """{athlete_id: {name, country_full, country_alpha3, profile_img}} for
+    follow lists and comment tag chips."""
     if not athlete_ids:
         return {}
     placeholders = ",".join("?" * len(athlete_ids))
     rows = _get_conn().execute(f"""
-        SELECT a.athlete_id, a.name, a.country_full, n.alpha3
+        SELECT a.athlete_id, a.name, a.country_full, n.alpha3, a.profile_img
         FROM athletes a
         JOIN nationalities n ON a.country_full = n.country_full
         WHERE a.athlete_id IN ({placeholders})
     """, list(athlete_ids)).fetchall()
     return {r[0]: {"athlete_id": r[0], "name": r[1], "country_full": r[2],
-                   "country_alpha3": r[3]} for r in rows}
+                   "country_alpha3": r[3], "profile_img": r[4]} for r in rows}
 
 
 def get_races_brief_bulk(race_ids):
@@ -5212,3 +5214,20 @@ def get_recent_results_for_athletes(athlete_ids, days=90):
             "prog_name", "race_date", "position", "status", "overall_s",
             "overall_change"]
     return [dict(zip(cols, r)) for r in rows]
+
+
+def search_races_for_mention(query, limit=5):
+    """Race-level name search for comment @mentions, past and upcoming,
+    newest first. Matches on "title prog" so "rome elite men" works."""
+    q = f"%{query}%"
+    rows = _get_conn().execute("""
+        SELECT race_id, race_title, prog_name, race_date FROM (
+            SELECT race_id, race_title, prog_name, race_date FROM races
+            UNION ALL
+            SELECT race_id, race_title, prog_name, race_date FROM upcoming_races
+        )
+        WHERE (race_title || ' ' || prog_name) ILIKE ?
+        ORDER BY race_date DESC
+        LIMIT ?
+    """, [q, limit]).fetchall()
+    return [dict(zip(["race_id", "race_title", "prog_name", "race_date"], r)) for r in rows]

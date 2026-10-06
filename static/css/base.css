@@ -518,6 +518,86 @@ html, body {
     outline-offset: 2px;
 }
 
+/* Notification bell (logged-in only; users.js unhides it) */
+.nav-notif[hidden] { display: none; }
+.nav-notif {
+    position: relative;
+    margin-left: var(--spacing-lg, 1.25rem);
+}
+.nav-notif:not([hidden]) + .nav-search-trigger { margin-left: 0.25rem; }
+.nav-notif-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 0;
+    color: rgba(255,255,255,0.65);
+    padding: 0.4rem;
+    cursor: pointer;
+    border-radius: var(--border-radius-sm);
+    transition: color var(--transition-fast), background var(--transition-fast);
+}
+.nav-notif-toggle:hover,
+.nav-notif-toggle[aria-expanded="true"] { color: #fff; background: rgba(255,255,255,0.06); }
+.nav-notif-toggle:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+.nav-notif-badge {
+    position: absolute;
+    top: 0;
+    right: -2px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: var(--primary-color);
+    color: #fff;
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 0 0 2px var(--navy);
+}
+.nav-notif-badge[hidden] { display: none; }
+.notif-panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 10px);
+    width: 340px;
+    max-height: 420px;
+    overflow-y: auto;
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow-lg);
+    z-index: 1100;
+}
+.notif-panel[hidden] { display: none; }
+.notif-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-color);
+    font-size: 0.85rem;
+    line-height: 1.4;
+    text-decoration: none;
+}
+.notif-item:last-child { border-bottom: none; }
+.notif-item:hover { background: var(--highlight); }
+.notif-item.unread { box-shadow: inset 3px 0 0 var(--primary-color); }
+.notif-text strong { font-weight: 700; }
+.notif-when { font-size: 0.72rem; color: var(--text-lighter); }
+.notif-empty {
+    padding: 1.25rem 1rem;
+    font-size: 0.85rem;
+    color: var(--text-light);
+    text-align: center;
+}
+
 /* Mobile nav toggle (hamburger). Hidden on desktop, shown at <=768. */
 .nav-toggle {
     display: none;
@@ -545,6 +625,16 @@ html, body {
     }
     .nav-search-trigger {
         margin-left: auto;
+    }
+
+    .nav-notif { margin-left: auto; }
+    .nav-notif:not([hidden]) + .nav-search-trigger { margin-left: 0; }
+    .notif-panel {
+        position: fixed;
+        top: 60px;
+        left: 0.75rem;
+        right: 0.75rem;
+        width: auto;
     }
 
     .main-nav {
