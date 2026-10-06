@@ -18,7 +18,7 @@
     border: 4px solid var(--border-color); border-top-color: var(--primary-color); border-radius: 50%; animation: share-spin 0.8s linear infinite; }
 .share-preview.loading .share-spinner { display: block; }
 @keyframes share-spin { to { transform: rotate(360deg); } }
-.share-controls fieldset { border: 0; padding: 0; margin: 0 0 var(--spacing-lg); }
+.share-controls fieldset { border: 0; padding: 0; margin: 0 0 var(--spacing-lg); min-width: 0; }  /* fieldsets default to min-content, which defeats the swipe rows */
 .share-controls legend { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-light); margin-bottom: var(--spacing-sm); }
 .share-opts { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); }
 .share-opts label { cursor: pointer; }
@@ -43,4 +43,27 @@
     .share-controls { overflow-y: auto; overscroll-behavior: contain; }
     .share-controls fieldset { margin-bottom: var(--spacing-md); }
     .share-download { position: sticky; bottom: 0; }
+}
+/* Style swatches: a tile per card background, ringed when picked. */
+.share-controls legend #share-style-name { text-transform: none; letter-spacing: 0; font-weight: 500; margin-left: 0.4em; color: var(--text-color); }
+.share-swatches { display: flex; gap: var(--spacing-sm); }
+.share-swatches label { cursor: pointer; flex: none; }
+.share-swatches input { position: absolute; opacity: 0; }
+.share-swatches span { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: var(--border-radius);
+    border: 1px solid var(--border-color); font-weight: 800; font-size: 0.95rem; color: var(--text-light); background: var(--white); }
+.share-swatches input:checked + span { box-shadow: 0 0 0 2px var(--white), 0 0 0 4px var(--navy); }
+.share-swatches input:focus-visible + span { outline: 2px solid var(--primary-color); outline-offset: 3px; }
+.share-swatches .sw-navy { background: radial-gradient(ellipse at 75% 75%, #c97a3a 0%, transparent 60%), linear-gradient(180deg, #2b3550, #0b0e18); border-color: transparent; }
+.share-swatches .sw-cream { background: #f4f4f2; }
+.share-swatches .sw-clear-light { background: repeating-conic-gradient(#8a8f9c 0 25%, #a9adb7 0 50%) 0 0 / 12px 12px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+.share-swatches .sw-clear-dark  { background: repeating-conic-gradient(#d9d9d9 0 25%, #f4f4f2 0 50%) 0 0 / 12px 12px; color: var(--navy); }
+
+/* Phones: each group is one swipeable row, faded at the right edge so it
+   reads as "more this way", rather than chips wrapping over many lines. */
+@media (max-width: 768px) {
+    .share-opts { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-right: 2rem;
+        mask-image: linear-gradient(90deg, #000 calc(100% - 2rem), transparent); }
+    .share-opts::-webkit-scrollbar { display: none; }
+    .share-opts label { flex: none; }
+    .share-opts span { white-space: nowrap; }
 }

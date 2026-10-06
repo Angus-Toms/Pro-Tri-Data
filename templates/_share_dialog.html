@@ -33,13 +33,15 @@
                     </select>
                 </fieldset>
                 <fieldset>
-                    <legend>Style</legend>
-                    <div class="share-opts">
-                        <label><input type="radio" name="style" value="solid:light" checked><span>Navy</span></label>
-                        <label><input type="radio" name="style" value="solid:dark"><span>Cream</span></label>
-                        <label><input type="radio" name="style" value="photo:light"><span>Your photo</span></label>
-                        <label><input type="radio" name="style" value="transparent:light"><span>Transparent, white text</span></label>
-                        <label><input type="radio" name="style" value="transparent:dark"><span>Transparent, dark text</span></label>
+                    <legend>Style <span id="share-style-name">Navy</span></legend>
+                    {# Swatches stand in for the long labels; the label's title names it. #}
+                    <div class="share-swatches">
+                        {% for value, name, cls in [("solid:light", "Navy", "sw-navy"), ("solid:dark", "Cream", "sw-cream"),
+                                                    ("photo:light", "Your photo", "sw-photo"),
+                                                    ("transparent:light", "Transparent, white text", "sw-clear-light"),
+                                                    ("transparent:dark", "Transparent, dark text", "sw-clear-dark")] %}
+                        <label title="{{ name }}"><input type="radio" name="style" value="{{ value }}" aria-label="{{ name }}" data-name="{{ name }}"{% if loop.first %} checked{% endif %}><span class="{{ cls }}">{% if cls == "sw-photo" %}<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>{% elif cls != "sw-navy" and cls != "sw-cream" %}Aa{% endif %}</span></label>
+                        {% endfor %}
                     </div>
                 </fieldset>
                 <fieldset id="share-photo-field" hidden>

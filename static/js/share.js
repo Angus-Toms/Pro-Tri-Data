@@ -13,6 +13,7 @@
     const photoIn  = document.getElementById('share-photo');
     const photoName = document.getElementById('share-photo-name');
     const form     = dlg.querySelector('form');
+    const styleName = document.getElementById('share-style-name');
     const MAX_PHOTO_BYTES = 30 * 1024 * 1024;
     let blobUrl = null, blobExt = 'png', seq = 0;
 
@@ -26,6 +27,7 @@
     async function refresh() {
         const s = state();
         athField.hidden = s.subject !== 'athlete';
+        styleName.textContent = form.querySelector('input[name=style]:checked').dataset.name;
         photoField.hidden = s.mode !== 'photo';
         const q = new URLSearchParams({ race: raceId, design: s.design, ink: s.ink });
         if (s.subject === 'athlete') q.set('athlete', s.athlete);
