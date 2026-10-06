@@ -54,7 +54,7 @@
 .share-swatches input:checked + span { box-shadow: 0 0 0 2px var(--white), 0 0 0 4px var(--navy); }
 .share-swatches input:focus-visible + span { outline: 2px solid var(--primary-color); outline-offset: 3px; }
 .share-swatches .sw-navy { background: radial-gradient(ellipse at 75% 75%, #c97a3a 0%, transparent 60%), linear-gradient(180deg, #2b3550, #0b0e18); border-color: transparent; }
-.share-swatches .sw-cream { background: #f4f4f2; }
+.share-swatches .sw-cream { background: radial-gradient(ellipse at 75% 75%, rgba(232,93,4,0.25) 0%, transparent 60%), linear-gradient(180deg, #f7f5f0, #ebe3d6); }
 .share-swatches .sw-clear-light { background: repeating-conic-gradient(#8a8f9c 0 25%, #a9adb7 0 50%) 0 0 / 12px 12px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.4); }
 .share-swatches .sw-clear-dark  { background: repeating-conic-gradient(#d9d9d9 0 25%, #f4f4f2 0 50%) 0 0 / 12px 12px; color: var(--navy); }
 
