@@ -1,5 +1,4 @@
 import math
-from collections import OrderedDict
 from datetime import date, timedelta
 from functools import lru_cache
 
@@ -23,44 +22,64 @@ router = APIRouter()
 
 _merge_redirects = lru_cache(maxsize=1)(db.athlete_merge_redirects)
 
-_TIER_LABELS = {
-    "olympic":               "Olympic",
-    "world_champs":          "World Championships",
-    "ag_world_champs":       "AG World Championships",
-    "ag_continental_champs": "AG Continental Championships",
-    "ag_continental_champs": "AG Continental Championships",
-    "wtcs":                  "WTCS",
-    "world_cup":             "World Cup",
-    "continental_cup":       "Continental Cup",
-    "french_grand_prix":     "French Grand Prix",
+# Palmares scoring. Every finish is worth the tier's winner value scaled by
+# _POS_DECAY per place behind the winner, so all tiers sit on one scale and
+# e.g. an Olympic 20th (~110) no longer outranks a world title (1000). Values
+# only matter relative to the other tiers in the same stream (short / AG /
+# long), since each stream is a separate palmares.
+_TIER_POINTS = {
+    "olympic":               1250,
+    "world_champs":          1000,
+    "grand_final":           1000,
+    "sprint_world_champs":    900,
+    "wtcs":                   800,
+    "u23_world_champs":       750,
+    "world_cup":              500,
+    "junior_world_champs":    300,
+    "continental_cup":        200,
+    "french_grand_prix":      150,
+    "ag_world_champs":       1000,
+    "ag_continental_champs":  500,
     # Long-course tiers
-    "im_world_champs":       "Ironman World Championships",
-    "im_703_world_champs":   "Ironman 70.3 World Championships",
-    "im":                    "Ironman",
-    "t100":                  "T100",
-    "im_703":                "Ironman 70.3",
-    "challenge":             "Challenge",
+    "im_world_champs":       1500,
+    "im_703_world_champs":   1000,
+    "t100":                   800,
+    "im":                     700,
+    "im_703":                 400,
+    "challenge":              300,
 }
+_POS_DECAY = 0.88
+# A finish worth fewer points than this never makes the palmares (roughly a
+# top-31 at worlds, top-26 at a World Cup, top-18 at a Continental Cup).
+_MIN_POINTS = 20
+# Hide anything worth less than this fraction of the athlete's best result, so
+# a world champion's early Continental Cup placings drop off.
+_REL_THRESHOLD = 0.2
+_MAX_ITEMS = 10
 
-# Worst finish position that still qualifies for palmares display. Tiers not
-# listed are uncapped. The four "worlds"-tier categories (world_champs,
-# ag_world_champs, im_world_champs, im_703_world_champs) are capped at 30
-# so a 31st-place at Worlds doesn't crowd out higher-finishes elsewhere.
-_TIER_POS_CAPS = {
-    "olympic":               40,
-    "world_champs":          30,
-    "ag_world_champs":       30,
-    "ag_continental_champs": 15,
-    "im_world_champs":       30,
-    "im_703_world_champs":   30,
-    "wtcs":                  25,
-    "world_cup":             20,
-    "continental_cup":       15,
-    "french_grand_prix":     10,
-    "im":                    20,
-    "t100":                  20,
-    "im_703":                20,
-    "challenge":             15,
+# (title, medal prefix, event name) for championship-style tiers; everything
+# else reads "{label} Win" / "{label} Silver" / "{label}, 5th".
+_CHAMPIONSHIP_LABELS = {
+    "olympic":               ("Olympic Champion",          "Olympic",                    "Olympic Games"),
+    "world_champs":          ("World Champion",            "World Championship",         "World Championships"),
+    "u23_world_champs":      ("U23 World Champion",        "U23 World Championship",     "U23 World Championships"),
+    "junior_world_champs":   ("Junior World Champion",     "Junior World Championship",  "Junior World Championships"),
+    "sprint_world_champs":   ("Sprint World Champion",     "Sprint World Championship",  "Sprint World Championships"),
+    "grand_final":           ("Grand Final Win",           "Grand Final",                "Grand Final"),
+    "ag_world_champs":       ("AG World Champion",         "AG World Championship",      "AG World Championships"),
+    "ag_continental_champs": ("AG Continental Champion",   "AG Continental",             "AG Continental Championships"),
+    "im_world_champs":       ("Ironman World Champion",    "Ironman World Championship", "Ironman World Championships"),
+    "im_703_world_champs":   ("Ironman 70.3 World Champion", "Ironman 70.3 World Championship", "Ironman 70.3 World Championships"),
+}
+_TIER_LABELS = {
+    "wtcs":              "WTCS",
+    "world_cup":         "World Cup",
+    "continental_cup":   "Continental Cup",
+    "french_grand_prix": "French Grand Prix",
+    "im":                "Ironman",
+    "t100":              "T100",
+    "im_703":            "Ironman 70.3",
+    "challenge":         "Challenge",
 }
 
 
@@ -108,79 +127,63 @@ def _mtr_program(prog_name, leg_num=None):
     return label
 
 
-def _format_position(tier, pos, age_group=None):
-    pos = int(pos)
-    label = _TIER_LABELS.get(tier, tier)
-    if tier == "olympic":
-        if pos == 1: return "Olympic Champion"
-        if pos == 2: return "Olympic Silver"
-        if pos == 3: return "Olympic Bronze"
-        return f"Olympic Games, {format_ordinal(pos)}"
-    if tier == "world_champs":
-        # age_group is "U23" or "Junior" for non-Elite categories, None for Elite
-        prefix = f"{age_group} " if age_group else ""
-        if pos == 1: return f"{prefix}World Champion"
-        if pos == 2: return f"{prefix}World Championship Silver"
-        if pos == 3: return f"{prefix}World Championship Bronze"
-        return f"{prefix}World Championships, {format_ordinal(pos)}"
-    if tier == "ag_world_champs":
-        if pos == 1: return "AG World Champion"
-        if pos == 2: return "AG World Championship Silver"
-        if pos == 3: return "AG World Championship Bronze"
-        return f"AG World Championships, {format_ordinal(pos)}"
-    if tier == "ag_continental_champs":
-        if pos == 1: return "AG Continental Champion"
-        if pos == 2: return "AG Continental Silver"
-        if pos == 3: return "AG Continental Bronze"
-        return f"AG Continental Championships, {format_ordinal(pos)}"
-    # Long-course worlds mirror the short-course worlds formatting with an
-    # explicit "Ironman" / "Ironman 70.3" prefix so "Ironman World Champion"
-    # reads naturally.
-    if tier in ("im_world_champs", "im_703_world_champs"):
-        prefix = "Ironman 70.3 " if tier == "im_703_world_champs" else "Ironman "
-        if pos == 1: return f"{prefix}World Champion"
-        if pos == 2: return f"{prefix}World Championship Silver"
-        if pos == 3: return f"{prefix}World Championship Bronze"
-        return f"{prefix}World Championships, {format_ordinal(pos)}"
+def _format_position(tier, pos):
+    if tier in _CHAMPIONSHIP_LABELS:
+        title, medal, event = _CHAMPIONSHIP_LABELS[tier]
+        if pos == 1: return title
+        if pos == 2: return f"{medal} Silver"
+        if pos == 3: return f"{medal} Bronze"
+        return f"{event}, {format_ordinal(pos)}"
+    label = _TIER_LABELS[tier]
     if pos == 1: return f"{label} Win"
     if pos == 2: return f"{label} Silver"
     if pos == 3: return f"{label} Bronze"
     return f"{label}, {format_ordinal(pos)}"
 
 
-def _build_notable_results(notable_raw, tier_order=None):
-    """Group notable results by description, collapse multiples, cap per tier.
+def _build_notable_results(notable_raw):
+    """Pick an athlete's most significant results across every tier.
 
-    Position caps come from `_TIER_POS_CAPS`: tiers listed there require a
-    finish at or above the given position to qualify (e.g. Olympics top 40,
-    WTCS top 25). Tiers without an entry are uncapped.
+    Finishes are grouped by (tier, position) and scored on the shared
+    _TIER_POINTS scale. Within a tier, a podium hides that tier's non-podium
+    finishes (an Olympic champion's 12th at the next Games is noise); without
+    a podium only the single best finish is kept. Groups below _MIN_POINTS
+    or below _REL_THRESHOLD of the athlete's best group are dropped, and the
+    rest are listed best first.
     """
-    if tier_order is None:
-        tier_order = ["olympic", "world_champs", "wtcs", "world_cup", "continental_cup",
-                      "french_grand_prix"]
+    groups = {}
+    for r in notable_raw:
+        groups.setdefault((r["tier"], r["position"]), []).append(r)
+
+    by_tier = {}
+    for (tier, pos), races in groups.items():
+        points = _TIER_POINTS[tier] * _POS_DECAY ** (pos - 1)
+        if points >= _MIN_POINTS:
+            by_tier.setdefault(tier, []).append((points, tier, pos, races))
+
+    kept = []
+    for tier_groups in by_tier.values():
+        tier_groups.sort(reverse=True)
+        podiums = [g for g in tier_groups if g[2] <= 3]
+        kept.extend(podiums or tier_groups[:1])
+    if not kept:
+        return []
+
+    best = max(g[0] for g in kept)
+    kept = [g for g in kept if g[0] >= best * _REL_THRESHOLD]
+    kept.sort(key=lambda g: (-g[0], -_TIER_POINTS[g[1]], -len(g[3])))
+
     formatted = []
-
-    for tier in tier_order:
-        cap = _TIER_POS_CAPS.get(tier)
-        tier_results = [r for r in notable_raw
-                        if r["tier"] == tier and (cap is None or r["position"] <= cap)]
-        grouped = OrderedDict()
-        for r in sorted(tier_results, key=lambda x: x["position"]):
-            desc = _format_position(tier, r["position"], r.get("age_group"))
-            entry = grouped.setdefault(desc, {"description": desc, "races": [], "count": 0})
-            entry["races"].append({"race_id": r["race_id"], "race_name": r["race_handle"], "race_date": r["race_date"]})
-            entry["count"] += 1
-
-        for i, entry in enumerate(grouped.values()):
-            if i >= 2:
-                break
-            desc = entry["description"]
-            if entry["count"] > 1:
-                desc = f"{entry['count']} x {desc}s" if desc.endswith("Win") else f"{entry['count']} x {desc}"
-            races_sorted = sorted(entry["races"], key=lambda x: x["race_date"] or "", reverse=True)
-            formatted.append({"description": desc, "races": races_sorted})
-
-    return formatted[:10]
+    for points, tier, pos, races in kept[:_MAX_ITEMS]:
+        desc = _format_position(tier, pos)
+        if len(races) > 1:
+            plural = desc.endswith("Win")
+            desc = f"{len(races)} x {desc}{'s' if plural else ''}"
+        races_sorted = sorted(races, key=lambda x: x["race_date"] or "", reverse=True)
+        formatted.append({"description": desc, "races": [
+            {"race_id": r["race_id"], "race_name": r["race_handle"], "race_date": r["race_date"]}
+            for r in races_sorted]})
+    return formatted
 
 
 def _build_ratings_chart(ratings_data):
@@ -516,12 +519,8 @@ def get_athlete(request: Request, athlete_id: int,
 
     # --- notable results: three parallel streams (short-course elite, AG, long-course) ---
     notable_results      = _build_notable_results(notable_raw)
-    ag_notable_results   = _build_notable_results(ag_notable_raw, tier_order=["ag_world_champs", "ag_continental_champs"])
-    long_notable_results = _build_notable_results(
-        long_notable_raw,
-        tier_order=["im_world_champs", "im_703_world_champs",
-                    "im", "t100", "im_703", "challenge"],
-    )
+    ag_notable_results   = _build_notable_results(ag_notable_raw)
+    long_notable_results = _build_notable_results(long_notable_raw)
 
     def _split_columns(results):
         # Split into two display columns balanced by visual height.

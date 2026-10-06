@@ -1935,14 +1935,13 @@ def get_athlete_best_performances(athlete_id, category='elite', course='short'):
 
 # Notable result category IDs (from WorldTriathlon API)
 _NOTABLE_CAT_IDS = {624, 348, 351, 349, 341, 343}
-_AG_CAT_ID = 483
+_PARA_CAT_ID = 350
 
 
 def get_athlete_notable_results(athlete_id):
     """
     Short-course results at Olympic / WC / WTCS / World Cup / Continental Cup races.
-    Returns list of dicts: {tier, position, race_id, race_handle, race_date, age_group}
-    age_group is "U23" / "Junior" for non-Elite world champs, else None.
+    Returns list of dicts: {tier, position, race_id, race_handle, race_date}.
     Only short-course races are considered; long-course palmares comes from
     `get_athlete_long_course_notable_results`.
     """
@@ -1958,6 +1957,10 @@ def get_athlete_notable_results(athlete_id):
           AND res.status = 'Finished'
           AND res.position IS NOT NULL
           AND r.distance IN ('sprint', 'standard')
+          -- AG races have their own palmares. Filter on the race's category,
+          -- not cat 483: that flag is event-level, so combined elite + AG
+          -- events (e.g. 2026 Pontevedra) carry it on their elite races too.
+          AND r.category = 'elite'
           AND NOT EXISTS (SELECT 1 FROM ignored_races ig WHERE ig.race_id = r.race_id)
         ORDER BY res.position
     """, [athlete_id]).fetchall()
@@ -1969,13 +1972,9 @@ def get_athlete_notable_results(athlete_id):
         except (ValueError, SyntaxError):
             continue
 
-        # AG events are handled separately
-        if _AG_CAT_ID in cat_ids:
-            continue
-
         # French Grand Prix (FFTRI national club series) — no WT cat_ids, so
-        # identified by its event title. Displayed like a continental cup but
-        # capped at top-10 (see _TIER_POS_CAPS).
+        # identified by its event title. Scored a notch below a continental
+        # cup (see _TIER_POINTS).
         if "French Grand Prix" in race_title:
             notable.append({"tier": "french_grand_prix", "position": position,
                              "race_id": race_id, "race_handle": race_handle,
@@ -1995,17 +1994,24 @@ def get_athlete_notable_results(athlete_id):
                 cat_ids.add(340)
 
         if 624 in cat_ids or 348 in cat_ids:
-            # Derive age group from prog_name so we can label "U23 World Champion" etc.
+            # Since 2009 the elite world title is decided on WTCS series
+            # points; the Grand Final / Championship Finals race is only the
+            # last round, so winning it is not "World Champion". Pre-2009
+            # worlds, 2020 Hamburg (one-off), the Lausanne sprint worlds and
+            # all U23 / Junior worlds are single-race titles.
             prog = prog_name or ""
             if prog.startswith("U23"):
-                age_group = "U23"
+                tier = "u23_world_champs"
             elif prog.startswith("Junior"):
-                age_group = "Junior"
+                tier = "junior_world_champs"
+            elif "grand final" in title_lower or "championship finals" in title_lower:
+                tier = "grand_final"
+            elif "sprint" in title_lower:
+                tier = "sprint_world_champs"
             else:
-                age_group = None  # Elite - no prefix
-            notable.append({"tier": "world_champs", "position": position,
-                             "race_id": race_id, "race_handle": race_handle,
-                             "race_date": race_date, "age_group": age_group})
+                tier = "world_champs"
+            notable.append({"tier": tier, "position": position,
+                             "race_id": race_id, "race_handle": race_handle, "race_date": race_date})
         elif 351 in cat_ids:
             notable.append({"tier": "wtcs", "position": position,
                              "race_id": race_id, "race_handle": race_handle, "race_date": race_date})
@@ -2022,9 +2028,9 @@ def get_athlete_notable_results(athlete_id):
 def get_athlete_ag_notable_results(athlete_id):
     """AG palmares: world + continental championship results.
 
-    Tiers:
-      ag_world_champs        - cat 624/348 (worlds) AND cat 483 (AG)
-      ag_continental_champs  - cat 340 (continental champs) AND cat 483 (AG)
+    Tiers (AG-category races only; Para races are excluded):
+      ag_world_champs        - cat 624/348 (worlds)
+      ag_continental_champs  - cat 340 (continental champs)
     """
     conn = _get_conn()
     rows = conn.execute("""
@@ -2034,6 +2040,7 @@ def get_athlete_ag_notable_results(athlete_id):
         WHERE res.athlete_id = ?
           AND res.status = 'Finished'
           AND res.position IS NOT NULL
+          AND r.category = 'ag'
         ORDER BY res.position
     """, [athlete_id]).fetchall()
 
@@ -2044,7 +2051,7 @@ def get_athlete_ag_notable_results(athlete_id):
         except (ValueError, SyntaxError):
             continue
 
-        if _AG_CAT_ID not in cat_ids:
+        if _PARA_CAT_ID in cat_ids:
             continue
 
         title_lower = (race_title or "").lower()
@@ -2082,10 +2089,11 @@ def get_athlete_long_course_notable_results(athlete_id):
       - t100                 T100 races
       - im_703               any other Ironman 70.3
       - challenge            Challenge series
-    Independent long-course events are ignored.
+    Independent long-course events are ignored. A worlds race only counts in
+    its worlds tier, not also as a generic Ironman / 70.3.
 
     Returns list of dicts: {tier, position, race_id, race_handle, race_date}.
-    Position caps are applied by the router — this function returns every
+    Scoring and selection happen in the router; this returns every
     categorisable finish.
     """
     conn = _get_conn()
@@ -2115,30 +2123,23 @@ def get_athlete_long_course_notable_results(athlete_id):
             or "ironman hawaii" in title_lower
         )
 
-        tiers = []
-        if brand == "ironman":
-            if distance == "long"   and is_worlds:   tiers = ["im_world_champs", "im"]
-            elif distance == "middle" and is_worlds: tiers = ["im_703_world_champs", "im_703"]
-            elif distance == "long":   tiers = ["im"]
-            elif distance == "middle": tiers = ["im_703"]
-            # An Ironman-branded T100 shouldn't happen but if the data is weird, skip it.
-        elif brand == "t100":
-            tiers = ["t100"]
-        elif brand == "challenge":
-            tiers = ["challenge"]
-        # else: independent event, not palmares-worthy
+        if brand == "ironman" and distance == "long":
+            tier = "im_world_champs" if is_worlds else "im"
+        elif brand == "ironman" and distance == "middle":
+            tier = "im_703_world_champs" if is_worlds else "im_703"
+        elif brand in ("t100", "challenge"):
+            tier = brand
+        else:
+            # Independent event (or an odd Ironman-branded T100): not palmares-worthy
+            continue
 
-        # World-championship rounds are still Ironmans / 70.3s, so they also
-        # contribute to the generic tier counter (a Kona win counts toward
-        # "IM Wins" as well as showing up under "Kona Win").
-        for tier in tiers:
-            notable.append({
-                "tier":        tier,
-                "position":    position,
-                "race_id":     race_id,
-                "race_handle": race_handle,
-                "race_date":   race_date,
-            })
+        notable.append({
+            "tier":        tier,
+            "position":    position,
+            "race_id":     race_id,
+            "race_handle": race_handle,
+            "race_date":   race_date,
+        })
 
     return notable
 

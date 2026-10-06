@@ -285,7 +285,7 @@ _GAMES_PATTERNS = [
 ]
 
 
-def _classify_race_level(race_title, cat_ids):
+def _classify_race_level(race_title, cat_ids, category, prog_name):
     """Short level abbreviation for a race title + WT category ids.
 
     Empty string if no level can be inferred from either source.
@@ -317,6 +317,14 @@ def _classify_race_level(race_title, cat_ids):
             best = meta
     label = best[0] if best else ''
 
+    # Since 2009 the elite race at the Grand Final / Championship Finals is
+    # the last WTCS round, not the world title itself (that's decided on
+    # series points). U23 / Junior / AG races at the same event are still
+    # single-race world championships.
+    if (label == 'World Champs' and category == 'elite' and prog_name.startswith('Elite')
+            and ('grand final' in tl or 'championship finals' in tl)):
+        label = 'Grand Final'
+
     # Junior / Youth / U23 modifier — re-attached when the title flags it and
     # the picked label doesn't already encode the same qualifier (so we don't
     # emit "Junior Junior CC").
@@ -328,9 +336,11 @@ def _classify_race_level(race_title, cat_ids):
         elif 'u23' in tl:
             label = 'U23 ' + label
 
-    # AG-only events (cat 483 alongside an elite level cat) get an AG prefix
-    # so podiums in athlete pages read "AG World Champs Avignon 89".
-    if label and 483 in cat_set and not label.lower().startswith('ag '):
+    # AG races get an AG prefix so podiums in athlete pages read "Avignon AG
+    # World Champs 89". Keyed on the race's own category, not cat 483: that
+    # flag is event-level, so it also sits on the elite races of combined
+    # elite + AG events (e.g. 2026 Pontevedra).
+    if label and category == 'ag' and not label.lower().startswith('ag '):
         label = 'AG ' + label
 
     return label
@@ -352,7 +362,7 @@ def _extract_venue(race_title):
     return ' '.join(kept).strip()
 
 
-def short_course_race_handle(race_title, cat_ids, race_date):
+def short_course_race_handle(race_title, cat_ids, race_date, category, prog_name):
     """Compact display name for a short-course race, e.g. "Yokohama WC 24".
 
     Pipeline: detect national champs by 3-letter ISO prefix; otherwise strip
@@ -368,7 +378,7 @@ def short_course_race_handle(race_title, cat_ids, race_date):
         return f"{title_words[1]} National Champs {yy}"
 
     venue = _extract_venue(race_title)
-    level = _classify_race_level(race_title, cat_ids)
+    level = _classify_race_level(race_title, cat_ids, category, prog_name)
     parts = [p for p in (venue, level, yy) if p]
     return ' '.join(parts) if parts else f"Race {yy}"
 
@@ -465,23 +475,25 @@ class Ingester:
         pure python on already-loaded fields).
         """
         rows = self.conn.execute("""
-            SELECT race_id, race_title, cat_ids, race_date
+            SELECT race_id, race_title, cat_ids, race_date, category, prog_name
             FROM races
             WHERE distance IN ('sprint', 'standard', 'relay')
               -- French Grand Prix races carry their own hand-built handles
               -- ("FGP {Venue} {Year} {D1/D2} {Men/Women}") set by fgp_ingest;
               -- they have no WT cat_ids, so the generic classifier would
               -- flatten them and drop the division/gender. Leave them alone.
+              -- Same for Bundesliga races ("{Venue} BuLi {YY}", bundesliga_ingest).
               AND race_title NOT LIKE '%French Grand Prix%'
+              AND race_title NOT LIKE '%Triathlon Bundesliga%'
         """).fetchall()
 
         updates = []
-        for race_id, race_title, cat_ids_str, race_date in rows:
+        for race_id, race_title, cat_ids_str, race_date, category, prog_name in rows:
             try:
                 cat_ids = literal_eval(cat_ids_str) if cat_ids_str else []
             except (ValueError, SyntaxError):
                 cat_ids = []
-            new_handle = short_course_race_handle(race_title, cat_ids, race_date)
+            new_handle = short_course_race_handle(race_title, cat_ids, race_date, category, prog_name)
             updates.append((new_handle, race_id))
 
         # Bulk update — leverages duckdb's UPDATE-from-VALUES support.
@@ -731,7 +743,8 @@ class Ingester:
             sub_category=race_sub_category(prog_name),
             cat_ids=str(get_category_ids(event)),
             distance=infer_distance(get_spec_ids(event), winner_s),
-            race_handle=short_course_race_handle(race_title, get_category_ids(event), race_date),
+            race_handle=short_course_race_handle(race_title, get_category_ids(event), race_date,
+                                                 category, prog_name),
             event_spec_ids=str(get_spec_ids(event)),
         )
         db.insert_results_bulk(self.conn, result_rows)
@@ -839,7 +852,8 @@ class Ingester:
             sub_category=sub_category,
             cat_ids=str(cat_ids),
             distance='relay',
-            race_handle=short_course_race_handle(race_title, cat_ids, race_date),
+            race_handle=short_course_race_handle(race_title, cat_ids, race_date,
+                                                 'elite', str(prog.get('prog_name', ''))),
             event_spec_ids=str(get_spec_ids(event)),
         )
         self.conn.executemany(
@@ -985,7 +999,8 @@ class StartListIngester:
         """, [
             race_id, event_id, race_title, prog_name, race_date, gender, category,
             str(get_category_ids(event)),
-            short_course_race_handle(race_title, get_category_ids(event), race_date),
+            short_course_race_handle(race_title, get_category_ids(event), race_date,
+                                     category, prog_name),
             str(get_spec_ids(event)),
         ])
 
