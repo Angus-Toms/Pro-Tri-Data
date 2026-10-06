@@ -51,6 +51,12 @@ async def flag_cache_headers(request: Request, call_next):
 @app.middleware("http")
 async def edge_cache_headers(request: Request, call_next):
     response = await call_next(request)
+    # Admin pages, including the 404 served to anyone without the cookie,
+    # must never sit in the edge cache: a cached miss would hide the tool
+    # from the one person meant to see it.
+    if request.url.path.startswith("/admin"):
+        response.headers["Cache-Control"] = "no-store"
+        return response
     if (
         request.method == "GET"
         and response.status_code == 200

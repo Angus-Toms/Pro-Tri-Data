@@ -1528,6 +1528,16 @@ def get_instagram_owner(handle):
     return {"athlete_id": row[0], "name": row[1]} if row else None
 
 
+def get_instagram_handles(athlete_ids):
+    """{athlete_id: handle} for those of `athlete_ids` that have one."""
+    ids = list(athlete_ids)
+    rows = _get_conn().execute(f"""
+        SELECT athlete_id, instagram FROM athletes
+        WHERE instagram <> '' AND athlete_id IN ({",".join("?" * len(ids))})
+    """, ids).fetchall()
+    return dict(rows)
+
+
 # An athlete page is worth indexing if the athlete has at least 2 results or
 # any elite result. Single-result age-groupers are near-duplicate thin pages
 # that Google crawls and rejects ("Crawled - currently not indexed"), dragging
