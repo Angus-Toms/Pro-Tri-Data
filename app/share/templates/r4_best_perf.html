@@ -1,0 +1,26 @@
+{% extends "_base.html" %}
+{# Best performances: the biggest rating gain overall and in each leg. Same
+   row shape as the fastest splits card, with the gain where the time was. #}
+{% block css %}
+  .perfs { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; margin-top: 30px; }
+  .perf { display: grid; grid-template-columns: 136px 1fr auto; column-gap: 34px; align-items: center; }
+  .perf .lbl { font-size: 26px; display: block; margin-bottom: 8px; }
+  .perf .who { font-size: 44px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+  .perf .who .f { font-weight: 500; }
+  .perf .gain { text-align: right; }
+  .perf .d { font-size: 76px; color: var(--accent); }
+  .perf .r { font-size: 28px; font-weight: 600; color: var(--fg-2); margin-top: 10px; font-variant-numeric: tabular-nums; }
+  .perf .face { border: 6px solid var(--accent); }
+{% endblock %}
+{% block body %}
+  <div class="race">{{ race_title }}<span class="sub">{{ prog }} · Best performances</span></div>
+  <div class="perfs">
+    {% for p in best %}
+    <div class="perf">
+      {{ face(p) }}
+      <div><span class="lbl">{{ p.label }}</span><div class="who"><span class="f">{{ p.first }}</span> {{ p.last }}{{ flag(p) }}</div></div>
+      <div class="gain"><div class="d num">{{ '%+d' % p.change }}</div><div class="r">Rating {{ p.rating }}</div></div>
+    </div>
+    {% endfor %}
+  </div>
+{% endblock %}

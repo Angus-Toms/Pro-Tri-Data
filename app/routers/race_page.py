@@ -431,7 +431,9 @@ def get_race(request: Request, race_id: int, partial: bool = False):
 
     template = "race_partial.html" if partial else "race.html"
     share_designs = {
-        "race":    [(k, v[3]) for k, v in SHARE_DESIGNS.items() if v[2] == "race"],
+        # Ignored races have no ratings, so no best-performances card.
+        "race":    [(k, v[3]) for k, v in SHARE_DESIGNS.items()
+                    if v[2] == "race" and (ratings or k != "r4_best_perf")],
         "athlete": [(k, v[3]) for k, v in SHARE_DESIGNS.items() if v[2] == "athlete"],
     }
     return templates.TemplateResponse(template, headers=_race_cache_headers(race["race_date"]), context={

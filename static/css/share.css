@@ -31,3 +31,16 @@
 .share-photo-row { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-sm); }
 .share-photo-row .share-note { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .share-photo-row .share-note.share-error { color: var(--error-color); white-space: normal; }
+/* Phones: the image on top, options in a scrollbox under it, so the card
+   never gets squeezed into a sliver beside the controls. */
+@media (max-width: 768px) {
+    .share-dialog { max-height: calc(100dvh - 2rem); overflow: hidden; }
+    .share-panel { display: flex; flex-direction: column; max-height: calc(100dvh - 2rem); }
+    .share-body { flex: 1; min-height: 0; grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr);
+        gap: var(--spacing-md); padding: var(--spacing-md); }
+    .share-preview { min-height: 200px; }
+    .share-preview img { max-height: 42dvh; }
+    .share-controls { overflow-y: auto; overscroll-behavior: contain; }
+    .share-controls fieldset { margin-bottom: var(--spacing-md); }
+    .share-download { position: sticky; bottom: 0; }
+}

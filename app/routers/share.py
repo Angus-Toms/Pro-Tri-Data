@@ -35,6 +35,8 @@ def _card(race: int, design: str, mode: str, ink: str, athlete: int | None, phot
             raise HTTPException(404, "no ratings for this race")
     else:
         ctx = {k: v for k, v in rc.items() if not k.startswith("_")}
+        if design == "r4_best_perf" and not ctx["best"]:
+            raise HTTPException(404, "no ratings for this race")
     data, media_type = cards.render_card(design, ctx, mode, ink, photo)
     return Response(data, media_type=media_type,
                     headers={"Cache-Control": "no-store" if mode == "photo" else "public, max-age=0, s-maxage=86400"})

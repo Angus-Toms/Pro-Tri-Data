@@ -35,6 +35,7 @@ DESIGNS = {
     "r2_top10":        ("r2_top10.html",        PORTRAIT, "race",    "Top ten"),
     "r2b_top10_dense": ("r2b_top10_dense.html", PORTRAIT, "race",    "Top ten with splits"),
     "r3_fastest_legs": ("r3_fastest_legs.html", PORTRAIT, "race",    "Fastest splits"),
+    "r4_best_perf":    ("r4_best_perf.html",    PORTRAIT, "race",    "Best performances"),
     "p1_result":       ("p1_result.html",       STORY,    "athlete", "Result"),
     "p2_splits_bar":   ("p2_splits_bar.html",   STORY,    "athlete", "Splits"),
     "p4_rating":       ("p4_rating.html",       STORY,    "athlete", "Rating"),
@@ -139,6 +140,17 @@ def race_context(race_id: int) -> dict:
                       "behind": format_time_behind(r[key] - best)} for r in ranked[:3]],
         })
 
+    # Best performances: biggest rating gain per discipline ---------------
+    # Same pick as the race page badges. Ignored races have no ratings rows,
+    # so the list comes back empty and the card is unavailable.
+    ratings = queries.get_race_ratings(race_id)
+    best = []
+    for d in ("overall", "swim", "bike", "run"):
+        top = max(ratings, key=lambda r: r[f"{d}_change"] or 0, default=None)
+        if top and (top[f"{d}_change"] or 0) > 0:
+            best.append({**person(top), "label": d.title(),
+                         "change": round(top[f"{d}_change"]), "rating": round(top[f"{d}_rating"])})
+
     date = race["race_date"]
     return {
         "race_id": race_id,
@@ -148,7 +160,7 @@ def race_context(race_id: int) -> dict:
         "venue":      race["location"],
         "date":       date.strftime("%-d %B %Y"),
         "year":       date.year,
-        "podium": podium, "top10": top10, "legs": legs,
+        "podium": podium, "top10": top10, "legs": legs, "best": best,
         "_finishers": finishers, "_race": race,
     }
 

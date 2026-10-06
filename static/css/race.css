@@ -431,6 +431,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;    /* phones: controls drop under the heading instead of widening the page */
     margin-bottom: 1rem;
     gap: 1rem;
 }
