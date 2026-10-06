@@ -127,19 +127,13 @@
 
 .athlete-hero-instagram {
     display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    color: rgba(255, 255, 255, 0.9);
+    margin-left: 0.35em;   /* same as the flag's, so name-flag-icon gaps match */
     text-decoration: none;
-    border-bottom: 1px solid rgba(232, 93, 4, 0.55);
-    padding-bottom: 1px;
-    transition: color 0.15s, border-color 0.15s;
+    color: rgba(255, 255, 255, 0.75);
+    transition: color 0.15s;
 }
-.athlete-hero-instagram svg { width: 0.95em; height: 0.95em; }
-.athlete-hero-instagram:hover {
-    color: var(--primary-color);
-    border-bottom-color: var(--primary-color);
-}
+.athlete-hero-instagram svg { width: 0.75em; height: 0.75em; }   /* matches flag-lg height */
+.athlete-hero-instagram:hover { color: var(--primary-color); }
 
 /* Stat numbers - white, bolder */
 .hero-stat-n {
