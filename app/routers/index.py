@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
-from config import ASSET_VERSION, STATIC_BASE_URL, flag
+from config import ASSET_VERSION, STATIC_BASE_URL
+from app.display_helpers import flag
 
 from ptd_data import queries
 from app.routers.about import load_blogs
-from app.routers.upcoming_page import _build_podium
+from app.routers.event_page import _predicted_podium
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -12,14 +13,14 @@ templates.env.globals["STATIC_BASE_URL"] = STATIC_BASE_URL
 templates.env.globals["ASSET_VERSION"] = ASSET_VERSION
 templates.env.globals["flag"]          = flag
 
-MEN_CHAMP_ID      = 80795
-WOMEN_CHAMP_ID    = 79065
+MEN_CHAMP_ID      = 86042
+WOMEN_CHAMP_ID    = 63163
 MEN_IM_CHAMP_ID   = 76434     # Casper Stornes - 2025 Ironman World Champion (Nice)
 WOMEN_IM_CHAMP_ID = 94515     # Solveig Løvseth - 2025 Ironman World Champion (Kona)
 
 
 @router.get("/")
-async def index(request: Request):
+def index(request: Request):
     counts = queries.get_counts()
 
     def champ_card(athlete_id, course='short'):
@@ -32,11 +33,13 @@ async def index(request: Request):
         return {**info, **(ratings or {}), **stats, **(active_ranks or {})}
 
     upcoming_events = queries.get_upcoming_events()[:3]
-    models = queries.get_prediction_models()
+    entries_by_race = queries.get_upcoming_race_entries_bulk(
+        [r["race_id"] for e in upcoming_events for r in e["races"]])
     for event in upcoming_events:
         for race in event["races"]:
-            race["podium"] = _build_podium(
-                race.pop("top3"), race["gender"], race["event_spec_ids"], models
+            race["podium"] = _predicted_podium(
+                entries_by_race.get(race["race_id"], []),
+                {"race_id": race["race_id"], "category": race["category"]},
             )
 
     blogs = load_blogs()

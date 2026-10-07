@@ -118,3 +118,15 @@ def athlete_img_url(athlete_id, profile_img):
     if profile_img:
         return f"{STATIC_BASE_URL}athlete_imgs/128/{athlete_id}.webp"
     return f"{STATIC_BASE_URL}imgs/default_user_64.webp"
+
+
+def format_course_conditions(raw):
+    """Format stored course conditions (queries.get_race_course_conditions)
+    for display: disc -> {formatted: ±mm:ss, category}. diff_s is positive
+    when the course ran faster than predicted, so it renders with a minus."""
+    out = {}
+    for disc, v in raw.items():
+        sign = '-' if v["diff_s"] >= 0 else '+'
+        mins, secs = divmod(abs(round(v["diff_s"])), 60)
+        out[disc] = {"formatted": f"{sign}{mins:02d}:{secs:02d}", "category": v["category"]}
+    return out

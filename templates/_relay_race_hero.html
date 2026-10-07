@@ -1,0 +1,58 @@
+<div class="race-hero" data-race-id="{{ race.race_id }}">
+    <div class="race-hero-inner">
+        <!-- Left: breadcrumb + title + metadata + race switcher -->
+        <div class="race-hero-left">
+            {% with no_winner_label = 'Mixed Relay' %}{% include "_race_breadcrumb.html" %}{% endwith %}
+            <h1 class="race-hero-title">{{ race.race_title }}</h1>
+            <div class="race-hero-meta">
+                <span>{{ race.date.strftime('%d %B %Y') }}</span>
+                <span class="race-meta-dot">·</span>
+                <span>{% if race_location %}{{ race_location }}, {% endif %}{{ race_country }}</span>
+                <span class="race-meta-dot">·</span>
+                <span>{{ race.team_count }} teams</span>
+            </div>
+            {% if event_races|length > 1 %}
+            {%- set max_pills = 5 -%}
+            {%- set first_n = event_races[:max_pills] -%}
+            {%- if first_n | selectattr('race_id', 'equalto', race.race_id) | list | length == 0 -%}
+                {%- set active_race = (event_races | selectattr('race_id', 'equalto', race.race_id) | list | first) -%}
+                {%- set visible = first_n[:max_pills - 1] + ([active_race] if active_race else []) -%}
+            {%- else -%}
+                {%- set visible = first_n -%}
+            {%- endif -%}
+            <div class="race-switcher">
+                {% for r in visible %}
+                <a href="/race/{{ r.race_id }}" class="race-pill{{ ' active' if r.race_id == race.race_id else '' }}">{{ r.prog_name }}</a>
+                {% endfor %}
+                {% if event_races|length > visible|length %}
+                <a href="/event/{{ event_id }}" class="race-pill race-pill-more">+{{ event_races|length - visible|length }} more</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right: team podium -->
+        {% if finish_count %}
+        <div class="race-hero-podium">
+            <div class="podium-label">Podium</div>
+            {% for team in teams[:3] %}
+                {% if team.position in [1, 2, 3] %}
+                <div class="podium-row">
+                    <div class="podium-row-left">
+                        <span class="pos-circle {{ 'gold' if team.position == 1 else 'silver' if team.position == 2 else 'bronze' }}">{{ team.position }}</span>
+                        <a href="/country/{{ team.country_alpha3 }}" class="podium-row-name">{{ team.team_name }} {{ flag(team.country_alpha3) }}</a>
+                    </div>
+                    <div class="podium-row-right">
+                        {% if team.behind %}
+                            <span class="podium-gap">{{ team.behind }}</span>
+                        {% else %}
+                            <span class="podium-time">{{ team.total }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>

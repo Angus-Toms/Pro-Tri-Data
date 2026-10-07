@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Instagram handles - Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/admin.css?v={{ ASSET_VERSION }}">
+{% endblock %}
+
+{% block content %}
+<div class="adm-wrap two-col">
+<div>
+    {% include "partials/admin_nav.html" %}
+    <div class="adm-stats">
+        <span><b>{{ stats.handles }}</b> handles</span>
+        <span><b>{{ stats.skipped }}</b> skipped</span>
+        <span><b>{{ stats.remaining }}</b> in queue</span>
+        <span><b>{{ stats.pending }}</b> awaiting next build</span>
+    </div>
+
+    {% if current %}
+    {% set a = current %}
+    <div class="adm-card">
+        {% if error %}<p class="adm-error">{{ error }}</p>{% endif %}
+        <div class="ig-athlete">
+            <img src="{{ STATIC_BASE_URL ~ 'athlete_imgs/128/' ~ a.athlete_id ~ '.webp' if a.profile_img else STATIC_BASE_URL ~ 'imgs/default_user_64.webp' }}" alt="">
+            <div>
+                <h2>{{ a.name }} {{ flag(a.country_alpha3, a.country_full, 'flag-lg') }}</h2>
+                <div class="ig-meta">
+                    {{ a.country_full }}
+                    {% if a.year_of_birth %} · b. {{ a.year_of_birth }}{% endif %}
+                    · {{ 'Men' if a.gender == 'male' else 'Women' }}
+                    {% if a.recent_elite %} · {{ a.recent_elite }} elite starts in 2 yrs{% endif %}
+                    {% if a.active_world_overall %} · WR #{{ a.active_world_overall }}{% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% set qname = a.name|urlencode %}
+        <div class="ig-links">
+            <a href="https://www.instagram.com/explore/search/keyword/?q={{ qname }}" target="_blank" rel="noopener">Instagram search</a>
+            <a href="https://www.google.com/search?q={{ qname }}+triathlon+instagram" target="_blank" rel="noopener">Google</a>
+            <a href="https://www.triathlon.org/athletes/profile/{{ a.athlete_id }}" target="_blank" rel="noopener">WT profile</a>
+            <a href="/athlete/{{ a.athlete_id }}" target="_blank">PTD profile</a>
+        </div>
+
+        <form method="post" action="/admin/instagram" class="ig-form">
+            <input type="hidden" name="athlete_id" value="{{ a.athlete_id }}">
+            <input type="hidden" name="name" value="{{ a.name }}">
+            <input type="text" name="handle" placeholder="@handle or profile URL" autofocus autocomplete="off" spellcheck="false">
+            <button type="submit" name="action" value="save" class="adm-btn primary">Save</button>
+            <button type="submit" name="action" value="skip" accesskey="s" class="adm-btn">Skip</button>
+        </form>
+        <p class="adm-hint">Enter saves. Skip marks the athlete as searched with nothing found; they stay out of the queue until the row is removed from data/instagram.csv.</p>
+    </div>
+    {% else %}
+    <div class="adm-card">Queue empty.</div>
+    {% endif %}
+</div>
+
+<aside class="adm-side">
+    <h3>Up next</h3>
+    <ul>
+        {% for a in up_next %}
+        <li><a href="/admin/instagram?q={{ a.athlete_id }}">{{ a.name }}</a> <span class="adm-muted">{{ a.recent_elite }} starts</span></li>
+        {% endfor %}
+    </ul>
+
+    <h3>Recent (awaiting build)</h3>
+    <ul>
+        {% for r in recent %}
+        <li>
+            <span>{{ r.name }} <span class="adm-muted{{ ' skip' if not r.handle }}">{{ '@' ~ r.handle if r.handle else 'skipped' }}</span></span>
+            <form method="post" action="/admin/instagram">
+                <input type="hidden" name="athlete_id" value="{{ r.athlete_id }}">
+                <button type="submit" name="action" value="undo" class="adm-btn link">undo</button>
+            </form>
+        </li>
+        {% else %}
+        <li><span class="adm-muted">Nothing yet</span></li>
+        {% endfor %}
+    </ul>
+</aside>
+</div>
+{% endblock %}

@@ -83,6 +83,16 @@
     background: rgba(255, 255, 255, 0.1);
 }
 
+/* Low-confidence badge in the hero (few career starts). Brighter amber + pill
+   to read against the dark hero, sized to sit with the flag and status chip. */
+/* Low-confidence marker in the hero stats line: clearer as text than an icon
+   (the asterisk icon still marks rows in the prediction tables). */
+.hero-lowconf {
+    color: #f0b429;
+    font-weight: 600;
+    cursor: default;
+}
+
 .athlete-hero-meta,
 .athlete-hero-stats {
     display: flex;
@@ -115,6 +125,16 @@
     color: rgba(255, 255, 255, 0.75);
 }
 
+.athlete-hero-instagram {
+    display: inline-flex;
+    margin-left: 0.35em;   /* same as the flag's, so name-flag-icon gaps match */
+    text-decoration: none;
+    color: rgba(255, 255, 255, 0.75);
+    transition: color 0.15s;
+}
+.athlete-hero-instagram svg { width: 0.75em; height: 0.75em; }   /* matches flag-lg height */
+.athlete-hero-instagram:hover { color: var(--primary-color); }
+
 /* Stat numbers - white, bolder */
 .hero-stat-n {
     font-weight: 600;
@@ -133,30 +153,42 @@
 .athlete-hero-actions {
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
+    align-items: flex-start;
     gap: 0.5rem;
-    flex-shrink: 0;
-    align-self: start;
+    align-self: flex-end;   /* right edge aligns with the form table below */
 }
 
-/* Unified mode switcher: pill bar with active detail strip */
+/* Right column of the hero: compact mode switcher (top) + current-form widget
+   below, left-aligned so the switcher, title and table share a left edge.
+   Mirrors the race hero's podium column; empty (0 width) when the athlete has
+   neither, so the grid collapses cleanly. */
+.athlete-hero-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+    align-self: center;
+}
+
+/* Unified mode switcher: pill bar with active detail strip. Kept compact so it
+   tucks neatly above the form table. */
 .athlete-mode-switcher {
     display: flex;
     align-items: stretch;
     background: rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-    padding: 4px;
+    border-radius: 8px;
+    padding: 3px;
     gap: 2px;
 }
 
 .athlete-mode-pill {
     display: inline-flex;
     align-items: center;
-    padding: 0.35rem 0.8rem;
-    border-radius: 8px;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
     text-decoration: none;
     color: rgba(255, 255, 255, 0.7);
-    font-size: 0.8rem;
+    font-size: 0.72rem;
     font-weight: 600;
     white-space: nowrap;
     transition: background var(--transition-fast), color var(--transition-fast);
@@ -273,28 +305,114 @@
 }
 
 
+/* ============================================
+    CURRENT FORM - navy-header card, equivalent splits per distance
+    ============================================ */
+/* Current-form widget lives in the hero right column, styled for the dark
+   navy background like the race podium (transparent, white text, faint
+   dividers). Shares the .form-table/.form-row markup, recoloured here. */
+.athlete-hero-form { min-width: 260px; }
+
+.hero-form-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.45);
+    font-weight: 700;
+    margin-bottom: 0.15rem;
+}
+
+.athlete-hero-form .form-table { padding: 0; }
+.athlete-hero-form .form-row {
+    grid-template-columns: 3.5rem repeat(var(--form-cols, 2), 1fr);
+    padding: 0.3rem 0;
+}
+.athlete-hero-form .form-row:not(:last-child)::after {
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.12);
+}
+.athlete-hero-form .form-disc { color: #fff; font-size: 0.8rem; }
+.athlete-hero-form .form-time { color: #fff; font-size: 0.85rem; }
+.athlete-hero-form .form-leg { color: rgba(255, 255, 255, 0.5); font-size: 0.7rem; }
+
+.form-table {
+    padding: 0.25rem 0;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 6rem repeat(var(--form-cols, 2), 1fr);
+    align-items: baseline;
+    padding: 0.5rem 1.25rem;
+    position: relative;
+}
+
+.form-row:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 1.25rem;
+    right: 1.25rem;
+    height: 1px;
+    background: var(--border-color);
+}
+
+.form-row-head {
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+}
+
+.form-col-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-lighter);
+}
+
+.form-disc {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.form-cell {
+    display: flex;
+    align-items: baseline;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+.form-time {
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-color);
+}
+
+.form-leg {
+    font-size: 0.75rem;
+    color: var(--text-lighter);
+}
+
+@media (max-width: 768px) {
+    .form-row { grid-template-columns: 4.5rem repeat(var(--form-cols, 2), 1fr); }
+}
+
+@media (max-width: 480px) {
+    .form-time { font-size: 0.875rem; }
+    .form-cell { flex-direction: column; gap: 0.1rem; }
+}
+
 /* Generic .disc-list / .disc-row / .substat rules live in base.css since
    they're shared between the athlete and race pages. */
 
 /* ============================================
    RANKINGS
    ============================================ */
-.ranking-link {
-    text-decoration: none;
-    color: inherit;
-    transition: color var(--transition-fast);
-}
-
-.ranking-link:hover {
-    color: var(--primary-color);
-}
-
-sup.ordinal-suffix {
-    font-size: 0.55em;
-    vertical-align: super;
-    font-weight: 600;
-    line-height: 0;
-}
+/* (.ranking-link and sup.ordinal-suffix moved to base.css - the country
+   page's relay ratings widget uses them too.) */
 
 .ranking-national-label {
     font-size: 0.75rem;
@@ -490,13 +608,7 @@ tr.sub-race-row .link:hover {
 /* ============================================
    RATING CHANGES & INDICATORS
    ============================================ */
-.rating-change {
-    font-size: 0.75em;
-    white-space: nowrap;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3em;
-}
+/* (.rating-change moved to base.css - the country page uses it too.) */
 
 /* ============================================
    RESPONSIVE
@@ -535,6 +647,16 @@ tr.sub-race-row .link:hover {
            pushes it to the right end naturally; when actions wraps to row 2
            it should sit at the left edge to match the info above. */
     }
+
+    /* Right column drops to a full-width row below the info (like the race
+       hero podium stacking under the title). */
+    .athlete-hero-right {
+        flex: 1 1 100%;
+        align-items: flex-start;
+        gap: 0.85rem;
+    }
+    .athlete-hero-form { width: 100%; min-width: 0; }
+    .athlete-hero-form .form-row { padding: 0.5rem 0; }
 
     .athlete-hero-name { font-size: 1.5rem; }
 
@@ -589,6 +711,11 @@ tr.sub-race-row .link:hover {
         align-self: center;     /* override align-self:start from base */
         justify-content: center;
     }
+    .athlete-hero-right {
+        align-items: center;
+        width: 100%;
+    }
+    .athlete-hero-form { max-width: 360px; }
 
     .athlete-hero-name {
         font-size: 1.375rem;
@@ -760,3 +887,159 @@ tr.sub-race-row .link:hover {
 
 /* The results / rating mobile accordion CSS now lives in base.css so the
    race page picks it up too. */
+
+/* ── Doping sanction: full-screen interstitial + rotating marquee ────────────
+   Shown for athletes with a doping_bans row. The overlay is a one-per-session
+   acknowledgement gate; the marquee is a persistent rotating header. Wording is
+   per-athlete (from the CSV) so it never over-claims. */
+
+/* Full-screen acknowledgement gate. */
+.doping-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 4000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background:
+        radial-gradient(circle at 50% 30%, rgba(120, 20, 20, 0.55), transparent 60%),
+        rgba(15, 12, 12, 0.92);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    animation: doping-fade-in 0.3s ease;
+}
+.doping-overlay.is-hiding { opacity: 0; transition: opacity 0.4s ease; }
+@keyframes doping-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.doping-overlay-card {
+    max-width: 30rem;
+    width: 100%;
+    text-align: center;
+    color: #fff;
+    animation: doping-rise 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes doping-rise {
+    from { opacity: 0; transform: translateY(18px) scale(0.97); }
+    to   { opacity: 1; transform: none; }
+}
+.doping-overlay-icon {
+    color: #f87171;
+    filter: drop-shadow(0 0 18px rgba(248, 113, 113, 0.5));
+    animation: doping-pulse 2s ease-in-out infinite;
+}
+@keyframes doping-pulse {
+    0%, 100% { transform: scale(1);    opacity: 1;   }
+    50%      { transform: scale(1.08); opacity: 0.8; }
+}
+.doping-overlay-kicker {
+    margin-top: 1rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: #f87171;
+}
+.doping-overlay-name {
+    margin: 0.35rem 0 0;
+    font-size: 1.9rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+}
+.doping-overlay-text {
+    margin: 0.85rem auto 0;
+    max-width: 26rem;
+    font-size: 0.98rem;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.82);
+}
+.doping-overlay-note {
+    margin: 1.1rem auto 0;
+    max-width: 26rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.62);
+}
+.doping-overlay-note a {
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 600;
+    text-decoration: underline;
+}
+.doping-overlay-note a:hover { color: #fff; }
+.doping-overlay-actions {
+    margin-top: 1.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.9rem;
+}
+.doping-overlay-btn {
+    appearance: none;
+    border: none;
+    cursor: pointer;
+    background: #dc2626;
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.92rem;
+    font-weight: 700;
+    padding: 0.75rem 2rem;
+    border-radius: 999px;
+    box-shadow: 0 8px 24px rgba(220, 38, 38, 0.4);
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+.doping-overlay-btn:hover { background: #ef4444; }
+.doping-overlay-btn:active { transform: translateY(1px); }
+.doping-overlay-link {
+    display: inline-block;
+    margin-top: 0.7rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.doping-overlay-link:hover { color: #fff; }
+
+/* Rotating header marquee. Two identical tracks scroll left in lockstep; when
+   one slides fully off it sits exactly where the other began, so the loop is
+   seamless. */
+.doping-marquee {
+    position: sticky;
+    top: 53px;  /* sit just below the sticky 52px site header (+1px border) */
+    z-index: 500;
+    display: flex;
+    overflow: hidden;
+    background: #dc2626;
+    color: #fff;
+    user-select: none;
+}
+.doping-marquee-track {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    white-space: nowrap;
+    animation: doping-scroll 60s linear infinite;
+}
+.doping-marquee:hover .doping-marquee-track { animation-play-state: paused; }
+.doping-marquee-item {
+    padding: 0.5rem 1.5rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+.doping-marquee-item::before {
+    content: "\2022";  /* separator dot */
+    margin-right: 1.5rem;
+    opacity: 0.6;
+}
+@keyframes doping-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .doping-marquee-track { animation: none; }
+    .doping-overlay-icon { animation: none; }
+}

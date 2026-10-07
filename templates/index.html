@@ -1,12 +1,18 @@
 {% extends "base.html" %}
 
-{% block title %}Pro Tri Data{% endblock %}
+{# Brand alone told a searcher nothing: the homepage ranked 5.9 for "triathlon data"
+   and 8.5 for "protri" and took zero clicks on both. Each word after the dash is a
+   distinct head-term cluster in GSC (results 457 impressions, rating 23, ranking 24,
+   stats 19); "rating" and "ranking" are separate queries, not stems of each other,
+   so both earn their place. Brand stays first because "protri" is the single biggest
+   homepage query. 59 characters, inside what Google displays. #}
+{% block title %}Pro Tri Data - Triathlon Results, Ratings, Rankings &amp; Stats{% endblock %}
 
 {% block meta %}
 <meta name="description" content="Pro Tri Data tracks 60k+ athletes and 9k+ races across all World Triathlon racing. Explore career ratings, race results, and athlete comparisons.">
 <meta property="og:site_name" content="Pro Tri Data">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Pro Tri Data - Elite Triathlon Ratings &amp; Results">
+<meta property="og:title" content="Pro Tri Data - Triathlon Results, Ratings, Rankings &amp; Stats">
 <meta property="og:description" content="Ratings, results, and performance analysis for elite triathlon. Explore career trajectories, race splits, and rankings for every World Triathlon athlete.">
 <meta property="og:image" content="{{ STATIC_BASE_URL }}imgs/logo-512.webp">
 {% endblock %}
@@ -69,9 +75,9 @@
         ] %}
         <div class="champs-grid">
             {% for label, champ, course in champ_cards %}
-            <a href="/athlete/{{ champ.athlete_id }}?course={{ course }}" class="champ-card">
+            <a href="/athlete/{{ champ.athlete_id }}" class="champ-card">
                 <div class="champ-card-header">
-                    <span class="champ-badge">2025 {{ "Men" if champ.gender == "male" else "Women" }}'s {{ label }} World Champion</span>
+                    <span class="champ-badge">{{ "2026" if label == "WT" else "2025"}} {{ "Men" if champ.gender == "male" else "Women" }}'s {{ label }} World Champion</span>
                 </div>
                 <div class="champ-card-body">
                     <img
@@ -269,7 +275,7 @@
                 ("Women · Age Group",    women_ag_podium,    "female", "ag",    "short"),
             ] %}
             <div class="lb-widget">
-                <a href="/athlete-leaderboard?gender={{ gender_slug }}&category={{ cat }}&course={{ crs }}&active_only=false" class="lb-widget-header">
+                <a href="/athlete-leaderboard?gender={{ gender_slug }}&category={{ cat }}&course={{ crs }}&active_only=false" rel="nofollow" class="lb-widget-header">
                     <span>{{ label }}</span>
                     <span class="lb-widget-more">See more<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
                 </a>
@@ -283,7 +289,7 @@
                         {% else %}<span class="pos-other">{{ pos }}</span>{% endif %}
                         <img src="{{ STATIC_BASE_URL }}{{ 'athlete_imgs/128/' ~ a.athlete_id ~ '.webp' if a.profile_img else 'imgs/default_user_64.webp' }}"
                              alt="{{ a.name }}" class="lb-widget-img" loading="lazy" width="32" height="32">
-                        <a href="/athlete/{{ a.athlete_id }}?category={{ cat }}&course={{ crs }}" class="lb-widget-name">{{ a.name }} {{ flag(a.country_alpha3) }}</a>
+                        <a href="/athlete/{{ a.athlete_id }}" class="lb-widget-name">{{ a.name }} {{ flag(a.country_alpha3) }}</a>
                         <span class="lb-widget-rating">{{ "%.0f"|format(a.overall) }}</span>
                     </li>
                     {% endfor %}

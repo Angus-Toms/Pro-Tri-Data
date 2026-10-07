@@ -2,7 +2,8 @@ from typing import Optional
 
 from fastapi import APIRouter, Query, Request
 from fastapi.templating import Jinja2Templates
-from config import ASSET_VERSION, STATIC_BASE_URL, flag
+from config import ASSET_VERSION, STATIC_BASE_URL
+from app.display_helpers import flag
 
 from ptd_data import queries
 from app.routers.router_utils import format_rating, format_rating_change
@@ -15,11 +16,17 @@ templates.env.globals["flag"]          = flag
 
 
 def _get_page(gender, disc, order, country, yob_start, yob_end, active_only, offset, category, course):
-    athletes = queries.get_leaderboard(
-        gender=gender, disc=disc, order=order,
-        country=country, yob_start=yob_start, yob_end=yob_end,
-        active_only=active_only, offset=offset, category=category, course=course,
-    )
+    if course == "relay":
+        # Relay is a country-level entity: gender / YOB / country don't apply.
+        athletes = queries.get_relay_leaderboard(
+            disc=disc, order=order, active_only=active_only, offset=offset,
+        )
+    else:
+        athletes = queries.get_leaderboard(
+            gender=gender, disc=disc, order=order,
+            country=country, yob_start=yob_start, yob_end=yob_end,
+            active_only=active_only, offset=offset, category=category, course=course,
+        )
     # Assign display rank and compute template fields
     for i, a in enumerate(athletes):
         a["rank"]               = offset + i + 1
@@ -37,7 +44,7 @@ def _get_page(gender, disc, order, country, yob_start, yob_end, active_only, off
 
 
 @router.get("/athlete-leaderboard")
-async def leaderboard(
+def leaderboard(
     request: Request,
     gender:      str           = Query("female", regex="^(male|female)$"),
     disc:        str           = Query("overall", regex="^(overall|swim|bike|run|transition)$"),
@@ -47,7 +54,7 @@ async def leaderboard(
     yob_end:     Optional[int] = Query(2010, ge=1930, le=2010),
     active_only: bool          = Query(True),
     category:    str           = Query("elite", regex="^(elite|ag)$"),
-    course:      str           = Query("short", regex="^(short|long)$"),
+    course:      str           = Query("short", regex="^(short|long|relay)$"),
 ):
     athletes = _get_page(gender, disc, order, country, yob_start, yob_end, active_only, offset=0, category=category, course=course)
     country_alpha3 = queries.get_alpha3_for_country(country) if country and country != "all" else None
@@ -66,11 +73,12 @@ async def leaderboard(
         "active_only":  active_only,
         "category":     category,
         "course":       course,
+        "is_relay":     course == "relay",
     })
 
 
 @router.get("/athlete-leaderboard/more")
-async def leaderboard_more(
+def leaderboard_more(
     request: Request,
     gender:      str           = Query("female", regex="^(male|female)$"),
     disc:        str           = Query("overall", regex="^(overall|swim|bike|run|transition)$"),
@@ -81,7 +89,7 @@ async def leaderboard_more(
     active_only: bool          = Query(True),
     offset:      int           = Query(0),
     category:    str           = Query("elite", regex="^(elite|ag)$"),
-    course:      str           = Query("short", regex="^(short|long)$"),
+    course:      str           = Query("short", regex="^(short|long|relay)$"),
 ):
     athletes = _get_page(gender, disc, order, country, yob_start, yob_end, active_only, offset, category, course)
     return templates.TemplateResponse("partials/more_athlete_leaderboard.html", {
@@ -89,4 +97,5 @@ async def leaderboard_more(
         "athletes": athletes,
         "disc":     disc,
         "order":    order,
+        "is_relay": course == "relay",
     })

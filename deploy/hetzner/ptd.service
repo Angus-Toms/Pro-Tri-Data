@@ -1,0 +1,19 @@
+[Unit]
+Description=Pro Tri Data (FastAPI)
+After=network.target
+
+[Service]
+User=ptd
+WorkingDirectory=/opt/ptd
+Environment=PTD_ENV=prod
+Environment=DATA_ROOT=/var/lib/ptd
+# CX23 (2 vCPU / 4GB): one process so the in-process caches stay unified.
+# memory_limit leaves room for the OS page cache holding the DB file.
+Environment=DUCKDB_MEMORY_LIMIT=1GB
+Environment=THREADPOOL_LIMIT=6
+ExecStart=/opt/ptd/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips=127.0.0.1
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

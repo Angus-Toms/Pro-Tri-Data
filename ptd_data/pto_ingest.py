@@ -127,6 +127,56 @@ def _name_similarity(a, b):
     return SequenceMatcher(None, _normalize_name(a), _normalize_name(b)).ratio()
 
 
+def _name_tokens(name):
+    """Accent-folded, lowercased word tokens of a name (hyphens split too)."""
+    return frozenset(t for t in re.split(r"[^a-z0-9]+", _normalize_name(name)) if t)
+
+
+# Letters that NFKD can't decompose to ASCII, plus the spelled-out umlaut/eszett
+# forms PTO/WT use interchangeably. Pre-mapped before NFKD so nothing is dropped.
+_TRANSLIT_PRE = str.maketrans({
+    "ø": "o", "Ø": "o", "æ": "ae", "Æ": "ae", "œ": "oe", "Œ": "oe",
+    "ł": "l", "Ł": "l", "đ": "d", "Đ": "d", "ð": "d", "þ": "th", "ı": "i", "ß": "ss",
+})
+
+
+def _fold_key(name):
+    """Transliteration-insensitive key; equal keys ⇒ accent/spelling variant.
+
+    Folds diacritics, the spelled-out umlaut digraphs (ue/oe/ae → u/o/a), and
+    strips spacing/punctuation — so 'Müller-Hörner' and 'Mueller-Horner' share
+    a key, while a genuine letter change ('Paul' vs 'Paula', 'Owen' vs 'Cowen',
+    'Simon' vs 'Simone') does not. This is what makes the missing-yob auto-link
+    safe where a raw similarity score cannot be: a one-character edit in a short
+    name scores ~0.95 whether it's an accent or a different person.
+    """
+    s = name.translate(_TRANSLIT_PRE)
+    s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode().lower()
+    for dig, rep in (("ue", "u"), ("oe", "o"), ("ae", "a")):
+        s = s.replace(dig, rep)
+    return re.sub(r"[^a-z0-9]", "", s)
+
+
+def _unique_subset_match(name, candidates):
+    """Return the single candidate whose name is an added/removed-name variant.
+
+    'name' matches candidate c when one's token set is a subset of the other's
+    ('Lars Thomsen' ⊆ 'Lars Ole Thomsen'; equal sets differing only in
+    punctuation also qualify). This is the safe discriminator for the
+    added/removed-name case: it accepts a dropped/added forename or middle
+    name but rejects a swapped surname ('Daniel Luna' vs 'Daniel Pla', whose
+    token sets are disjoint), which pure similarity cannot separate. Requires
+    a unique qualifying candidate and at least two tokens a side so a lone
+    shared surname can't trigger a match. `candidates` are (id, name, yob).
+    """
+    a = _name_tokens(name)
+    if len(a) < 2:
+        return None
+    hits = [c for c in candidates
+            if len(b := _name_tokens(c[1])) >= 2 and (a <= b or b <= a)]
+    return hits[0] if len(hits) == 1 else None
+
+
 # Thresholds for fuzzy name matching during ingest. Mirrors pto_matcher.py's
 # values so behaviour is consistent whether an athlete is linked at ingest
 # time or later via overlap-race matching.
@@ -151,21 +201,25 @@ class PTOIngester:
         # auto-merge (usually because PTO had no yob). Written to
         # data/merge_candidates.csv at end of run for manual review.
         self._merge_candidates: list[dict] = []
+        # {pto_slug: {athlete_id, ...}} pairings a human has rejected.
+        self._no_merge = db.load_no_merge('pto')
 
     def _load_wt_athletes(self):
-        """Build a country-keyed lookup of unmatched WT athletes for fuzzy name+yob matching.
+        """Build a (country, gender)-keyed lookup of unmatched WT athletes.
 
-        Returns {country_full: [(athlete_id, name, yob), ...]}. Indexing by
-        country lets _match_wt scan a tiny subset per lookup rather than the
-        full roster, keeping fuzzy matching cheap.
+        Returns {(country_full, gender): [(athlete_id, name, yob), ...]}.
+        Indexing by country lets _match_wt scan a tiny subset per lookup rather
+        than the full roster; gender is in the key because fuzzy name matching
+        alone happily crosses it ('Louis Richard' ~ 'Lucie Picard' scores 0.72,
+        and a shared country + yob was all the rest of the rule needed).
         """
         rows = self.conn.execute(
-            "SELECT athlete_id, name, country_full, year_of_birth FROM athletes "
+            "SELECT athlete_id, name, country_full, year_of_birth, gender FROM athletes "
             "WHERE pto_slug IS NULL"  # only unmatched WT athletes
         ).fetchall()
         index = {}
-        for athlete_id, name, country, yob in rows:
-            index.setdefault(country, []).append((athlete_id, name, yob))
+        for athlete_id, name, country, yob, gender in rows:
+            index.setdefault((country, gender), []).append((athlete_id, name, yob))
         return index
 
     def run(self, years=None):
@@ -411,14 +465,16 @@ class PTOIngester:
 
         venue, country_raw = _split_location(info.get("location", ""))
         country_full = _resolve_pto_country(country_raw)
-        race_date = _parse_date(info.get("date", "")) or date(year, 1, 1)
+        gender_dates = _parse_race_dates(info, year)
+        event_start, event_end = min(gender_dates.values()), max(gender_dates.values())
 
         # Skip races with no results tables (future races)
         if not soup.find("table", class_="race-results"):
             print(f"  No race-results tables — race hasn't happened yet, skipping")
             return False
 
-        print(f"  Venue: {venue!r}  Country: {country_full!r}  Date: {race_date}  "
+        print(f"  Venue: {venue!r}  Country: {country_full!r}  "
+              f"Dates: {event_start}..{event_end}  "
               f"Brand: {brand}  Tier: {tier or '-'}  Prize: ${prize_usd}")
 
         db.upsert_nationality(self.conn, country_full)
@@ -431,8 +487,8 @@ class PTOIngester:
             venue=venue,
             country=country_full,
             continent=_country_to_continent(country_full),
-            start_date=str(race_date),
-            end_date=str(race_date),
+            start_date=str(event_start),
+            end_date=str(event_end),
             longitude=0,
             latitude=0,
             brand=brand,
@@ -451,6 +507,7 @@ class PTOIngester:
             print(f"  {gender_label}: {len(results)} rows found")
 
             race_id = db.slug_id(f"{slug}-{year}-{gender_val}")
+            race_date = gender_dates[gender_val]
 
             db.insert_race(
                 self.conn,
@@ -779,7 +836,7 @@ class PTOIngester:
         nickname   = profile.get("nickname", "") or ""
 
         # 3. WT match with real yob
-        wt_id, confidence = self._match_wt(name, country_full, yob)
+        wt_id, confidence = self._match_wt(pto_slug, name, country_full, yob, gender)
         if wt_id:
             print(f"    Matched '{name}' (yob={yob or '?'}) → WT athlete {wt_id} [{confidence}]")
             db.upsert_athlete_pto_fields(
@@ -793,8 +850,8 @@ class PTOIngester:
                 )
             # Remove from in-memory WT index so subsequent races can't
             # re-use this athlete row against a different namesake.
-            lst = self._wt_athletes.get(country_full, [])
-            self._wt_athletes[country_full] = [c for c in lst if c[0] != wt_id]
+            lst = self._wt_athletes.get((country_full, gender), [])
+            self._wt_athletes[(country_full, gender)] = [c for c in lst if c[0] != wt_id]
             return wt_id, False
 
         # 4. New PTO-only athlete
@@ -817,15 +874,19 @@ class PTOIngester:
         print(f"    New PTO athlete: {name!r} yob={yob or '?'} ({pto_slug})  id={athlete_id}")
         return athlete_id, True
 
-    def _match_wt(self, name, country_full, yob):
-        """Try to match against a WT athlete by country + yob + fuzzy name.
+    def _match_wt(self, pto_slug, name, country_full, yob, gender):
+        """Try to match against a WT athlete by country + gender + yob + fuzzy name.
 
         Returns (athlete_id, confidence_str) or (None, None).
 
         Rules:
-        - Prefilter by exact country match. No country → no match (the old
+        - Prefilter by exact country and gender. No country → no match (the old
           name-alone fallback conflated namesakes like Thomas Davies GBR 1972
-          vs GBR 1995, and country is cheap and reliable).
+          vs GBR 1995, and country is cheap and reliable). Gender is a hard
+          prefilter for the same reason: none of the name rules below can tell
+          a man from a woman, so without it a 0.72-similar cross-gender pair
+          sharing a country and yob linked cleanly.
+        - Pairings listed in data/athlete_no_merge.csv are dropped up front.
         - Exact-name fallback: if there's a unique normalised-name match in
           the same country AND one side has yob=0/NULL, accept (we can't
           contradict on yob and the unique-name + same-country pairing is
@@ -841,7 +902,9 @@ class PTOIngester:
         WT match is recorded as a merge candidate for manual review (see
         self._merge_candidates).
         """
-        candidates = self._wt_athletes.get(country_full, [])
+        blocked = self._no_merge.get(pto_slug, ())
+        candidates = [c for c in self._wt_athletes.get((country_full, gender), [])
+                      if c[0] not in blocked]
         if not candidates:
             return None, None
 
@@ -857,30 +920,41 @@ class PTOIngester:
             return top[0], f"exact_name_country (wt_yob={top[2] or '?'}, pto_yob={yob or '?'})"
 
         if not yob:
-            # Still scan for namesake to suggest as a merge candidate. We
-            # don't auto-merge (the safety rationale is unchanged), but flag
-            # the pair so a human can confirm and put it in athlete_merges.csv.
+            # No PTO yob to disambiguate, so name + country carries the match.
+            # Two rules are safe to auto-link (a missing yob can't contradict);
+            # everything else becomes a merge candidate.
+
+            # Rule A: transliteration/accent variant — same fold-key, unique.
+            fk = _fold_key(name)
+            fold_hits = [c for c in candidates if _fold_key(c[1]) == fk]
+            if len(fold_hits) == 1:
+                return fold_hits[0][0], f"noyob_translit (wt_yob={fold_hits[0][2] or '?'})"
+            # Rule B: added/removed name (token subset) — safe at any score.
+            subset = _unique_subset_match(name, candidates)
+            if subset:
+                return subset[0], f"noyob_subset (wt_yob={subset[2] or '?'})"
+
+            # Otherwise flag the strongest same-country namesake for review.
             scored = sorted(
                 ((c, _name_similarity(c[1], name)) for c in candidates),
                 key=lambda x: -x[1],
             )
-            if scored and scored[0][1] >= 0.85:
-                top, top_sim = scored[0]
-                runner_up_sim = scored[1][1] if len(scored) > 1 else 0.0
-                if top_sim - runner_up_sim >= _NAME_SIM_GAP:
-                    self._merge_candidates.append({
-                        "wt_athlete_id": top[0],
-                        "wt_name":       top[1],
-                        "wt_yob":        top[2] or 0,
-                        "pto_name":      name,
-                        "pto_yob":       0,
-                        "country_full":  country_full,
-                        "similarity":    round(top_sim, 3),
-                        "reason":        "pto_yob_missing",
-                    })
-                    print(f"    MERGE CANDIDATE: '{name}' (PTO yob=?) ~ "
-                          f"WT '{top[1]}' (id={top[0]}, yob={top[2] or '?'}) "
-                          f"sim={top_sim:.2f}")
+            top, top_sim = scored[0]
+            runner_up_sim = scored[1][1] if len(scored) > 1 else 0.0
+            if top_sim >= 0.85 and top_sim - runner_up_sim >= _NAME_SIM_GAP:
+                self._merge_candidates.append({
+                    "wt_athlete_id": top[0],
+                    "wt_name":       top[1],
+                    "wt_yob":        top[2] or 0,
+                    "pto_name":      name,
+                    "pto_yob":       0,
+                    "country_full":  country_full,
+                    "similarity":    round(top_sim, 3),
+                    "reason":        "pto_yob_missing",
+                })
+                print(f"    MERGE CANDIDATE: '{name}' (PTO yob=?) ~ "
+                      f"WT '{top[1]}' (id={top[0]}, yob={top[2] or '?'}) "
+                      f"sim={top_sim:.2f}")
             return None, None
 
         yob_close = [c for c in candidates if c[2] and abs(c[2] - yob) <= 1]
@@ -1075,9 +1149,32 @@ def _parse_date(text):
             return datetime.strptime(text.strip(), fmt).date()
         except (ValueError, AttributeError):
             continue
-    # Fallback: find first 4-digit year in text
-    m = re.search(r"\b(20\d{2})\b", text or "")
     return None
+
+
+def _parse_race_dates(info, year):
+    """Return {'male': date, 'female': date} from a PTO Race Info block.
+
+    Single-day races expose 'Date: 26 Apr 2026'. Multi-day championship events
+    (Kona, PTO/T100 majors) run the pro fields on different days and expose
+    'Dates: 06 Oct 2022 (FPRO) | 08 Oct 2022 (MPRO)' - the gender-tag order is
+    not fixed, so we key each parsed date by its own tag rather than position.
+    A gender left unresolved (untagged single-date race, or one field missing)
+    falls back to the other gender's date, then to Jan 1 of the year.
+    """
+    raw = info.get("dates") or info.get("date") or ""
+    tagged = {}
+    for m in re.finditer(r"(\d{1,2}\s+[A-Za-z]{3,}\s+\d{4})\s*\((M|F)PRO\)", raw):
+        d = _parse_date(m.group(1))
+        if d:
+            tagged["male" if m.group(2) == "M" else "female"] = d
+    if not tagged:
+        # Single-day or untagged: one date shared by both genders.
+        d = _parse_date(raw)
+        if d:
+            tagged = {"male": d, "female": d}
+    fallback = next(iter(tagged.values()), date(year, 1, 1))
+    return {g: tagged.get(g, fallback) for g in ("male", "female")}
 
 
 def _resolve_pto_country(raw):

@@ -3,8 +3,8 @@
 Unified athlete image pipeline: download → crop → resize → WebP → R2 upload.
 
 Usage:
-    python ptd_data/sync_images.py            # incremental: skip already-processed/uploaded files
-    python ptd_data/sync_images.py --clear    # wipe R2 prefix + local WebPs, full reprocess from raw
+    python -m ptd_data.sync_images            # incremental: skip already-processed/uploaded files
+    python -m ptd_data.sync_images --clear    # wipe R2 prefix + local WebPs, full reprocess from raw
 """
 from __future__ import annotations
 

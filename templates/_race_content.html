@@ -1,4 +1,5 @@
 {# Race Performance: standards + (optional) best perf + (optional) course conditions, by discipline #}
+{% from "partials/_icons.html" import low_conf_badge, help_icon %}
 {% set has_best = not ignored_info %}
 {% set has_cond = course_conditions %}
 {% set has_rank = race_ranks and race_ranks.values() | select | list | length > 0 %}
@@ -15,7 +16,7 @@
 {%- endif -%}
 {%- endif -%}
 {%- endmacro %}
-<div class="page-section-head">Standards</div>
+<div class="page-section-head"><span>Standards {{ help_icon('race-standards') }}</span></div>
 <div class="ratings-section">
     <div class="ratings-table-scroll">
         <table class="ratings-table">
@@ -45,7 +46,7 @@
                     {% if has_rank %}
                     <td class="rt-rank">
                         {% if race_ranks[disc] and race_course %}
-                        <a class="ranking-link" href="/race-leaderboard?gender={{ race.gender }}&course={{ race_course }}&disc={{ disc }}" title="View {{ disc }} race leaderboard">{{ ordinal(race_ranks[disc]) }}</a>
+                        <a class="ranking-link" href="/race-leaderboard?gender={{ race.gender }}&course={{ race_course }}&disc={{ disc }}" rel="nofollow" title="View {{ disc }} race leaderboard">{{ ordinal(race_ranks[disc]) }}</a>
                         {% else %}<span class="no-data">-</span>{% endif %}
                     </td>
                     {% endif %}
@@ -75,26 +76,36 @@
 
 <!-- Results Table -->
 <div class="results-section-head">
-    <div class="page-section-head" id="results-section-title">Race Results</div>
+    <div class="page-section-head" id="results-section-title"><span><span class="section-label">Race Results</span> {{ help_icon('race-results') }}</span></div>
     <div class="results-section-controls">
-        {% with download_url = "/api/v1/races/" ~ race.race_id ~ "/results" %}{% include "partials/download_button.html" %}{% endwith %}
         {% if has_predictions %}
         <div class="race-view-toggle">
             <button class="race-view-btn" data-view="predictions">Predictions</button>
             <button class="race-view-btn active" data-view="results">Results</button>
         </div>
         {% endif %}
+        <div class="table-actions">
         {% set _course = 'long' if race_distance in ('middle','t100','long') else 'short' %}
-        <button id="add-prediction-btn" class="btn-add-prediction"
+        <button id="add-prediction-btn" class="btn-add-prediction btn-table-action"
                 data-gender="{{ race.gender }}" data-course="{{ _course }}"
                 title="Add athlete prediction" aria-label="Add athlete prediction">
-            <svg class="lucide-user-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
                 <circle cx="9" cy="7" r="4"/>
                 <line x1="19" y1="8" x2="19" y2="14"/>
                 <line x1="22" y1="11" x2="16" y2="11"/>
             </svg>
+            <span class="btn-table-action-label">Add athlete</span>
         </button>
+        {% with download_url = "/download/races/" ~ race.race_id ~ "/results" %}{% include "partials/download_button.html" %}{% endwith %}
+        {% set _first = (splits_data | selectattr('position') | list | first) %}
+        {% if _first %}
+        <button type="button" class="btn-table-action" data-share="{{ _first.athlete_id }}" data-share-design="p1_result" title="Share a result card">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>
+            <span class="btn-table-action-label">Share</span>
+        </button>
+        {% endif %}
+        </div>
     </div>
 </div>
 <div id="prediction-modal" class="prediction-modal hidden" role="dialog" aria-modal="true" aria-labelledby="prediction-modal-title">
@@ -223,7 +234,7 @@
 
 {% if has_predictions %}
 {% set _dist_label = {'sprint':'sprint','standard':'standard distance','middle':'middle distance','t100':'T100','long':'long course'}.get(race_distance, race_distance) %}
-<p id="predictions-subtitle" class="page-section-sub hidden" style="margin-bottom:0.75rem">Predicted splits and finishing order based on pre-race ratings, using a global model trained on {{ "women's" if race.gender == "female" else "men's" }} {{ _dist_label }} races. These don't account for this specific course or conditions. Athletes marked italic are making their debut - their ratings have not yet converged so predictions are less reliable.</p>
+<p id="predictions-subtitle" class="page-section-sub hidden" style="margin-bottom:0.75rem">Predicted splits and finishing order based on pre-race ratings, using a global model trained on {{ "women's" if race.gender == "female" else "men's" }} {{ _dist_label }} races. These don't account for this specific course or conditions. Athletes marked {{ low_conf_badge('low-conf-inline') }} have few career starts, so their ratings haven't settled - we're less confident in their predictions.</p>
 <div id="predictions-view" class="race-view hidden">
     <div class="results-sort-chips" role="tablist" aria-label="Sort predictions">
         <button class="sort-chip" data-sort-col="0" type="button">Position<svg class="chip-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
@@ -247,7 +258,7 @@
             </thead>
             <tbody>
                 {% for row in predictions %}
-                <tr class="{{ 'debut-row' if row.is_debut else '' }}">
+                <tr class="{{ 'low-conf-row' if row.is_low_confidence else '' }}">
                     <td class="position-col" data-value="{{ row.predicted_position }}">
                         {% if row.predicted_position == 1 %}<span class="pos-circle gold">1</span>
                         {% elif row.predicted_position == 2 %}<span class="pos-circle silver">2</span>
@@ -257,7 +268,7 @@
                     <td class="athlete-col" data-value="{{ row.name }}">
                         <a href="/athlete/{{ row.athlete_id }}" class="link">
                             {{ row.name }} {{ flag(row.country_alpha3) }}
-                        </a>{% if row.is_debut %} <span class="debut-label">(debut)</span>{% endif %}
+                        </a>{% if row.is_low_confidence %} {{ low_conf_badge('low-conf-mark') }}{% endif %}
                     </td>
                     <td class="yob-col" data-value="{{ row.year_of_birth if row.year_of_birth else 0 }}">
                         {{"{} ({})".format(row.year_of_birth, row.age) if row.year_of_birth else "" }}
@@ -295,7 +306,17 @@
 {% endif %}
 
 <!-- Ratings Table -->
-<div class="page-section-head">Ratings &amp; Changes</div>
+<div class="results-section-head">
+    <div class="page-section-head"><span>Ratings &amp; Changes {{ help_icon('race-rating-changes') }}</span></div>
+    {% if ratings_data %}
+    <div class="results-section-controls">
+        <button type="button" class="btn-table-action" data-share="{{ ratings_data[0].athlete_id }}" data-share-design="p4_rating" title="Share a rating card">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>
+            <span class="btn-table-action-label">Share</span>
+        </button>
+    </div>
+    {% endif %}
+</div>
 {% if ignored_info %}
 {# Pick a message based on the reason. Oversized fields are almost always a
    combined Elite + AG result table from the source data — say so explicitly

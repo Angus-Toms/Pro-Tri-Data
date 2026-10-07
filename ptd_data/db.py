@@ -1,6 +1,9 @@
 import csv
 import datetime as _dt
+import os
 import pathlib
+import re
+import threading
 import zlib
 
 import duckdb
@@ -18,8 +21,50 @@ def get_conn(read_only=False):
     return conn
 
 
+# Shared read-only connection for the web app. Route handlers run in a
+# threadpool, and a single DuckDB connection serialises queries across
+# threads, so each thread gets its own cursor (a lightweight sibling
+# connection sharing the same database instance).
+_read_root = None
+_read_lock = threading.Lock()
+_read_local = threading.local()
+
+
+def get_read_cursor():
+    global _read_root
+    if _read_root is None:
+        with _read_lock:
+            if _read_root is None:
+                conn = duckdb.connect(str(DB_PATH), read_only=True)
+                # The prod instance is small and shared; without these DuckDB
+                # assumes it owns ~80% of the machine. memory_limit is the
+                # biggest lever on a 512MB box, so keep it env-tunable.
+                # 128MB OOMed in prod: the limit is shared across all threadpool
+                # cursors, and a few concurrent athlete-history queries exhaust
+                # it (hard error - the allocation isn't spillable).
+                mem_limit = os.getenv("DUCKDB_MEMORY_LIMIT", "192MB")
+                conn.execute("SET threads = 2")
+                conn.execute(f"SET memory_limit = '{mem_limit}'")
+                _read_root = conn
+    cur = getattr(_read_local, "cursor", None)
+    if cur is None:
+        cur = _read_root.cursor()
+        _read_local.cursor = cur
+    return cur
+
+
+def close_read_conn():
+    """Drop the cached read-only connection so a writable handle can be opened.
+    DuckDB refuses to hold a RO and a RW handle to the same file at once."""
+    global _read_root
+    if _read_root is not None:
+        _read_root.close()
+        _read_root = None
+    _read_local.cursor = None
+
+
 def create_schema(conn):
-    conn.execute("CREATE TYPE IF NOT EXISTS gender_enum AS ENUM ('male', 'female')")
+    conn.execute("CREATE TYPE IF NOT EXISTS gender_enum AS ENUM ('male', 'female', 'mixed')")
     conn.execute("CREATE TYPE IF NOT EXISTS category_enum AS ENUM ('elite', 'ag')")
     conn.execute(
         "CREATE TYPE IF NOT EXISTS category_sub_enum AS ENUM "
@@ -35,7 +80,7 @@ def create_schema(conn):
     )
     conn.execute(
         "CREATE TYPE IF NOT EXISTS distance_enum AS ENUM "
-        "('sprint', 'standard', 'middle', 't100', 'long')"
+        "('sprint', 'standard', 'middle', 't100', 'long', 'relay')"
     )
 
     conn.execute("""
@@ -59,7 +104,41 @@ def create_schema(conn):
             pto_slug        VARCHAR,
             height_cm       INTEGER,
             weight_kg       INTEGER,
-            nickname        VARCHAR NOT NULL DEFAULT ''
+            nickname        VARCHAR NOT NULL DEFAULT '',
+            -- FFTRI licence id (e.g. 'A16528'), set by the French Grand Prix
+            -- ingest. Same role as pto_slug: a sticky per-source identity link.
+            fftri_id        VARCHAR,
+            -- Instagram handle (no @). Filled by data/instagram.csv (manual,
+            -- via the /admin/instagram tool) or, for athletes first seen in
+            -- an elite race, the WT athlete profile at ingest.
+            instagram       VARCHAR NOT NULL DEFAULT ''
+        )
+    """)
+
+    # Athletes the admin tool looked for and found no Instagram page. Loaded
+    # from data/instagram.csv rows with an empty handle; keeps them out of the
+    # review queue.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS instagram_skips (
+            athlete_id  INTEGER PRIMARY KEY,
+            skipped_at  DATE NOT NULL
+        )
+    """)
+
+    # Doping sanctions, populated exclusively from data/doping_bans.csv (see
+    # load_doping_bans). athlete_id is intentionally NOT FK-constrained to match
+    # the results/ratings convention and to avoid build-order coupling with the
+    # merges pass. Per-athlete `summary` carries the exact, human-written wording
+    # so the athlete-page banner never over-claims (e.g. whereabouts cases).
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS doping_bans (
+            athlete_id      INTEGER PRIMARY KEY,
+            substance       VARCHAR NOT NULL DEFAULT '',
+            sanction_start  DATE,
+            sanction_end    DATE,
+            summary         VARCHAR NOT NULL DEFAULT '',
+            evidence_url    VARCHAR NOT NULL DEFAULT '',
+            source          VARCHAR NOT NULL DEFAULT ''
         )
     """)
 
@@ -144,6 +223,81 @@ def create_schema(conn):
             t2_s            DOUBLE NOT NULL DEFAULT 0,
             pto_points      DOUBLE NOT NULL DEFAULT 0,
             PRIMARY KEY (race_id, athlete_id)
+        )
+    """)
+
+    # Mixed team relay results. Relay races get a normal `races` row
+    # (gender='mixed', distance='relay') so event pages, handles, and recurring
+    # grouping work unchanged, but their results live here instead of `results`:
+    # a team row plus one leg row per member. Team totals and positions come
+    # straight from the API team-level result; leg splits from team_members.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS relay_teams (
+            race_id         INTEGER NOT NULL REFERENCES races(race_id),
+            team_id         INTEGER NOT NULL,   -- WT team id (athlete-id namespace)
+            team_title      VARCHAR NOT NULL,   -- e.g. "Team I Australia"
+            team_num        INTEGER NOT NULL DEFAULT 1,  -- 1 = first team, 2 = "Team II", ...
+            country_full    VARCHAR NOT NULL REFERENCES nationalities(country_full),
+            position        INTEGER,
+            status          result_status_enum NOT NULL,
+            start_num       INTEGER NOT NULL DEFAULT 0,
+            total_s         DOUBLE NOT NULL DEFAULT 0,
+            PRIMARY KEY (race_id, team_id)
+        )
+    """)
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS relay_legs (
+            race_id         INTEGER NOT NULL REFERENCES races(race_id),
+            team_id         INTEGER NOT NULL,
+            leg_num         INTEGER NOT NULL,   -- 1..4 in handover order
+            athlete_id      INTEGER NOT NULL,   -- see results.athlete_id note
+            leg_s           DOUBLE NOT NULL DEFAULT 0,
+            swim_s          DOUBLE NOT NULL DEFAULT 0,
+            bike_s          DOUBLE NOT NULL DEFAULT 0,
+            run_s           DOUBLE NOT NULL DEFAULT 0,
+            t1_s            DOUBLE NOT NULL DEFAULT 0,
+            t2_s            DOUBLE NOT NULL DEFAULT 0,
+            PRIMARY KEY (race_id, team_id, leg_num)
+        )
+    """)
+
+    # Country-level mixed relay ELO, mirroring the athlete ratings/rankings
+    # shape. One rating entity per country (elite MTR only, best team per
+    # country per race). Discipline ratings come from summed leg splits.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS country_ratings (
+            race_id             INTEGER NOT NULL REFERENCES races(race_id),
+            country_full        VARCHAR NOT NULL REFERENCES nationalities(country_full),
+            overall             DOUBLE NOT NULL DEFAULT 0,
+            swim                DOUBLE NOT NULL DEFAULT 0,
+            bike                DOUBLE NOT NULL DEFAULT 0,
+            run                 DOUBLE NOT NULL DEFAULT 0,
+            transition          DOUBLE NOT NULL DEFAULT 0,
+            overall_change      DOUBLE NOT NULL DEFAULT 0,
+            swim_change         DOUBLE NOT NULL DEFAULT 0,
+            bike_change         DOUBLE NOT NULL DEFAULT 0,
+            run_change          DOUBLE NOT NULL DEFAULT 0,
+            transition_change   DOUBLE NOT NULL DEFAULT 0,
+            PRIMARY KEY (race_id, country_full)
+        )
+    """)
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS country_rankings (
+            race_id                 INTEGER NOT NULL REFERENCES races(race_id),
+            country_full            VARCHAR NOT NULL REFERENCES nationalities(country_full),
+            world_overall           INTEGER NOT NULL,
+            world_swim              INTEGER NOT NULL,
+            world_bike              INTEGER NOT NULL,
+            world_run               INTEGER NOT NULL,
+            world_transition        INTEGER NOT NULL,
+            active_world_overall    INTEGER,
+            active_world_swim       INTEGER,
+            active_world_bike       INTEGER,
+            active_world_run        INTEGER,
+            active_world_transition INTEGER,
+            PRIMARY KEY (race_id, country_full)
         )
     """)
 
@@ -244,13 +398,63 @@ def create_schema(conn):
             PRIMARY KEY (gender, distance, discipline)
         )
     """)
-    # Drop rating_cap if it exists on older DBs — empirically useless in the
-    # residual sweep and replaced by per-athlete history anchoring.
-    conn.execute("ALTER TABLE prediction_models DROP COLUMN IF EXISTS rating_cap")
-    # Idempotent migration for DBs created before year_coef existed. Nullable
-    # because DuckDB ALTER can't add NOT NULL + DEFAULT in one step; readers
-    # COALESCE to 0 so pre-migration rows act as "no year term".
-    conn.execute("ALTER TABLE prediction_models ADD COLUMN IF NOT EXISTS year_coef DOUBLE")
+
+    # Precomputed race predictions (see ptd_data/predictions.py). Rebuilt on
+    # every weekly build; predictions are a pure function of the read-only DB
+    # so serving from this table replaces the expensive request-time compute.
+    # Covers completed elite races and upcoming races with start lists.
+    # Raw seconds, 0 = unavailable (format_time(0) renders empty). Names /
+    # countries join against athletes at serve time.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS race_predictions (
+            race_id            INTEGER NOT NULL,
+            athlete_id         INTEGER NOT NULL,
+            predicted_position INTEGER NOT NULL,
+            overall_s          INTEGER NOT NULL DEFAULT 0,
+            swim_s             INTEGER NOT NULL DEFAULT 0,
+            bike_s             INTEGER NOT NULL DEFAULT 0,
+            run_s              INTEGER NOT NULL DEFAULT 0,
+            is_low_confidence  BOOLEAN NOT NULL DEFAULT FALSE,
+            win_pct            DOUBLE NOT NULL DEFAULT 0,   -- 0-1, sums to 1 per race
+            podium_pct         DOUBLE NOT NULL DEFAULT 0,   -- 0-1, sums to 3 per race
+            PRIMARY KEY (race_id, athlete_id)
+        )
+    """)
+    # Course conditions displayed on race/event pages. Pooled per event at
+    # build time, then written per race so lookups stay by race_id (all races
+    # in an event carry identical rows by construction).
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS race_course_conditions (
+            race_id     INTEGER NOT NULL,
+            discipline  VARCHAR NOT NULL,   -- 'overall' | 'swim' | 'bike' | 'run'
+            diff_s      DOUBLE NOT NULL,    -- avg predicted-actual seconds (positive = course fast)
+            category    VARCHAR NOT NULL,   -- 'very_fast' | 'fast' | 'normal' | 'slow' | 'very_slow'
+            PRIMARY KEY (race_id, discipline)
+        )
+    """)
+
+    # Form model state (see ptd_data/form.py). athlete_form mirrors the
+    # ratings table's temporal semantics: one row per observation holding the
+    # athlete's blended form *after* that race, so "latest row strictly
+    # before date X" is the leakage-free pre-race form at X.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS athlete_form (
+            race_id     INTEGER NOT NULL REFERENCES races(race_id),
+            athlete_id  INTEGER NOT NULL,  -- see results.athlete_id note
+            discipline  VARCHAR NOT NULL,  -- 'overall' | 'swim' | 'bike' | 'run'
+            form_rel    DOUBLE NOT NULL,   -- blended Kalman+Elo form, rel space
+            n_obs       INTEGER NOT NULL,  -- observations to date incl this race
+            PRIMARY KEY (race_id, athlete_id, discipline)
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS form_race_constants (
+            race_id     INTEGER NOT NULL REFERENCES races(race_id),
+            discipline  VARCHAR NOT NULL,
+            c           DOUBLE NOT NULL,   -- ln(median_split) + ALS field adj
+            PRIMARY KEY (race_id, discipline)
+        )
+    """)
 
     conn.execute("""
         CREATE TABLE IF NOT EXISTS upcoming_races (
@@ -264,7 +468,11 @@ def create_schema(conn):
             cat_ids         VARCHAR NOT NULL DEFAULT '[]',
             race_handle     VARCHAR NOT NULL DEFAULT '',
             event_spec_ids  VARCHAR NOT NULL DEFAULT '[]',
-            last_fetched    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            last_fetched    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            -- distance_enum value for hand-entered long-course start lists
+            -- (data/startlists/*.json). NULL for WT rows, whose distance is
+            -- derived from event_spec_ids.
+            distance        VARCHAR
         )
     """)
 
@@ -299,6 +507,57 @@ def create_schema(conn):
         )
     """)
 
+    # Social posts: one row per (race, post_type) once successfully published.
+    # The social scheduler diffs candidate races against this to avoid re-posting.
+    # post_type is 'pre_race' (predictions) or 'post_race' (recap). No FK on
+    # race_id - pre_race rows reference upcoming_races, post_race rows reference
+    # races, and a race graduates from one table to the other over time.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS social_posts (
+            race_id     BIGINT      NOT NULL,
+            post_type   VARCHAR     NOT NULL,
+            posted_at   TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            ig_post_id  VARCHAR,
+            fb_post_ids VARCHAR,
+            PRIMARY KEY (race_id, post_type)
+        )
+    """)
+
+    # relay_legs with corrections applied, so ratings and every display query
+    # read the same numbers. Manual rows win over auto; an absent row falls
+    # through to the raw split. Mirrors the corr/corr_wide CTE that ratings.py
+    # spells out for individual results. 'overall' is the leg time.
+    conn.execute("""
+        CREATE OR REPLACE VIEW relay_legs_corrected AS
+        WITH corr AS (
+            SELECT race_id, athlete_id, discipline,
+                   COALESCE(MAX(value) FILTER (WHERE source = 'manual'),
+                            MAX(value) FILTER (WHERE source = 'auto')) AS value
+            FROM corrections
+            GROUP BY race_id, athlete_id, discipline
+        ),
+        corr_wide AS (
+            SELECT race_id, athlete_id,
+                   MAX(value) FILTER (WHERE discipline = 'overall') AS leg,
+                   MAX(value) FILTER (WHERE discipline = 'swim')    AS swim,
+                   MAX(value) FILTER (WHERE discipline = 'bike')    AS bike,
+                   MAX(value) FILTER (WHERE discipline = 'run')     AS run,
+                   MAX(value) FILTER (WHERE discipline = 't1')      AS t1,
+                   MAX(value) FILTER (WHERE discipline = 't2')      AS t2
+            FROM corr GROUP BY race_id, athlete_id
+        )
+        SELECT l.race_id, l.team_id, l.leg_num, l.athlete_id,
+               COALESCE(cw.leg,  l.leg_s)  AS leg_s,
+               COALESCE(cw.swim, l.swim_s) AS swim_s,
+               COALESCE(cw.bike, l.bike_s) AS bike_s,
+               COALESCE(cw.run,  l.run_s)  AS run_s,
+               COALESCE(cw.t1,   l.t1_s)   AS t1_s,
+               COALESCE(cw.t2,   l.t2_s)   AS t2_s
+        FROM relay_legs l
+        LEFT JOIN corr_wide cw
+               ON cw.race_id = l.race_id AND cw.athlete_id = l.athlete_id
+    """)
+
     # ART indexes on non-PK columns used in WHERE/JOIN clauses
     conn.execute("CREATE INDEX IF NOT EXISTS idx_events_date ON events(start_date)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_event_series_series_id ON event_series(series_id)")
@@ -309,6 +568,7 @@ def create_schema(conn):
     conn.execute("CREATE INDEX IF NOT EXISTS idx_anh_country ON athlete_nationality_history(country_full)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_results_athlete_id ON results(athlete_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ratings_athlete_id ON ratings(athlete_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_athlete_form_athlete ON athlete_form(athlete_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_rankings_athlete_id ON rankings(athlete_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_race_rankings_gc ON race_rankings(gender, course)")
 
@@ -351,6 +611,21 @@ _COUNTRY_SPECIAL_CASES = {
     "Democratic People's Republic of Korea": "PRK",
     # Federation / neutral banner
     "World Triathlon":                 "WTR",
+    # Home nations, sports-only entities, and disputed territories that
+    # pycountry can't resolve (all otherwise fall through to "UNK").
+    "Scotland":                        "SCO",
+    "SCOTLAND":                        "SCO",
+    "England":                         "ENG",
+    "ENGLAND":                         "ENG",
+    "Wales":                           "WAL",
+    "WALES":                           "WAL",
+    "Northern Ireland":                "NIR",  # Commonwealth Games: Ulster Banner
+    "Russian Triathlon Federation":    "RUS",
+    "Russian Olympic Committee":       "ROC",
+    "Kosovo":                          "KOS",
+    # Alt spellings pycountry doesn't recognise (a few stray history rows each).
+    "USA":                             "USA",
+    "Korea, South":                    "KOR",
 }
 
 
@@ -486,6 +761,16 @@ def record_athlete_nationality(conn, athlete_id, country_full, race_date):
     latest_country, latest_start = row
     if country_full == latest_country:
         if race_date < latest_start:
+            # Roll the range start back, but never across the previous range:
+            # WT backfills decade-old events, and an old same-country race
+            # observed inside/before an earlier foreign range would otherwise
+            # overlap it and corrupt the timeline (and can violate the PK).
+            prev_end = conn.execute("""
+                SELECT MAX(end_date) FROM athlete_nationality_history
+                WHERE athlete_id = ? AND end_date IS NOT NULL AND end_date <= ?
+            """, [athlete_id, latest_start]).fetchone()[0]
+            if prev_end is not None and race_date < prev_end:
+                return
             conn.execute("""
                 UPDATE athlete_nationality_history
                 SET start_date = ?
@@ -507,6 +792,30 @@ def record_athlete_nationality(conn, athlete_id, country_full, race_date):
             (athlete_id, country_full, start_date, end_date)
         VALUES (?, ?, ?, NULL)
     """, [athlete_id, country_full, race_date])
+
+
+def athlete_merge_redirects():
+    """old_id -> surviving_id map from data/athlete_merges.csv, chains resolved.
+
+    The app 301s /athlete/<merged_id> to the surviving athlete so indexed URLs
+    and backlinks follow the merge instead of 404ing. Loaded once per process;
+    the CSV only changes with a deploy.
+    """
+    path = _DATA_DIR / 'athlete_merges.csv'
+    if not path.exists():
+        return {}
+    redirects = {}
+    with open(path, newline='', encoding='utf-8') as f:
+        for row in csv.DictReader(f):
+            redirects[int(row['merge_athlete_id'])] = int(row['keep_athlete_id'])
+    # Collapse chains (A->B, B->C becomes A->C) so the app serves one hop.
+    for old_id, new_id in redirects.items():
+        seen = {old_id}
+        while new_id in redirects and new_id not in seen:
+            seen.add(new_id)
+            new_id = redirects[new_id]
+        redirects[old_id] = new_id
+    return redirects
 
 
 def apply_athlete_merges(conn):
@@ -541,13 +850,13 @@ def apply_athlete_merges(conn):
     applied = 0
     for keep_id, merge_id in pairs:
         merge_row = conn.execute(
-            "SELECT pto_slug, height_cm, weight_kg, nickname FROM athletes WHERE athlete_id = ?",
+            "SELECT pto_slug, height_cm, weight_kg, nickname, fftri_id, instagram FROM athletes WHERE athlete_id = ?",
             [merge_id],
         ).fetchone()
         if merge_row is None:
             continue  # Already merged on a previous run.
         keep_row = conn.execute(
-            "SELECT pto_slug, height_cm, weight_kg, nickname FROM athletes WHERE athlete_id = ?",
+            "SELECT pto_slug, height_cm, weight_kg, nickname, fftri_id, instagram FROM athletes WHERE athlete_id = ?",
             [keep_id],
         ).fetchone()
         if keep_row is None:
@@ -558,10 +867,12 @@ def apply_athlete_merges(conn):
         new_height = keep_row[1] or merge_row[1]
         new_weight = keep_row[2] or merge_row[2]
         new_nick   = keep_row[3] or merge_row[3]
-        if (new_slug, new_height, new_weight, new_nick) != keep_row:
+        new_fftri  = keep_row[4] or merge_row[4]
+        new_insta  = keep_row[5] or merge_row[5]
+        if (new_slug, new_height, new_weight, new_nick, new_fftri, new_insta) != keep_row:
             conn.execute(
-                "UPDATE athletes SET pto_slug=?, height_cm=?, weight_kg=?, nickname=? WHERE athlete_id=?",
-                [new_slug, new_height, new_weight, new_nick, keep_id],
+                "UPDATE athletes SET pto_slug=?, height_cm=?, weight_kg=?, nickname=?, fftri_id=?, instagram=? WHERE athlete_id=?",
+                [new_slug, new_height, new_weight, new_nick, new_fftri, new_insta, keep_id],
             )
 
         # Re-point athlete_id in tables sharing a (race_id, athlete_id, …) PK.
@@ -596,6 +907,131 @@ def apply_athlete_merges(conn):
 
     print(f"Applied {applied} athlete merge(s) "
           f"({len(pairs) - applied} already-applied or skipped)")
+
+
+def load_no_merge(source=None):
+    """Rejected (source account -> athlete) pairings from data/athlete_no_merge.csv.
+
+    Returns {source_key: {athlete_id, ...}} for one `source` ('pto' / 'fgp' /
+    'buli'), or the full {source: {source_key: {athlete_id, ...}}} map when
+    source is None. A pairing is keyed, not named, because the hardest cases
+    are two different people sharing an identical name (Kelly Couch USA, one
+    male long-course and one female short-course).
+
+    The auto-matchers drop these athlete_ids from their candidate lists so a
+    pairing a human has rejected can never re-form on a later ingest.
+    """
+    path = _DATA_DIR / 'athlete_no_merge.csv'
+    blocked = {}
+    if path.exists():
+        with open(path, newline='', encoding='utf-8') as f:
+            for row in csv.DictReader(f):
+                blocked.setdefault(row['source'], {}).setdefault(
+                    row['source_key'], set()).add(int(row['athlete_id']))
+    return blocked if source is None else blocked.get(source, {})
+
+
+# PTO races are the only source-owned races carrying a marker that survives
+# ingest: pto_ingest mints them with these prog_names and nothing else uses
+# them. That's what lets apply_athlete_no_merge move PTO results back off a
+# wrongly-linked athlete without guessing.
+_PTO_PROG_NAMES = "('Pro Men', 'Pro Women')"
+
+
+def apply_athlete_no_merge(conn):
+    """Undo any link data/athlete_no_merge.csv rejects but that is still attached.
+
+    A pairing made before its block existed is already persisted as
+    athletes.pto_slug, and _resolve_athlete short-circuits on that column, so
+    the ingest-time block alone never unpicks it. Per still-attached PTO row:
+    detach the slug (plus the height/weight/nickname taken from the wrong PTO
+    profile), mint the standalone athlete the ingest would have created -
+    slug_id(pto_slug), so the id matches what a from-scratch rebuild produces -
+    and move the PTO results and their per-race rows across.
+
+    Idempotent: once detached the slug no longer resolves to the blocked
+    athlete, so re-running is a no-op.
+    """
+    applied = 0
+    for source, keys in load_no_merge().items():
+        for source_key, blocked_ids in keys.items():
+            if source != 'pto':
+                # fgp/buli blocks are preventive only: their races carry no
+                # marker separating them from WT ones, so there is nothing safe
+                # to move. A link predating its block has to be unpicked by
+                # hand - say so rather than leaving it silently in place.
+                attached = source == 'fgp' and conn.execute(
+                    "SELECT athlete_id FROM athletes WHERE fftri_id = ?", [source_key],
+                ).fetchone()
+                if attached and attached[0] in blocked_ids:
+                    raise RuntimeError(
+                        f"fftri_id={source_key!r} is blocked from athlete "
+                        f"{attached[0]} but still attached; FGP links have no "
+                        "race marker to split results on - detach by hand"
+                    )
+                continue
+
+            row = conn.execute(
+                "SELECT athlete_id, country_full, height_cm, weight_kg, nickname "
+                "FROM athletes WHERE pto_slug = ?", [source_key],
+            ).fetchone()
+            if row is None or row[0] not in blocked_ids:
+                continue  # Never linked, already detached, or held by an allowed athlete.
+            blocked_id, country_full, height_cm, weight_kg, nickname = row
+
+            race_rows = conn.execute(f"""
+                SELECT res.race_id, r.gender, r.race_date
+                FROM results res JOIN races r USING (race_id)
+                WHERE res.athlete_id = ? AND r.prog_name IN {_PTO_PROG_NAMES}
+            """, [blocked_id]).fetchall()
+
+            conn.execute(
+                "UPDATE athletes SET pto_slug=NULL, height_cm=NULL, weight_kg=NULL, "
+                "nickname='' WHERE athlete_id = ?", [blocked_id],
+            )
+            if not race_rows:
+                # Linked but no PTO results yet - detaching is the whole fix;
+                # the next PTO ingest mints the standalone row itself.
+                print(f"  [no-merge] detached {source_key!r} from athlete {blocked_id} (no PTO results)")
+                applied += 1
+                continue
+
+            new_id = slug_id(source_key)
+            collider = conn.execute(
+                "SELECT name FROM athletes WHERE athlete_id = ?", [new_id]).fetchone()
+            if collider:
+                raise RuntimeError(
+                    f"slug_id collision: pto_slug={source_key!r} hashes to {new_id} "
+                    f"already held by {collider[0]!r}"
+                )
+
+            race_ids = [r[0] for r in race_rows]
+            genders = {r[1] for r in race_rows}
+            if len(genders) > 1:
+                raise RuntimeError(
+                    f"pto_slug={source_key!r} has PTO results in both genders "
+                    f"on athlete {blocked_id} - split by hand"
+                )
+            # Country matches by construction: every auto-matcher prefilters on
+            # an exact country match, so the PTO account raced under the same
+            # nationality as the athlete it was wrongly attached to.
+            upsert_athlete(conn, new_id, _title_from_slug(source_key), country_full,
+                           0, "", genders.pop())
+            upsert_athlete_pto_fields(conn, new_id, source_key, height_cm, weight_kg, nickname)
+            record_athlete_nationality(conn, new_id, country_full, min(r[2] for r in race_rows))
+
+            id_list = ','.join(str(i) for i in race_ids)
+            for table in ("results", "ratings", "rankings", "corrections", "start_list_entries"):
+                conn.execute(
+                    f"UPDATE {table} SET athlete_id = ? "
+                    f"WHERE athlete_id = ? AND race_id IN ({id_list})",
+                    [new_id, blocked_id],
+                )
+            print(f"  [no-merge] moved {len(race_ids)} PTO race(s) off athlete "
+                  f"{blocked_id} onto new athlete {new_id} ({source_key})")
+            applied += 1
+
+    print(f"Applied {applied} athlete un-link(s) from athlete_no_merge.csv")
 
 
 def reconcile_athlete_nationality(conn):
@@ -679,6 +1115,10 @@ def backfill_sub_category(conn):
             WHEN LOWER(SPLIT_PART(prog_name, ' ', 1)) = 'pro'    THEN 'elite'
             ELSE 'ag'
         END
+        -- Relay sub_category is set at ingest from the full prog name
+        -- ("Junior Mixed Relay" etc.); the first-word rule above would
+        -- misfile every relay as 'ag'.
+        WHERE distance != 'relay'
     """)
 
 
@@ -732,6 +1172,236 @@ def load_corrections(conn):
         long_rows,
     )
     print(f"Loaded {n_csv} manual corrections ({len(long_rows)} long rows)")
+
+
+def load_doping_bans(conn):
+    """Load doping sanctions from data/doping_bans.csv into the doping_bans table.
+
+    The CSV is the ONLY source: the table is fully cleared and rebuilt each run,
+    so removing a row from the CSV removes the athlete's banner. Each row keys on
+    athlete_id (resolved once, by hand, against the athletes table); `name` is
+    documentation only. Rows whose athlete_id isn't in the DB are skipped with a
+    warning - the banner needs an athlete page to attach to.
+
+    Columns: athlete_id, name, substance, sanction_start, sanction_end,
+             summary, evidence_url, source.
+    Dates are ISO (YYYY-MM-DD) or blank.
+    """
+    conn.execute("DELETE FROM doping_bans")
+
+    path = _DATA_DIR / 'doping_bans.csv'
+    if not path.exists():
+        print("No doping_bans.csv - skipping")
+        return
+
+    rows, skipped = [], 0
+    with open(path, newline='', encoding='utf-8') as f:
+        for row in csv.DictReader(f):
+            try:
+                athlete_id = int(row['athlete_id'])
+            except (KeyError, ValueError, TypeError):
+                continue
+            if not conn.execute("SELECT 1 FROM athletes WHERE athlete_id = ?", [athlete_id]).fetchone():
+                print(f"  [doping] athlete_id={athlete_id} ({row.get('name','?')}) not in DB - skipping")
+                skipped += 1
+                continue
+            rows.append((
+                athlete_id,
+                row.get('substance', '').strip(),
+                row.get('sanction_start', '').strip() or None,
+                row.get('sanction_end', '').strip() or None,
+                row.get('summary', '').strip(),
+                row.get('evidence_url', '').strip(),
+                row.get('source', '').strip(),
+            ))
+
+    conn.executemany(
+        """INSERT INTO doping_bans
+               (athlete_id, substance, sanction_start, sanction_end, summary, evidence_url, source)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        rows,
+    )
+    print(f"Loaded {len(rows)} doping ban(s) ({skipped} skipped - athlete not in DB)")
+
+
+# Current active world rank (either course), then elite starts in the last two
+# years, among athletes with a recent elite start. Ranks put the names people
+# look for first; raw start counts favour prolific continental-cup racers.
+INSTAGRAM_PRIORITY_SQL = """
+    WITH recent AS (
+        SELECT r.athlete_id, COUNT(*) AS recent_elite
+        FROM results r
+        JOIN races ra ON ra.race_id = r.race_id
+        WHERE ra.category = 'elite' AND ra.race_date >= CURRENT_DATE - INTERVAL 730 DAY
+        GROUP BY r.athlete_id
+    ),
+    latest_rank AS (
+        SELECT DISTINCT ON (rk.athlete_id) rk.athlete_id, rk.active_world_overall
+        FROM rankings rk
+        JOIN races ra ON ra.race_id = rk.race_id
+        WHERE rk.category = 'elite'
+        ORDER BY rk.athlete_id, ra.race_date DESC, rk.race_id DESC
+    )
+    SELECT a.athlete_id, rc.recent_elite, lr.active_world_overall
+    FROM athletes a
+    JOIN recent rc ON rc.athlete_id = a.athlete_id
+    LEFT JOIN latest_rank lr ON lr.athlete_id = a.athlete_id
+    ORDER BY COALESCE(lr.active_world_overall, 999999), rc.recent_elite DESC, a.athlete_id
+"""
+
+INSTAGRAM_CSV_COLUMNS = ["athlete_id", "name", "handle", "updated_at"]
+
+_INSTAGRAM_HANDLE_RE = re.compile(r"^[A-Za-z0-9._]{1,30}$")
+
+
+def normalize_instagram_handle(raw):
+    """'https://www.instagram.com/kristianblu/?hl=en', '@kristianblu' and
+    'kristianblu' all become 'kristianblu'. Returns None when what's left
+    isn't a valid handle (WT profiles sometimes hold a full name or a URL to
+    somewhere else entirely)."""
+    s = raw.strip()
+    s = re.sub(r"^(https?://)?(www\.)?instagram\.com/", "", s, flags=re.I)
+    s = s.split("?")[0].split("/")[0].lstrip("@").strip().lower()
+    return s if _INSTAGRAM_HANDLE_RE.match(s) else None
+
+
+
+def load_instagram_csv(conn):
+    """Apply data/instagram.csv: rows with a handle set athletes.instagram
+    (manual always wins), rows with an empty handle mark the athlete as
+    looked-for-and-not-found in instagram_skips. The CSV is the only source
+    for skips, so the table is rebuilt from it each run."""
+    conn.execute("DELETE FROM instagram_skips")
+    path = _DATA_DIR / 'instagram.csv'
+    if not path.exists():
+        print("No instagram.csv - skipping")
+        return
+    set_n = skip_n = 0
+    with open(path, newline='', encoding='utf-8') as f:
+        for row in csv.DictReader(f):
+            athlete_id = int(row['athlete_id'])
+            if row['handle']:
+                conn.execute("UPDATE athletes SET instagram = ? WHERE athlete_id = ?",
+                             [row['handle'], athlete_id])
+                set_n += 1
+            else:
+                conn.execute("INSERT OR REPLACE INTO instagram_skips VALUES (?, ?)",
+                             [athlete_id, row['updated_at'][:10]])
+                skip_n += 1
+    print(f"instagram.csv: {set_n} handles, {skip_n} skips")
+
+
+def merge_instagram_pending(pending_path):
+    """Fold the admin tool's append-only pending file (pulled from prod by
+    weekly.sh) into data/instagram.csv. Later rows win per athlete, so a
+    re-entered handle or an undo-then-redo resolves to the last action. An
+    undo row (empty name and handle) that ends up last drops the athlete
+    entirely, putting them back in the queue."""
+    pending_path = pathlib.Path(pending_path)
+    path = _DATA_DIR / 'instagram.csv'
+    rows = {}
+    for src in (path, pending_path):
+        if not src.exists():
+            continue
+        with open(src, newline='', encoding='utf-8') as f:
+            for row in csv.DictReader(f):
+                rows[int(row['athlete_id'])] = row
+    with open(path, 'w', newline='', encoding='utf-8') as f:
+        w = csv.DictWriter(f, fieldnames=INSTAGRAM_CSV_COLUMNS)
+        w.writeheader()
+        rows = {aid: r for aid, r in rows.items() if r['name']}
+        for aid in sorted(rows):
+            w.writerow({k: rows[aid][k] for k in INSTAGRAM_CSV_COLUMNS})
+    print(f"instagram.csv: {len(rows)} rows after merging {pending_path}")
+
+
+STARTLISTS_DIR = _DATA_DIR / 'startlists'
+
+
+def load_manual_startlists(conn):
+    """Load hand-entered long-course start lists (data/startlists/*.json,
+    written by /admin/startlist and pulled by weekly.sh) into events /
+    upcoming_races / start_list_entries so they flow through predictions and
+    the upcoming pages like WT start lists. Ids are minted the way pto_ingest
+    mints them (slug_id of the PTO race slug + year + gender), so when the
+    PTO results land they replace the upcoming row under the same race_id.
+    Past-dated files are left alone: the start-list purge handles them."""
+    import json
+    from ptd_data.pto_ingest import _short_race_handle, _country_to_continent
+    files = sorted(STARTLISTS_DIR.glob('*.json')) if STARTLISTS_DIR.exists() else []
+    today = _dt.date.today()
+    loaded = 0
+    for path in files:
+        data = json.loads(path.read_text())
+        ev = data['event']
+        year = int(ev['date'][:4])
+        if _dt.date.fromisoformat(ev['date']) < today:
+            continue
+        event_id = slug_id(f"{ev['slug']}-{year}")
+        upsert_nationality(conn, ev['country'])
+        insert_event(conn, event_id=event_id, name=ev['name'], venue=ev['venue'], country=ev['country'],
+                     continent=_country_to_continent(ev['country']), start_date=ev['date'], end_date=ev['date'],
+                     longitude=0, latitude=0, brand=ev['brand'], prize_money_usd=int(ev.get('prize_usd') or 0))
+        for gender, entries in data['races'].items():
+            if not entries:
+                continue
+            race_id = slug_id(f"{ev['slug']}-{year}-{gender}")
+            conn.execute("""
+                INSERT OR REPLACE INTO upcoming_races
+                    (race_id, event_id, race_title, prog_name, race_date, gender, category,
+                     cat_ids, race_handle, event_spec_ids, last_fetched, distance)
+                VALUES (?, ?, ?, ?, ?, ?, 'elite', '[]', ?, '[]', CURRENT_TIMESTAMP, ?)
+            """, [race_id, event_id, ev['name'], 'Pro Men' if gender == 'male' else 'Pro Women',
+                  ev.get(f'date_{gender}') or ev['date'], gender,
+                  _short_race_handle(ev['name'], ev['slug'], year), ev['distance']])
+            rows = []
+            for e in entries:
+                athlete_id = e['athlete_id']
+                if athlete_id is None:
+                    # New athlete: mint a PTO-style slug so a later PTO ingest
+                    # resolves to this row via athletes.pto_slug.
+                    pto_slug = e['pto_slug']
+                    athlete_id = slug_id(pto_slug)
+                    upsert_nationality(conn, e['country'])
+                    upsert_athlete(conn, athlete_id, e['name'], e['country'], int(e.get('yob') or 0), '', gender)
+                    conn.execute("UPDATE athletes SET pto_slug = ? WHERE athlete_id = ? AND pto_slug IS NULL",
+                                 [pto_slug, athlete_id])
+                rows.append((race_id, athlete_id, int(e.get('start_num') or 0)))
+            conn.execute("DELETE FROM start_list_entries WHERE race_id = ?", [race_id])
+            conn.executemany("INSERT OR IGNORE INTO start_list_entries VALUES (?, ?, ?)", rows)
+            loaded += 1
+            print(f"  {ev['name']} {gender}: {len(rows)} entries")
+    print(f"Manual start lists: {loaded} races from {len(files)} files")
+
+
+def social_already_posted(conn, race_id, post_type):
+    """True if (race_id, post_type) has a social_posts row."""
+    return conn.execute(
+        "SELECT 1 FROM social_posts WHERE race_id = ? AND post_type = ?",
+        [race_id, post_type],
+    ).fetchone() is not None
+
+
+def mark_social_posted(conn, race_id, post_type, ig_post_id, fb_post_ids):
+    """Record a published post. fb_post_ids is a list (joined to CSV) or None.
+
+    DuckDB's INSERT ... ON CONFLICT DO UPDATE chokes on CURRENT_TIMESTAMP in
+    the SET list (parses the bare keyword as a column reference) and also
+    doesn't fill the DEFAULT for posted_at on a parameterised INSERT path,
+    so we set the timestamp explicitly on both sides.
+    """
+    csv = ",".join(fb_post_ids) if fb_post_ids else None
+    conn.execute(
+        """
+        INSERT INTO social_posts (race_id, post_type, posted_at, ig_post_id, fb_post_ids)
+        VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?)
+        ON CONFLICT (race_id, post_type) DO UPDATE SET
+            posted_at   = excluded.posted_at,
+            ig_post_id  = excluded.ig_post_id,
+            fb_post_ids = excluded.fb_post_ids
+        """,
+        [race_id, post_type, ig_post_id, csv],
+    )
 
 
 def slug_id(slug):

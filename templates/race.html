@@ -1,36 +1,71 @@
 {% extends "base.html" %}
 
-{% block title %}{{ race.race_title }} ({{ race.date.strftime('%Y') }}) - {{ race.gender | title }} Elite | Pro Tri Data{% endblock %}
+{# Titles match how people actually search: "<race> <year> results" and
+   "<race> start list". Most WT titles already lead with the year, so only
+   append it when missing.
+
+   Kept deliberately short. Google shows ~60 characters, and a word-frequency
+   pass over GSC queries put "triathlon", the year, "results" and the venue at
+   the top while "splits", "elite" and the site name scored zero, so those are
+   gone. program_label() carries the program category, which every program of an
+   event needs or their titles collide. #}
+{% macro page_title() -%}
+{%- set y = race.date.strftime('%Y') -%}
+{%- set base = title_words(race.race_title if y in race.race_title else race.race_title ~ ' ' ~ y) -%}
+{%- if is_upcoming -%}
+{{ base }} - {{ program_label(race) }} Start List
+{%- else -%}
+{{ base }} - {{ program_label(race) }} Results
+{%- endif -%}
+{%- endmacro %}
+
+{% block title %}{{ page_title() }}{% endblock %}
+
+{# Set outside the blocks so the JSON-LD below can reuse it as the Event
+   description. No location in it even though it is on hand: it runs to
+   "Jakabaring Sport City, Palembang, Indonesia" on some events, which alone
+   blows the ~155 characters Google shows, and most race titles already name the
+   venue. The page body and the JSON-LD still carry it. #}
+{% if is_upcoming %}
+{% set desc %}{{ program_label(race) }} start list for {{ title_words(race.race_title) }}, {{ race.date.strftime('%-d %b %Y') }}, with ratings and predicted results.{% endset %}
+{% else %}
+{% set desc %}{{ program_label(race) }} results for {{ title_words(race.race_title) }}, {{ race.date.strftime('%B %Y') }}. {{ finish_count }} finishers, with splits and rating changes.{% endset %}
+{% endif %}
 
 {% block meta %}
-{% set loc_str %}{% if race_location %} in {{ race_location }}{% endif %}{% endset %}
-{% set desc %}{{ race.race_title }}, {{ race.date.strftime('%B %Y') }}{{ loc_str }}. {{ race.gender | title }} elite results - {{ finish_count }} finishers. View splits, rating changes, and performance analysis.{% endset %}
 <meta name="description" content="{{ desc }}">
 <meta property="og:site_name" content="Pro Tri Data">
 <meta property="og:type" content="website">
-<meta property="og:title" content="{{ race.race_title }} ({{ race.date.strftime('%Y') }}) - {{ race.gender | title }} Elite | Pro Tri Data">
+<meta property="og:title" content="{{ page_title() }}">
 <meta property="og:description" content="{{ desc }}">
 <meta property="og:image" content="{{ STATIC_BASE_URL }}imgs/logo-512.webp">
 {% endblock %}
 
 {% block jsonld %}
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"SportsEvent","name":{{ race.race_title | tojson }},"startDate":"{{ race.date.isoformat() }}","sport":"Triathlon","url":"https://www.protridata.com/race/{{ race.race_id }}"{% if race_location %},"location":{"@type":"Place","name":{{ race_location | tojson }}}{% endif %}}
+{#- location is required by Google's Event type, so it must never be conditional.
+    Venue is missing on 14% of races and country is present on every one of those,
+    so it is the fallback rather than a reason to omit the field and log an error
+    in Search Console. endDate and description are only recommended, but a race is
+    a single day and the description is already built above, so both are free. -#}
+{"@context":"https://schema.org","@type":"SportsEvent","name":{{ race.race_title | tojson }},"startDate":"{{ race.date.isoformat() }}","endDate":"{{ race.date.isoformat() }}","sport":"Triathlon","url":"https://www.protridata.com/race/{{ race.race_id }}","eventStatus":"https://schema.org/EventScheduled","description":{{ desc | trim | tojson }},"image":"{{ STATIC_BASE_URL }}imgs/logo-512.webp","location":{"@type":"Place","name":{{ (race_location or race_country) | tojson }}{% if race_country %},"address":{{ race_country | tojson }}{% endif %}}}
 </script>
+{% include "_breadcrumb_jsonld.html" %}
 {% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/race.css?v={{ ASSET_VERSION }}">
 <link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/users.css?v={{ ASSET_VERSION }}">
+<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/share.css?v={{ ASSET_VERSION }}">
 {% endblock %}
 
 {% block hero %}{% include "_race_hero.html" %}{% endblock %}
 
-{% block content %}{% if is_upcoming %}{% include "_upcoming_race_content.html" %}{% else %}{% include "_race_content.html" %}{% endif %}{% endblock %}
+{% block content %}{% if is_upcoming %}{% include "_upcoming_race_content.html" %}{% else %}{% include "_race_content.html" %}{% include "_share_dialog.html" %}{% endif %}{% endblock %}
 
 {% block extra_js %}
-<script src="{{ STATIC_BASE_URL }}js/utils.js?v={{ ASSET_VERSION }}"></script>
 <script src="{{ STATIC_BASE_URL }}js/race.js?v={{ ASSET_VERSION }}"></script>
+<script src="{{ STATIC_BASE_URL }}js/share.js?v={{ ASSET_VERSION }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     initRaceCharts();

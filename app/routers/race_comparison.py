@@ -3,11 +3,12 @@ import numpy as np
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from config import ASSET_VERSION, STATIC_BASE_URL, flag
+from config import ASSET_VERSION, STATIC_BASE_URL
+from app.display_helpers import flag
 
 from ptd_data import queries
 from app.routers import race_page
-from app.routers.router_utils import format_time, format_time_behind, format_rating, format_rating_change
+from app.routers.router_utils import format_time, format_time_behind, format_rating, format_rating_change, format_course_conditions
 
 # Consistent race colours across all charts and tables. Same blue/pink as the
 # athlete-compare page so users see one visual language for "thing 1 vs thing 2".
@@ -54,14 +55,14 @@ def _race_summary_payload(race_id: int):
 
 
 @router.get("/race-compare", response_class=HTMLResponse)
-async def race_compare_page(request: Request):
+def race_compare_page(request: Request):
     return templates.TemplateResponse("race_comparison.html", {
         "request": request, "active_page": "races",
     })
 
 
 @router.get("/race-compare/search")
-async def search_races_for_compare(q: str = "", course: str = "", gender: str = ""):
+def search_races_for_compare(q: str = "", course: str = "", gender: str = ""):
     if not q or len(q.strip()) < 2:
         return JSONResponse([])
     results = queries.search_races_for_compare(
@@ -75,7 +76,7 @@ async def search_races_for_compare(q: str = "", course: str = "", gender: str = 
 
 
 @router.get("/race-compare/race/{race_id}")
-async def get_race_for_compare(race_id: int):
+def get_race_for_compare(race_id: int):
     payload = _race_summary_payload(race_id)
     if not payload:
         return JSONResponse({"error": "Not found"}, status_code=404)
@@ -144,13 +145,12 @@ def _race_card_data(race_id: int):
     finishers = sum(1 for r in results if r["status"] not in DNF_STATUSES)
     dnfs      = len(results) - finishers
 
-    # Predictions / course conditions (elite races only)
+    # Course conditions (elite races only), precomputed at build time
     is_elite = queries.get_race_category(race_id) == 'elite'
     course_conditions = None
     if is_elite:
-        _, _, course_conditions = race_page._compute_race_predictions(
-            race_id, race, results, queries.get_prediction_models()
-        )
+        course_conditions = format_course_conditions(
+            queries.get_race_course_conditions(race_id))
 
     thresholds = queries.get_race_standard_thresholds(
         race["gender"],
@@ -207,7 +207,7 @@ def _race_card_data(race_id: int):
 
 
 @router.get("/race-compare/{race1_id}/{race2_id}", response_class=HTMLResponse)
-async def get_race_comparison_html(request: Request, race1_id: int, race2_id: int):
+def get_race_comparison_html(request: Request, race1_id: int, race2_id: int):
     if not request.headers.get("X-Partial"):
         return RedirectResponse(
             url=f"/race-compare?r1={race1_id}&r2={race2_id}",

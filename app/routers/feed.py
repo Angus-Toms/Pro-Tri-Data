@@ -2,12 +2,13 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from config import ASSET_VERSION, STATIC_BASE_URL, flag
+from config import ASSET_VERSION, STATIC_BASE_URL
+from app.display_helpers import flag
 from ptd_data import queries
 from ptd_users import queries as uq
 from ptd_users.auth import current_user
 from app.routers.router_utils import format_rating_change, format_time, rel_time, user_avatar
-from app.routers.upcoming_page import _build_podium
+from app.routers.event_page import _predicted_podium
 from app.routers.comments import render_comment_body, tag_refs
 
 router = APIRouter()
@@ -41,17 +42,15 @@ async def feed(request: Request):
             "gender":     row["gender"],
             "country":    row["country"],
             "event_spec_ids": row["event_spec_ids"],
+            "category":   row["category"],
             "followed_race":  False,
             "athletes":   [],
         })
         entry["athletes"].append(row["name"])
 
-    models = queries.get_prediction_models()
     entries_by_race = queries.get_upcoming_race_entries_bulk(list(upcoming))
     for rid, entry in upcoming.items():
-        top3 = sorted(entries_by_race.get(rid, []),
-                      key=lambda e: e["overall_rating"] or 0, reverse=True)[:3]
-        entry["podium"] = _build_podium(top3, entry["gender"], entry["event_spec_ids"], models)
+        entry["podium"] = _predicted_podium(entries_by_race.get(rid, []), entry)
     upcoming_races = sorted(upcoming.values(), key=lambda e: (e["race_date"], e["race_id"]))
 
     # --- recent results from followed athletes (last 90 days) ---

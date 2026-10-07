@@ -5,7 +5,8 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
 
-from config import ASSET_VERSION, SITE_BASE_URL, STATIC_BASE_URL, flag
+from config import ASSET_VERSION, SITE_BASE_URL, STATIC_BASE_URL
+from app.display_helpers import flag
 from ptd_users import emails
 from ptd_users import queries as uq
 from ptd_users.auth import (

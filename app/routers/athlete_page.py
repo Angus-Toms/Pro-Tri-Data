@@ -1,15 +1,17 @@
-from collections import OrderedDict
+import math
 from datetime import date, timedelta
+from functools import lru_cache
 
+import anyio
 from fastapi import HTTPException, Query, Request, APIRouter
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from config import ASSET_VERSION, STATIC_BASE_URL, flag
+from config import ASSET_VERSION, STATIC_BASE_URL
+from app.display_helpers import flag
 
-from ptd_data import queries
+from ptd_data import db, queries
+from ptd_data.predictions import LOW_CONF_STARTS
 from ptd_users import queries as uq
-from ptd_data.ratings import SCALE
-from app.routers.race_page import _anchor_time
 from app.routers.router_utils import (
     format_time, format_time_behind, format_rating_change, format_1yr_rating_change,
 )
@@ -20,42 +22,66 @@ templates.env.globals["ASSET_VERSION"] = ASSET_VERSION
 templates.env.globals["flag"]          = flag
 router = APIRouter()
 
-_TIER_LABELS = {
-    "olympic":               "Olympic",
-    "world_champs":          "World Championships",
-    "ag_world_champs":       "AG World Championships",
-    "ag_continental_champs": "AG Continental Championships",
-    "ag_continental_champs": "AG Continental Championships",
-    "wtcs":                  "WTCS",
-    "world_cup":             "World Cup",
-    "continental_cup":       "Continental Cup",
-    # Long-course tiers
-    "im_world_champs":       "Ironman World Championships",
-    "im_703_world_champs":   "Ironman 70.3 World Championships",
-    "im":                    "Ironman",
-    "t100":                  "T100",
-    "im_703":                "Ironman 70.3",
-    "challenge":             "Challenge",
-}
+_merge_redirects = lru_cache(maxsize=1)(db.athlete_merge_redirects)
 
-# Worst finish position that still qualifies for palmares display. Tiers not
-# listed are uncapped. The four "worlds"-tier categories (world_champs,
-# ag_world_champs, im_world_champs, im_703_world_champs) are capped at 30
-# so a 31st-place at Worlds doesn't crowd out higher-finishes elsewhere.
-_TIER_POS_CAPS = {
-    "olympic":               40,
-    "world_champs":          30,
-    "ag_world_champs":       30,
-    "ag_continental_champs": 15,
-    "im_world_champs":       30,
-    "im_703_world_champs":   30,
-    "wtcs":                  25,
-    "world_cup":             20,
-    "continental_cup":       15,
-    "im":                    20,
-    "t100":                  20,
-    "im_703":                20,
-    "challenge":             15,
+# Palmares scoring. Every finish is worth the tier's winner value scaled by
+# _POS_DECAY per place behind the winner, so all tiers sit on one scale and
+# e.g. an Olympic 20th (~110) no longer outranks a world title (1000). Values
+# only matter relative to the other tiers in the same stream (short / AG /
+# long), since each stream is a separate palmares.
+_TIER_POINTS = {
+    "olympic":               1250,
+    "world_champs":          1000,
+    "grand_final":           1000,
+    "sprint_world_champs":    900,
+    "wtcs":                   800,
+    "u23_world_champs":       750,
+    "world_cup":              500,
+    "junior_world_champs":    300,
+    "continental_cup":        200,
+    "french_grand_prix":      150,
+    "ag_world_champs":       1000,
+    "ag_continental_champs":  500,
+    # Long-course tiers
+    "im_world_champs":       1500,
+    "im_703_world_champs":   1000,
+    "t100":                   800,
+    "im":                     700,
+    "im_703":                 400,
+    "challenge":              300,
+}
+_POS_DECAY = 0.88
+# A finish worth fewer points than this never makes the palmares (roughly a
+# top-31 at worlds, top-26 at a World Cup, top-18 at a Continental Cup).
+_MIN_POINTS = 20
+# Hide anything worth less than this fraction of the athlete's best result, so
+# a world champion's early Continental Cup placings drop off.
+_REL_THRESHOLD = 0.2
+_MAX_ITEMS = 10
+
+# (title, medal prefix, event name) for championship-style tiers; everything
+# else reads "{label} Win" / "{label} Silver" / "{label}, 5th".
+_CHAMPIONSHIP_LABELS = {
+    "olympic":               ("Olympic Champion",          "Olympic",                    "Olympic Games"),
+    "world_champs":          ("World Champion",            "World Championship",         "World Championships"),
+    "u23_world_champs":      ("U23 World Champion",        "U23 World Championship",     "U23 World Championships"),
+    "junior_world_champs":   ("Junior World Champion",     "Junior World Championship",  "Junior World Championships"),
+    "sprint_world_champs":   ("Sprint World Champion",     "Sprint World Championship",  "Sprint World Championships"),
+    "grand_final":           ("Grand Final Win",           "Grand Final",                "Grand Final"),
+    "ag_world_champs":       ("AG World Champion",         "AG World Championship",      "AG World Championships"),
+    "ag_continental_champs": ("AG Continental Champion",   "AG Continental",             "AG Continental Championships"),
+    "im_world_champs":       ("Ironman World Champion",    "Ironman World Championship", "Ironman World Championships"),
+    "im_703_world_champs":   ("Ironman 70.3 World Champion", "Ironman 70.3 World Championship", "Ironman 70.3 World Championships"),
+}
+_TIER_LABELS = {
+    "wtcs":              "WTCS",
+    "world_cup":         "World Cup",
+    "continental_cup":   "Continental Cup",
+    "french_grand_prix": "French Grand Prix",
+    "im":                "Ironman",
+    "t100":              "T100",
+    "im_703":            "Ironman 70.3",
+    "challenge":         "Challenge",
 }
 
 
@@ -74,78 +100,92 @@ def format_ordinal(n):
     return f"{n}{suffix}"
 
 
-def _format_position(tier, pos, age_group=None):
-    pos = int(pos)
-    label = _TIER_LABELS.get(tier, tier)
-    if tier == "olympic":
-        if pos == 1: return "Olympic Champion"
-        if pos == 2: return "Olympic Silver"
-        if pos == 3: return "Olympic Bronze"
-        return f"Olympic Games, {format_ordinal(pos)}"
-    if tier == "world_champs":
-        # age_group is "U23" or "Junior" for non-Elite categories, None for Elite
-        prefix = f"{age_group} " if age_group else ""
-        if pos == 1: return f"{prefix}World Champion"
-        if pos == 2: return f"{prefix}World Championship Silver"
-        if pos == 3: return f"{prefix}World Championship Bronze"
-        return f"{prefix}World Championships, {format_ordinal(pos)}"
-    if tier == "ag_world_champs":
-        if pos == 1: return "AG World Champion"
-        if pos == 2: return "AG World Championship Silver"
-        if pos == 3: return "AG World Championship Bronze"
-        return f"AG World Championships, {format_ordinal(pos)}"
-    if tier == "ag_continental_champs":
-        if pos == 1: return "AG Continental Champion"
-        if pos == 2: return "AG Continental Silver"
-        if pos == 3: return "AG Continental Bronze"
-        return f"AG Continental Championships, {format_ordinal(pos)}"
-    # Long-course worlds mirror the short-course worlds formatting with an
-    # explicit "Ironman" / "Ironman 70.3" prefix so "Ironman World Champion"
-    # reads naturally.
-    if tier in ("im_world_champs", "im_703_world_champs"):
-        prefix = "Ironman 70.3 " if tier == "im_703_world_champs" else "Ironman "
-        if pos == 1: return f"{prefix}World Champion"
-        if pos == 2: return f"{prefix}World Championship Silver"
-        if pos == 3: return f"{prefix}World Championship Bronze"
-        return f"{prefix}World Championships, {format_ordinal(pos)}"
+_GENDER_WORD = {"male": "Men", "female": "Women", "mixed": "Mixed"}
+
+
+def _display_program(prog_name, gender=None):
+    """Results-table program label. Division-tagged programs (French Grand Prix
+    'Elite Men (D1)') render as "{Division} {Gender}" ("D1 Men") — matching the
+    series-page tabs — while everything else shows its prog_name unchanged. The
+    stored prog_name keeps "Elite" so sub_category derivation is unaffected.
+    Gender falls back to the word already in the prog_name when not supplied."""
+    div = queries.program_division(prog_name)
+    if not div:
+        return prog_name
+    word = _GENDER_WORD.get(gender)
+    if not word:
+        word = next((w for w in ("Women", "Men", "Mixed") if w in (prog_name or "")), "")
+    return f"{div} {word}".strip()
+
+
+def _mtr_program(prog_name, leg_num=None):
+    """Mixed-relay program label for the results/ratings tables:
+    'Mixed Elite Relay' -> 'Elite MTR', 'Mixed Relay' -> 'MTR', with an
+    optional leg suffix."""
+    cat = prog_name.removeprefix("Mixed").removesuffix("Relay").strip()
+    label = f"{cat} MTR".strip()
+    if leg_num:
+        label += f" · Leg {leg_num}"
+    return label
+
+
+def _format_position(tier, pos):
+    if tier in _CHAMPIONSHIP_LABELS:
+        title, medal, event = _CHAMPIONSHIP_LABELS[tier]
+        if pos == 1: return title
+        if pos == 2: return f"{medal} Silver"
+        if pos == 3: return f"{medal} Bronze"
+        return f"{event}, {format_ordinal(pos)}"
+    label = _TIER_LABELS[tier]
     if pos == 1: return f"{label} Win"
     if pos == 2: return f"{label} Silver"
     if pos == 3: return f"{label} Bronze"
     return f"{label}, {format_ordinal(pos)}"
 
 
-def _build_notable_results(notable_raw, tier_order=None):
-    """Group notable results by description, collapse multiples, cap per tier.
+def _build_notable_results(notable_raw):
+    """Pick an athlete's most significant results across every tier.
 
-    Position caps come from `_TIER_POS_CAPS`: tiers listed there require a
-    finish at or above the given position to qualify (e.g. Olympics top 40,
-    WTCS top 25). Tiers without an entry are uncapped.
+    Finishes are grouped by (tier, position) and scored on the shared
+    _TIER_POINTS scale. Within a tier, a podium hides that tier's non-podium
+    finishes (an Olympic champion's 12th at the next Games is noise); without
+    a podium only the single best finish is kept. Groups below _MIN_POINTS
+    or below _REL_THRESHOLD of the athlete's best group are dropped, and the
+    rest are listed best first.
     """
-    if tier_order is None:
-        tier_order = ["olympic", "world_champs", "wtcs", "world_cup", "continental_cup"]
+    groups = {}
+    for r in notable_raw:
+        groups.setdefault((r["tier"], r["position"]), []).append(r)
+
+    by_tier = {}
+    for (tier, pos), races in groups.items():
+        points = _TIER_POINTS[tier] * _POS_DECAY ** (pos - 1)
+        if points >= _MIN_POINTS:
+            by_tier.setdefault(tier, []).append((points, tier, pos, races))
+
+    kept = []
+    for tier_groups in by_tier.values():
+        tier_groups.sort(reverse=True)
+        podiums = [g for g in tier_groups if g[2] <= 3]
+        kept.extend(podiums or tier_groups[:1])
+    if not kept:
+        return []
+
+    best = max(g[0] for g in kept)
+    kept = [g for g in kept if g[0] >= best * _REL_THRESHOLD]
+    kept.sort(key=lambda g: (-g[0], -_TIER_POINTS[g[1]], -len(g[3])))
+
     formatted = []
-
-    for tier in tier_order:
-        cap = _TIER_POS_CAPS.get(tier)
-        tier_results = [r for r in notable_raw
-                        if r["tier"] == tier and (cap is None or r["position"] <= cap)]
-        grouped = OrderedDict()
-        for r in sorted(tier_results, key=lambda x: x["position"]):
-            desc = _format_position(tier, r["position"], r.get("age_group"))
-            entry = grouped.setdefault(desc, {"description": desc, "races": [], "count": 0})
-            entry["races"].append({"race_id": r["race_id"], "race_name": r["race_handle"], "race_date": r["race_date"]})
-            entry["count"] += 1
-
-        for i, entry in enumerate(grouped.values()):
-            if i >= 2:
-                break
-            desc = entry["description"]
-            if entry["count"] > 1:
-                desc = f"{entry['count']} x {desc}s" if desc.endswith("Win") else f"{entry['count']} x {desc}"
-            races_sorted = sorted(entry["races"], key=lambda x: x["race_date"] or "", reverse=True)
-            formatted.append({"description": desc, "races": races_sorted})
-
-    return formatted[:10]
+    for points, tier, pos, races in kept[:_MAX_ITEMS]:
+        desc = _format_position(tier, pos)
+        if len(races) > 1:
+            plural = desc.endswith("Win")
+            desc = f"{len(races)} x {desc}{'s' if plural else ''}"
+        races_sorted = sorted(races, key=lambda x: x["race_date"] or "", reverse=True)
+        formatted.append({"description": desc, "races": [
+            {"race_id": r["race_id"], "race_name": r["race_handle"], "race_date": r["race_date"]}
+            for r in races_sorted]})
+    return formatted
 
 
 def _build_ratings_chart(ratings_data):
@@ -235,11 +275,16 @@ def _build_rankings_charts(rankings_data):
 
 
 @router.get("/athlete/{athlete_id}", response_class=HTMLResponse)
-async def get_athlete(request: Request, athlete_id: int,
+def get_athlete(request: Request, athlete_id: int,
                       category: str = Query('elite'),
                       course:   str | None = Query(None)):
     info = queries.get_athlete_info(athlete_id)
     if not info:
+        # Manually merged athletes: 301 the retired ID to the survivor so
+        # indexed URLs and backlinks follow the merge instead of 404ing.
+        merged_into = _merge_redirects().get(athlete_id)
+        if merged_into:
+            return RedirectResponse(f"/athlete/{merged_into}", status_code=301)
         raise HTTPException(status_code=404, detail=f"Athlete {athlete_id} not found")
 
     # Resolve course (short vs long).
@@ -284,8 +329,17 @@ async def get_athlete(request: Request, athlete_id: int,
     ag_notable_raw     = queries.get_athlete_ag_notable_results(athlete_id)
     long_notable_raw   = queries.get_athlete_long_course_notable_results(athlete_id)
     race_hist    = queries.get_athlete_race_history(athlete_id, category, course=course)
+    # Mixed relay legs appear in the short-course elite history alongside
+    # individual races (they update the same ratings, damped).
+    if category == 'elite' and course == 'short':
+        relay_hist = queries.get_athlete_relay_history(athlete_id)
+        for r in relay_hist:
+            r["is_relay"] = True
+        if relay_hist:
+            race_hist = sorted(race_hist + relay_hist,
+                               key=lambda r: (r["race_date"], r["race_id"]), reverse=True)
     rating_hist  = queries.get_athlete_rating_history(athlete_id, category, course=course) if has_ratings else []
-    times_data    = queries.get_athlete_times_data(athlete_id)                              if has_ratings else []
+    times_data    = queries.get_athlete_times_data(athlete_id, category, course=course)    if has_ratings else []
     ratings_data  = queries.get_athlete_ratings_data(athlete_id, category, course=course)  if has_ratings else []
     rankings_data = queries.get_athlete_rankings_data(athlete_id, category, course=course) if has_ratings else []
 
@@ -323,6 +377,49 @@ async def get_athlete(request: Request, athlete_id: int,
         if peak_ranks:
             for disc in ["overall", "swim", "bike", "run", "transition"]:
                 peak_rankings[f"world_{disc}"] = _make_ranking(peak_ranks.get(f"world_{disc}"))
+
+    # --- current form card ---
+    # Equivalent race-day splits from the form model (ptd_data/form.py): the
+    # athlete's blended form mapped through the typical recent split for each
+    # distance. Elite only, and only disciplines where the athlete is both
+    # established (>= FORM_MIN_STARTS observed splits) and current (raced the
+    # course within 18 months) - e.g. Blummenfelt gets long-course form but
+    # his dormant short-course profile shows none.
+    FORM_MIN_STARTS = 5
+    current_form = None
+    if category == 'elite':
+        form = queries.get_athlete_form(athlete_id, course)
+        refs = queries.get_form_reference_times(course)
+        form_cutoff = date.today() - timedelta(days=int(18 * 30.44))
+        if course == 'short':
+            form_cols = [('Sprint', 'sprint'), ('Standard', 'standard')]
+            form_discs = ('swim', 'run')
+            legs = {('sprint', 'swim'): '750m', ('standard', 'swim'): '1500m',
+                    ('sprint', 'run'): '5km', ('standard', 'run'): '10km'}
+        else:
+            form_cols = [('70.3', 'middle'), ('140.6', 'long')]
+            form_discs = ('swim', 'bike', 'run')
+            legs = {('middle', 'swim'): '1.9km', ('long', 'swim'): '3.8km',
+                    ('middle', 'bike'): '90km', ('long', 'bike'): '180km',
+                    ('middle', 'run'): '21.1km', ('long', 'run'): '42.2km'}
+        form_rows = []
+        as_of = None
+        for disc in form_discs:
+            f = form.get(disc)
+            if not f or f['n_obs'] < FORM_MIN_STARTS or f['last_race_date'] < form_cutoff:
+                continue
+            cells = []
+            for _, dist in form_cols:
+                ref = refs.get((info['gender'], dist, disc))
+                cells.append({
+                    'leg':  legs[(dist, disc)],
+                    'time': format_time(round(ref * math.exp(f['form_rel']))) if ref else '-',
+                })
+            form_rows.append({'label': disc.capitalize(), 'cells': cells})
+            as_of = max(as_of, f['last_race_date']) if as_of else f['last_race_date']
+        if form_rows:
+            current_form = {'cols': [label for label, _ in form_cols],
+                            'rows': form_rows, 'as_of': as_of}
 
     # --- 1yr changes card ---
     rating_changes_1yr = {}
@@ -395,20 +492,37 @@ async def get_athlete(request: Request, athlete_id: int,
         "win_pct":       wins   / max(race_starts, 1),
         "podium_pct":    podiums / max(race_starts, 1),
         "active":        active,
+        "is_low_confidence": race_starts < LOW_CONF_STARTS,
     }
     if peaks and best:
         for disc in ["overall", "swim", "bike", "run", "transition"]:
             athlete_dict[f"max_{disc}_race_id"]       = peaks[f"max_{disc}_race_id"]
             athlete_dict[f"{disc}_increase_race_id"]  = best[f"{disc}_race_id"] or 0
 
+    # --- crawlable intro sentence ---
+    # Athlete pages are otherwise near-identical tables; a unique line of real
+    # prose per athlete gives search engines text to match name queries against.
+    # Phrased as clauses rather than sentences to stay inside the ~155 characters
+    # Google shows, and with no pronouns: the gender column is the race category
+    # the athlete competed in, which is not a claim about the person.
+    tier_label = "age-group" if category == "ag" else "professional"
+    course_label = "long-course" if course == "long" else "short-course"
+    from_str = f" from {info['country_full']}" if info.get("country_full") else ""
+    seo_intro = f"{info['name']}, {tier_label} {course_label} triathlete{from_str}."
+    if race_starts:
+        first_year = min(r["race_date"].year for r in race_hist) if race_hist else None
+        since = "" if not first_year else (f" in {first_year}" if race_starts == 1 else f" since {first_year}")
+        seo_intro += (f" {race_starts} race start{'s' if race_starts != 1 else ''}{since},"
+                      f" {wins} win{'s' if wins != 1 else ''},"
+                      f" {podiums} podium{'s' if podiums != 1 else ''}.")
+    world_rank = current_rankings.get("world_overall")
+    if world_rank:
+        seo_intro += f" Ranked {world_rank['n']}{world_rank['suffix']} in the world."
+
     # --- notable results: three parallel streams (short-course elite, AG, long-course) ---
     notable_results      = _build_notable_results(notable_raw)
-    ag_notable_results   = _build_notable_results(ag_notable_raw, tier_order=["ag_world_champs", "ag_continental_champs"])
-    long_notable_results = _build_notable_results(
-        long_notable_raw,
-        tier_order=["im_world_champs", "im_703_world_champs",
-                    "im", "t100", "im_703", "challenge"],
-    )
+    ag_notable_results   = _build_notable_results(ag_notable_raw)
+    long_notable_results = _build_notable_results(long_notable_raw)
 
     def _split_columns(results):
         # Split into two display columns balanced by visual height.
@@ -431,7 +545,7 @@ async def get_athlete(request: Request, athlete_id: int,
     # Fetch percentile thresholds once for this athlete's gender (cached per process).
     # Build a race_id→overall_std map here so the rating history table reuses the same
     # values rather than re-querying with a different formula.
-    _gender = next((r["gender"] for r in race_hist if r.get("gender")), "male")
+    _gender = next((r["gender"] for r in race_hist if r.get("gender") in ("male", "female")), "male")
     _thresholds = queries.get_race_standard_thresholds(_gender, course=course)
     _std_map = {r["race_id"]: r.get("overall_std") for r in race_hist}
 
@@ -450,12 +564,17 @@ async def get_athlete(request: Request, athlete_id: int,
             "race_id":        r["race_id"],
             "event_id":       r["event_id"],
             "is_multi_stage": bool(r.get("is_multi_stage")),
+            "is_relay":       bool(r.get("is_relay")),
+            "leg_num":        r.get("leg_num"),
             "race_title":     r["race_title"],
             "race_date":      r["race_date"],
-            "program":        r["program"],
+            "program":        (_mtr_program(r["program"], r.get("leg_num")) if r.get("is_relay")
+                               else _display_program(r["program"], r.get("gender"))),
             "position":       r["position"],
             "status":         r["status"],
-            "standard_class": _std_class(r.get("overall_std")),
+            # Relays have no race_rankings standard; suppress the pill rather
+            # than defaulting to "beginner".
+            "standard_class": None if r.get("is_relay") else _std_class(r.get("overall_std")),
             "overall":        format_time(r["overall_s"]),
             "overall_behind": format_time_behind(r["overall_behind_s"]),
             "swim":           format_time(r["swim_s"]),
@@ -520,7 +639,8 @@ async def get_athlete(request: Request, athlete_id: int,
             "race_id":           r["race_id"],
             "race_date":         r["race_date"],
             "race_title":        r["race_title"],
-            "race_program":      r["race_program"],
+            "race_program":      (_mtr_program(r["race_program"], r["leg_num"]) if r["is_relay"]
+                                  else _display_program(r["race_program"])),
             "position":          r["position"],
             "status":            r["status"],
             "standard_class":    _std_class(_std_map.get(r["race_id"])),
@@ -539,21 +659,12 @@ async def get_athlete(request: Request, athlete_id: int,
     ]
 
     # --- upcoming races with predictions ---
-    START_RATING = 1500
     upcoming_raw = queries.get_athlete_upcoming_races(athlete_id)
     upcoming_races = []
     if upcoming_raw:
-        models = queries.get_prediction_models()
-        disc_col = {'overall': 'overall_rating', 'swim': 'swim_rating',
-                    'bike': 'bike_rating', 'run': 'run_rating'}
         _upcoming_ids = [r['race_id'] for r in upcoming_raw]
-        _entries_by_race   = queries.get_upcoming_race_entries_bulk(_upcoming_ids)
-        _distance_by_race  = queries.get_upcoming_race_distance_types_bulk(_upcoming_ids)
         _standards_by_race = queries.get_upcoming_race_standards_bulk(_upcoming_ids)
         for race in upcoming_raw:
-            entries  = _entries_by_race.get(race['race_id'], [])
-            distance = _distance_by_race.get(race['race_id'])
-
             # Standard pill classification
             std_class = None
             standards = _standards_by_race.get(race['race_id'], {})
@@ -566,31 +677,20 @@ async def get_athlete(request: Request, athlete_id: int,
                 elif v >= t['p30']: std_class = 'novice'
                 else:               std_class = 'beginner'
 
+            # Predictions are precomputed at build time and shared with the
+            # race page (ptd_data/predictions.py), so the two always agree.
             pred_pos, splits, behinds = None, {}, {}
-            if distance and models:
-                overall_ratings = {e['athlete_id']: e['overall_rating'] or START_RATING for e in entries}
-                my_overall = overall_ratings.get(athlete_id, START_RATING)
-                pred_pos   = sum(1 for r in overall_ratings.values() if r > my_overall) + 1
-
-                # Use the same anchor logic as the race page so predictions on
-                # an athlete's profile match those on /race/<id>. Previously
-                # this recomputed inline with plain slope*rating+intercept and
-                # drifted from the race page's pool-anchor+year-term version.
-                target_year = race['race_date'].year if race.get('race_date') else None
+            stored = queries.get_race_predictions(race['race_id'])
+            mine   = next((r for r in stored if r['athlete_id'] == athlete_id), None)
+            if mine:
+                pred_pos = mine['predicted_position']
                 for disc in ['overall', 'swim', 'bike', 'run']:
-                    m = models.get((race['gender'], distance, disc))
-                    if not m:
+                    raw = mine[f'{disc}_s']
+                    if not raw:
                         continue
-                    col = disc_col[disc]
-                    field = {e['athlete_id']: e[col] or START_RATING for e in entries}
-                    leader_rating = max(field.values())
-                    anchor        = _anchor_time(field, leader_rating, distance, disc, m,
-                                                 target_year=target_year)
-                    my_rating     = field.get(athlete_id, START_RATING)
-                    my_time       = anchor * (10 ** ((leader_rating - my_rating) / SCALE))
-                    leader_time   = anchor  # at leader rating, ELO factor = 1
-                    splits[disc]  = format_time(round(my_time))
-                    diff = round(my_time) - round(leader_time)
+                    leader = min(r[f'{disc}_s'] for r in stored if r[f'{disc}_s'])
+                    splits[disc]  = format_time(raw)
+                    diff = raw - leader
                     behinds[disc] = 'fastest' if diff == 0 else format_time_behind(diff)
 
             upcoming_races.append({
@@ -675,11 +775,15 @@ async def get_athlete(request: Request, athlete_id: int,
     else:
         active_mode = f'elite-{course}'
 
-    follower_count = await uq.follower_count("athlete", athlete_id)
+    # Sync handler (threadpool-limited, see main.py), so hop back to the event
+    # loop for the asyncpg call.
+    follower_count = anyio.from_thread.run(uq.follower_count, "athlete", athlete_id)
     return templates.TemplateResponse("athlete.html", {
         "follower_count": follower_count,
         "request":        request,
         "active_page":    "athletes",
+        "noindex":        not queries.athlete_is_indexable(athlete_id),
+        "seo_intro":      seo_intro,
         "athlete":        athlete_dict,
         "has_ratings":          has_ratings,
         "show_charts":          has_ratings and race_starts > 1,
@@ -698,6 +802,7 @@ async def get_athlete(request: Request, athlete_id: int,
         "ag_notable_col2":     ag_notable_col2,
         "long_notable_col1":   long_notable_col1,
         "long_notable_col2":   long_notable_col2,
+        "current_form":        current_form,
         "current_ratings":     current_ratings,
         "current_rankings":    current_rankings,
         "peak_rankings":       peak_rankings,
@@ -705,6 +810,7 @@ async def get_athlete(request: Request, athlete_id: int,
         "rating_peaks":        rating_peaks,
         "best_performances":   best_performances,
         "sparklines":          sparklines,
+        "doping_ban":          queries.get_athlete_doping_ban(athlete_id),
         "nationality_history": queries.get_athlete_nationality_history(athlete_id),
         "upcoming_races":      upcoming_races,
         "rivals":              queries.get_athlete_rivals(athlete_id, category, course) if has_ratings else [],

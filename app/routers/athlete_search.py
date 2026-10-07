@@ -3,7 +3,8 @@ import random
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
-from config import ASSET_VERSION, STATIC_BASE_URL, flag
+from config import ASSET_VERSION, STATIC_BASE_URL
+from app.display_helpers import flag
 
 from ptd_data import queries
 from app.routers.router_utils import format_rating
@@ -35,7 +36,7 @@ def _fmt_athlete(a):
 
 
 @router.get("/athletes", response_class=HTMLResponse)
-async def athletes_landing(request: Request):
+def athletes_landing(request: Request):
     counts       = queries.get_counts()
     country_list = queries.get_country_list()
 
@@ -76,7 +77,7 @@ async def athletes_landing(request: Request):
 
 
 @router.get("/athletes/search")
-async def search_athletes(
+def search_athletes(
     q: str = "",
     disc: str = "overall",
     order: str = "top",

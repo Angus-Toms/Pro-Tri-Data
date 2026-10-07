@@ -1,0 +1,69 @@
+/* Share dialog (race page). */
+.share-dialog { border: 0; border-radius: var(--border-radius-lg); padding: 0; max-width: 960px; width: calc(100vw - 2rem);
+    box-shadow: var(--box-shadow-lg); background: var(--white); color: var(--text-color); }
+.share-dialog::backdrop { background: rgba(26, 26, 46, 0.6); }
+.share-panel { margin: 0; }
+.share-head { display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-md) var(--spacing-lg); border-bottom: 1px solid var(--border-color); }
+.share-head h2 { margin: 0; font-size: var(--font-size-lg); font-weight: 700; }
+.share-close { border: 0; background: none; font-size: 1.6rem; line-height: 1; cursor: pointer; color: var(--text-light); }
+.share-body { display: grid; grid-template-columns: 300px 1fr; gap: var(--spacing-lg); padding: var(--spacing-lg); }
+.share-preview { position: relative; display: flex; align-items: flex-start; justify-content: center; min-height: 400px; }
+.share-preview img { max-width: 100%; max-height: 70vh; display: block; border-radius: var(--border-radius-sm); cursor: zoom-in; transition: opacity var(--transition-base);
+    box-shadow: var(--box-shadow); }
+/* Checkerboard sits on the image itself, and only for alpha PNGs, so solid cards never show it. */
+.share-preview img.transparent { background: repeating-conic-gradient(#d9d9d9 0 25%, #f4f4f2 0 50%) 0 0 / 20px 20px; }
+.share-preview.loading img { opacity: 0.35; }
+.share-preview img:not([src]) { display: none; }
+.share-spinner { display: none; position: absolute; top: 50%; left: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px;
+    border: 4px solid var(--border-color); border-top-color: var(--primary-color); border-radius: 50%; animation: share-spin 0.8s linear infinite; }
+.share-preview.loading .share-spinner { display: block; }
+@keyframes share-spin { to { transform: rotate(360deg); } }
+.share-controls fieldset { border: 0; padding: 0; margin: 0 0 var(--spacing-lg); min-width: 0; }  /* fieldsets default to min-content, which defeats the swipe rows */
+.share-controls legend { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-light); margin-bottom: var(--spacing-sm); }
+.share-opts { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); }
+.share-opts label { cursor: pointer; }
+.share-opts input { position: absolute; opacity: 0; }
+.share-opts span { display: inline-block; padding: 0.35rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); font-size: var(--font-size-sm); font-weight: 500; }
+.share-opts input:checked + span { background: var(--navy); color: var(--white); border-color: var(--navy); }
+.share-controls select { width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); font: inherit; }
+.share-note { font-size: 0.8rem; color: var(--text-light); margin: var(--spacing-sm) 0 0; }
+.share-download { width: 100%; }
+.share-photo-row { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-sm); }
+.share-photo-row .share-note { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.share-photo-row .share-note.share-error { color: var(--error-color); white-space: normal; }
+/* Phones: the image on top, options in a scrollbox under it, so the card
+   never gets squeezed into a sliver beside the controls. */
+@media (max-width: 768px) {
+    .share-dialog { max-height: calc(100dvh - 2rem); overflow: hidden; }
+    .share-panel { display: flex; flex-direction: column; max-height: calc(100dvh - 2rem); }
+    .share-body { flex: 1; min-height: 0; grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr);
+        gap: var(--spacing-md); padding: var(--spacing-md); }
+    .share-preview { min-height: 200px; }
+    .share-preview img { max-height: 42dvh; }
+    .share-controls { overflow-y: auto; overscroll-behavior: contain; }
+    .share-controls fieldset { margin-bottom: var(--spacing-md); }
+    .share-download { position: sticky; bottom: 0; }
+}
+/* Style swatches: a tile per card background, ringed when picked. */
+.share-controls legend #share-style-name { text-transform: none; letter-spacing: 0; font-weight: 500; margin-left: 0.4em; color: var(--text-color); }
+.share-swatches { display: flex; gap: var(--spacing-sm); }
+.share-swatches label { cursor: pointer; flex: none; }
+.share-swatches input { position: absolute; opacity: 0; }
+.share-swatches span { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: var(--border-radius);
+    border: 1px solid var(--border-color); font-weight: 800; font-size: 0.95rem; color: var(--text-light); background: var(--white); }
+.share-swatches input:checked + span { box-shadow: 0 0 0 2px var(--white), 0 0 0 4px var(--navy); }
+.share-swatches input:focus-visible + span { outline: 2px solid var(--primary-color); outline-offset: 3px; }
+.share-swatches .sw-navy { background: radial-gradient(ellipse at 75% 75%, #c97a3a 0%, transparent 60%), linear-gradient(180deg, #2b3550, #0b0e18); border-color: transparent; }
+.share-swatches .sw-cream { background: radial-gradient(ellipse at 75% 75%, rgba(232,93,4,0.25) 0%, transparent 60%), linear-gradient(180deg, #f7f5f0, #ebe3d6); }
+.share-swatches .sw-clear-light { background: repeating-conic-gradient(#8a8f9c 0 25%, #a9adb7 0 50%) 0 0 / 12px 12px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+.share-swatches .sw-clear-dark  { background: repeating-conic-gradient(#d9d9d9 0 25%, #f4f4f2 0 50%) 0 0 / 12px 12px; color: var(--navy); }
+
+/* Phones: each group is one swipeable row, faded at the right edge so it
+   reads as "more this way", rather than chips wrapping over many lines. */
+@media (max-width: 768px) {
+    .share-opts { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-right: 2rem;
+        mask-image: linear-gradient(90deg, #000 calc(100% - 2rem), transparent); }
+    .share-opts::-webkit-scrollbar { display: none; }
+    .share-opts label { flex: none; }
+    .share-opts span { white-space: nowrap; }
+}

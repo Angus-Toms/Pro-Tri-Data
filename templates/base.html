@@ -8,6 +8,7 @@
 
     <!-- Canonical -->
     <link rel="canonical" href="https://www.protridata.com{{ request.url.path }}">
+    {% if noindex %}<meta name="robots" content="noindex">{% endif %}
 
     <!-- SEO, OpenGraph & Twitter/X Card -->
     {% block meta %}
@@ -66,6 +67,7 @@
                     <div class="nav-dropdown-menu" role="menu">
                         <a href="/recent" class="nav-dropdown-item" role="menuitem">Recent results</a>
                         <a href="/upcoming" class="nav-dropdown-item" role="menuitem">Upcoming</a>
+                        <a href="/recurring" class="nav-dropdown-item" role="menuitem">Race directory</a>
                         <a href="/series" class="nav-dropdown-item" role="menuitem">Series</a>
                         <a href="/race-leaderboard" class="nav-dropdown-item" role="menuitem">Leaderboard</a>
                         <a href="/race-compare" class="nav-dropdown-item" role="menuitem">Compare</a>
@@ -350,15 +352,23 @@
     })();
     </script>
 
-    <!-- Shared JS helpers (flagImg, sort icons, etc.) -->
+    <!-- Chart.js before utils.js: utils.js registers a global Chart plugin
+         (yearBands) at load, so Chart must already be defined. -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <!-- Shared JS helpers (flagImg, sort icons, chart plugins, etc.) -->
     <script src="{{ STATIC_BASE_URL }}js/utils.js?v={{ ASSET_VERSION }}"></script>
     <!-- User-state hydration (/me cache, account chip, follow buttons) -->
     <script src="{{ STATIC_BASE_URL }}js/users.js?v={{ ASSET_VERSION }}"></script>
-    <!-- Chart.js loaded here so it doesn't block initial render -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <!-- Page-specific JavaScript -->
     {% block extra_js %}
     {% endblock %}
+
+    <!-- Cloudflare Web Analytics. Hostname-gated so local dev and any preview
+         host don't count as real visits; the token is public by design. -->
+    {% if request.url.hostname.endswith('protridata.com') %}
+    <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js"
+            data-cf-beacon='{"token": "7bba9a7651194ca7b77b5d615fd1f36f"}'></script>
+    {% endif %}
 </body>
 </html>

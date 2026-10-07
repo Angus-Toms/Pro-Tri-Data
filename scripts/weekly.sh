@@ -1,7 +1,5 @@
 #!/bin/bash
-# weekly.sh - unattended ingest + ratings extend + DB sync to Render.
-# Fired by launchd (see ~/Library/LaunchAgents/com.angus.ptd.weekly.plist)
-# at 00:00 on Sun, Mon, Tue, Thu.
+# weekly.sh - ingest + ratings extend + DB sync to the Hetzner box. Run by hand.
 #
 # Sends a macOS notification on non-zero exit. Two log files:
 #   weekly.latest.log   — current run only, cleared on start. Filtered down
@@ -62,10 +60,14 @@ PY
 # from build_db.sh start with "==>"; ingest progress prints "Done." /
 # "Checked"; explicit OK/FAIL markers from this script; the start/end
 # banners; rebuild-step summary lines that already contain counts.
-LATEST_FILTER='^(==>|====|  Run |  Baseline|  Final|  Net:|\[OK\]|\[FAIL\]|Done\.|Checked |Ingested |Loaded |Rule-based |Recurring fallback|Rebuilding |Wrote |Skipped )'
+LATEST_FILTER='^(==>|====|  Run |  Baseline|  Final|  Net:|\[OK\]|\[FAIL\]|\[WARN\]|Done\.|Checked |Ingested |Loaded |Rule-based |Recurring fallback|Rebuilding |Wrote |Skipped |Compacted DB|Found |Downloaded |Processed |Uploaded )'
 
 notify_fail() {
     osascript -e "display notification \"$1\" with title \"PTD weekly FAILED\" sound name \"Basso\"" >/dev/null 2>&1 || true
+}
+
+notify_warn() {
+    osascript -e "display notification \"$1\" with title \"PTD weekly WARNING\"" >/dev/null 2>&1 || true
 }
 
 START_ISO=$(date '+%Y-%m-%dT%H:%M:%S%z')
@@ -106,6 +108,41 @@ run_step() {
 
 STATUS=success
 
+# Handles entered in the /admin/instagram tool accumulate in an append-only
+# file on the box. Rotate it (atomic mv, so a save landing mid-pull isn't
+# lost: the app recreates the file on its next write), pull it, fold it into
+# the tracked data/instagram.csv so this build picks it up, then drop the
+# rotated copy. Remember to commit data/instagram.csv.
+pull_instagram() {
+    local prod_ssh pending remote
+    prod_ssh=$(python3 -c "from config import PROD_SSH; print(PROD_SSH)")
+    remote=$(python3 -c "from config import PROD_DB; import os; print(os.path.dirname(PROD_DB))")/instagram_pending.csv
+    pending="$SCRIPT_DIR/instagram_pending.pulled.csv"
+    if ! ssh "$prod_ssh" "test -s '$remote'"; then
+        echo "No pending Instagram entries on prod."
+        return 0
+    fi
+    ssh "$prod_ssh" "mv '$remote' '$remote.pulled'"
+    scp "$prod_ssh:$remote.pulled" "$pending"
+    python3 -c "from ptd_data import db; db.merge_instagram_pending('$pending')"
+    ssh "$prod_ssh" "rm '$remote.pulled'"
+    rm "$pending"
+}
+run_step "instagram pull" pull_instagram
+
+# Hand-entered long-course start lists (/admin/startlist) land as one JSON per
+# event on the box. Pull them into the tracked data/startlists/ (files are
+# moved, so the admin page's "saved" list empties once a pull has happened).
+# Remember to commit data/startlists/.
+pull_startlists() {
+    local prod_ssh remote
+    prod_ssh=$(python3 -c "from config import PROD_SSH; print(PROD_SSH)")
+    remote=$(python3 -c "from config import PROD_DB; import os; print(os.path.dirname(PROD_DB))")/startlists_pending/
+    mkdir -p ptd_data/data/startlists
+    rsync -a --remove-source-files "$prod_ssh:$remote" ptd_data/data/startlists/ 2>/dev/null || echo "No pending start lists on prod."
+}
+run_step "startlists pull" pull_startlists
+
 run_step "build_db --extend" "$SCRIPT_DIR/build_db.sh" --extend
 rc=$?
 if [ $rc -ne 0 ]; then
@@ -114,6 +151,20 @@ if [ $rc -ne 0 ]; then
         echo "[FAIL] build_db.sh exited $rc"
     } | tee -a "$LATEST_LOG" "$VERBOSE_LOG" >/dev/null
     notify_fail "build_db.sh exited $rc. tail $LATEST_LOG"
+fi
+
+# New athletes arrive with a photo URL but no converted image on R2; the
+# templates assume one exists, so sync before the DB ships. Non-fatal: a
+# broken image is a cosmetic problem, a missed deploy is not.
+if [ "$STATUS" = "success" ]; then
+    run_step "sync_images" python -m ptd_data.sync_images
+    rc=$?
+    if [ $rc -ne 0 ]; then
+        {
+            echo "[WARN] sync_images exited $rc"
+        } | tee -a "$LATEST_LOG" "$VERBOSE_LOG" >/dev/null
+        notify_warn "sync_images exited $rc. tail $LATEST_LOG"
+    fi
 fi
 
 if [ "$STATUS" = "success" ]; then
@@ -126,6 +177,44 @@ if [ "$STATUS" = "success" ]; then
         } | tee -a "$LATEST_LOG" "$VERBOSE_LOG" >/dev/null
         notify_fail "deploy.sh exited $rc. tail $LATEST_LOG"
     fi
+
+    # deploy.sh's drift check writes "CODE DRIFT" lines to the verbose log when
+    # the live site's prediction code is behind local. A --no-git deploy ships
+    # the DB but not the code, so this catches the exact case where the site
+    # and the social posts (rendered locally) would silently disagree. Copy the
+    # detail into the condensed log and fire a notification - the whole point is
+    # that this drift is otherwise invisible.
+    if grep -q "CODE DRIFT" "$VERBOSE_LOG"; then
+        grep "CODE DRIFT" "$VERBOSE_LOG" | tee -a "$LATEST_LOG" >/dev/null
+        notify_warn "Prediction code drift: live site is behind local. Run ./deploy.sh (with git)."
+    fi
+fi
+
+# Publish pending social posts. A failure here doesn't fail the overall run
+# (data ingestion + deploy are the load-bearing pieces) — just logs and
+# notifies. The scheduler is idempotent, so anything missed retries next run.
+if [ "$STATUS" = "success" ]; then
+    run_step "social.scheduler" python -m social.scheduler
+    rc=$?
+    if [ $rc -ne 0 ]; then
+        {
+            echo "[WARN] social.scheduler exited $rc"
+        } | tee -a "$LATEST_LOG" "$VERBOSE_LOG" >/dev/null
+        notify_fail "social.scheduler exited $rc. tail $LATEST_LOG"
+    fi
+fi
+
+# Pull the week's Search Console rows and refresh growth/gsc_report.md. Runs
+# regardless of deploy status - it only reads the GSC API, and a failed deploy
+# is exactly a week you still want the search numbers for. Non-fatal: a Google
+# API blip must not mark the data pipeline as failed.
+run_step "gsc_query_miner" python scripts/gsc_query_miner.py
+rc=$?
+if [ $rc -ne 0 ]; then
+    {
+        echo "[WARN] gsc_query_miner.py exited $rc"
+    } | tee -a "$LATEST_LOG" "$VERBOSE_LOG" >/dev/null
+    notify_warn "gsc_query_miner.py exited $rc. tail $LATEST_LOG"
 fi
 
 EVENTS_AFTER=$(db_count events)

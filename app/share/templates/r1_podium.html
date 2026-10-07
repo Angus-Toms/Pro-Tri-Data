@@ -1,0 +1,60 @@
+{% extends "_base.html" %}
+{# Podium: three faces, winner raised and largest. Metal ring is the only
+   decoration. Gaps sit under the time so the margin reads instantly. #}
+{% block css %}
+  .podium { flex: 1; display: grid; grid-template-columns: 1fr 1.3fr 1fr; align-items: end; column-gap: 26px;
+    margin-top: 60px; }
+  .step { text-align: center; }
+  .step .face { width: 86%; margin: 0 auto; border: 8px solid var(--metal); box-shadow: 0 10px 40px rgba(0,0,0,0.35); }
+  .step.s1 { --metal: var(--gold); padding-bottom: 110px; }
+  .step.s2 { --metal: var(--silver); padding-bottom: 40px; }
+  .step.s3 { --metal: var(--bronze); }
+  .step .pos { font-size: 160px; margin-top: 10px; color: var(--metal); }
+  .step.s1 .pos { font-size: 220px; }
+  .step .name { font-size: 40px; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; margin-top: 8px; }
+  .step.s1 .name { font-size: 48px; }
+  .step .time { font-size: 44px; margin-top: 14px; }
+  .step.s1 .time { font-size: 60px; }
+  .step .behind { font-size: 30px; font-weight: 600; color: var(--fg-2); margin-top: 10px; }
+  .legs { display: flex; gap: 40px; margin-top: 60px; padding-top: 40px; border-top: 2px solid var(--rule); }
+  .legs div { flex: 1; }
+  .legs .lbl { display: block; margin-bottom: 10px; }
+  .legs .who { font-size: 30px; font-weight: 700; letter-spacing: -0.01em; }
+  .legs .t { font-size: 30px; font-weight: 600; color: var(--fg-2); margin-top: 4px; }
+  {% if H < 1500 %}
+  /* 4:5 (social carousel): same layout, tighter scale. */
+  .podium { margin-top: 10px; }
+  .step .face { width: 72%; border-width: 6px; }
+  .step.s1 { padding-bottom: 70px; }
+  .step.s2 { padding-bottom: 30px; }
+  .step .pos { font-size: 120px; margin-top: 4px; }
+  .step.s1 .pos { font-size: 160px; }
+  .step .name { font-size: 34px; }
+  .step.s1 .name { font-size: 40px; }
+  .step .time { font-size: 38px; margin-top: 8px; }
+  .step.s1 .time { font-size: 50px; }
+  .step .behind { font-size: 26px; margin-top: 6px; }
+  .legs { margin-top: 30px; padding-top: 26px; gap: 30px; }
+  .legs .who, .legs .t { font-size: 27px; }
+  {% endif %}
+{% endblock %}
+{% block body %}
+  <div class="race">{{ race_title }}<span class="sub">{% if predicted %}Predicted podium · {% endif %}{{ prog }} · {{ venue }} · {{ date }}</span></div>
+  <div class="podium">
+    {% for idx in [1, 0, 2] %}{% set a = podium[idx] %}
+    <div class="step s{{ idx + 1 }}">
+      {{ face(a) }}
+      <div class="pos num">{{ idx + 1 }}</div>
+      <div class="name">{{ a.first }}<br>{{ a.last }}{{ flag(a) }}</div>
+      <div class="time num">{{ a.time }}</div>
+      <div class="behind">{{ a.behind or '&nbsp;'|safe }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="legs">
+    {% for leg in legs %}
+    <div><span class="lbl">{% if predicted %}Predicted fastest{% else %}Fastest{% endif %} {{ leg.label|lower }}</span>
+      <div class="who">{{ leg.rows[0].last }}</div><div class="t num">{{ leg.rows[0].time }}</div></div>
+    {% endfor %}
+  </div>
+{% endblock %}

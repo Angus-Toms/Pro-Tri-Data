@@ -12,7 +12,6 @@ import time
 from datetime import date, timedelta
 
 from app.routers.router_utils import format_time, format_time_behind
-from app.routers.upcoming_page import _build_podium
 from ptd_data import queries
 from ptd_users import db, emails
 from ptd_users import queries as uq
@@ -52,20 +51,18 @@ async def collect_updates(users):
         r["date"] = short_date(r["race_date"])
 
     starts = queries.get_upcoming_races_for_athletes(athlete_ids)
-    entries = queries.get_upcoming_race_entries_bulk(sorted({s["race_id"] for s in starts}))
-    models = queries.get_prediction_models()
+    # Stored predictions: the same rows the race page serves, so the email
+    # and the site always agree. Non-elite races have none.
+    preds = {rid: queries.get_race_predictions(rid) for rid in {s["race_id"] for s in starts}}
     for s in starts:
-        # Same ordering and time model as the site's predicted podium.
-        field = sorted(entries.get(s["race_id"], []), key=lambda e: e["overall_rating"] or 0, reverse=True)
-        rank = next((i + 1 for i, e in enumerate(field) if e["athlete_id"] == s["athlete_id"]), None)
-        rated = rank and field[rank - 1]["overall_rating"]
-        s["predicted"] = ordinal(rank) if rated else None
+        rows = preds[s["race_id"]]
+        mine = next((p for p in rows if p["athlete_id"] == s["athlete_id"]), None)
+        s["predicted"] = ordinal(mine["predicted_position"]) if mine else None
         s["predicted_gap"] = None
-        if rated:
+        if mine and mine["overall_s"] and rows[0]["overall_s"]:
             # Leader's predicted time for the leader, otherwise the gap to them.
-            pair = [field[0]] if rank == 1 else [field[0], field[rank - 1]]
-            pred = _build_podium(pair, s["gender"], s["event_spec_ids"], models)[-1]
-            s["predicted_gap"] = pred["time"] if rank == 1 else pred["gap"]
+            s["predicted_gap"] = (format_time(mine["overall_s"]) if mine["predicted_position"] == 1
+                                  else format_time_behind(mine["overall_s"] - rows[0]["overall_s"]))
         s["date"] = short_date(s["race_date"])
 
     cutoff = date.today() - timedelta(days=RESULT_WINDOW_DAYS)

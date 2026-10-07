@@ -1,0 +1,39 @@
+{% extends "_base.html" %}
+{# Milestones: the career markers this race set. One line each: icon, the
+   value, and a plain sentence saying what the value is. Rules separate them. #}
+{% block css %}
+  .content { justify-content: flex-end; }
+  .name { font-size: 64px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+  .race { margin-top: 20px; }
+  .ms { margin-top: 80px; }
+  .m { display: grid; grid-template-columns: 96px 1fr; column-gap: 40px; align-items: center;
+    padding: 44px 0; border-top: 2px solid var(--rule); }
+  .m:last-child { border-bottom: 2px solid var(--rule); }
+  .m svg { width: 96px; height: 96px; fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+  .m .big { font-size: 96px; }
+  .m .txt { font-size: 32px; font-weight: 600; color: var(--fg-2); margin-top: 12px; letter-spacing: -0.01em; line-height: 1.3; }
+{% endblock %}
+{% block body %}
+  <div class="name">{{ me.name }}{{ flag(me) }}</div>
+  <div class="race">{{ race_title }}<span class="sub">{{ prog }} · {{ me.pos_ord }} · {{ me.time }}</span></div>
+  <div class="ms">
+    {% for m in milestones %}
+    <div class="m">
+      {% if m.icon == 'medal' %}
+        <svg viewBox="0 0 100 100"><circle cx="50" cy="62" r="28"/><path d="M34 38 22 8h22l10 22M66 38 78 8H56L46 30"/><path d="M50 50v24M42 74h16"/></svg>
+      {% elif m.icon == 'trend' %}
+        <svg viewBox="0 0 100 100"><path d="M10 78 36 50l16 14 30-34"/><path d="M62 30h22v22"/></svg>
+      {% elif m.icon == 'stopwatch' %}
+        <svg viewBox="0 0 100 100"><circle cx="50" cy="58" r="32"/><path d="M50 58V38M40 14h20M50 14v10M76 32l6-6"/></svg>
+      {% elif m.icon == 'run' %}
+        <svg viewBox="0 0 100 100"><circle cx="64" cy="18" r="8"/><path d="M40 92l14-26-14-12 10-20 18 10 14 6M34 56l-14 2M54 66l14 10 8 14"/></svg>
+      {% elif m.icon == 'bike' %}
+        <svg viewBox="0 0 100 100"><circle cx="24" cy="68" r="16"/><circle cx="76" cy="68" r="16"/><path d="M24 68l20-30h24l8 30M44 38l-8-14h14M56 38l20 30"/></svg>
+      {% else %}
+        <svg viewBox="0 0 100 100"><path d="M8 60c10-10 20-10 30 0s20 10 30 0 20-10 30 0M8 78c10-10 20-10 30 0s20 10 30 0 20-10 30 0"/><circle cx="68" cy="30" r="8"/><path d="M30 46l14-14 14 6"/></svg>
+      {% endif %}
+      <div><div class="big num">{{ m.big }}</div><div class="txt">{{ m.text }}</div></div>
+    </div>
+    {% endfor %}
+  </div>
+{% endblock %}

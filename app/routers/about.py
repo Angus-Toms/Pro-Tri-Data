@@ -3,7 +3,8 @@ import json
 
 from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
-from config import ASSET_VERSION, STATIC_BASE_URL, flag
+from config import ASSET_VERSION, STATIC_BASE_URL
+from app.display_helpers import flag
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -68,7 +69,7 @@ def load_blog_by_slug(slug: str) -> dict | None:
 
 
 @router.get("/about")
-async def about(request: Request):
+def about(request: Request):
     context = {
         "request": request,
         "active_page": "about",
@@ -79,7 +80,7 @@ async def about(request: Request):
 
 
 @router.get("/about/blog/{slug}")
-async def blog_detail(request: Request, slug: str):
+def blog_detail(request: Request, slug: str):
     post = load_blog_by_slug(slug)
 
     context = {

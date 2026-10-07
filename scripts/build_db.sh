@@ -4,8 +4,17 @@
 # Steps (in order):
 #   1. ingest       - fetch from World Triathlon API, upsert races/athletes/results
 #   2. startlist    - fetch upcoming events + start lists for /upcoming page
-#   3. pto          - scrape stats.protriathletes.org for long-course results
-#   4. merges       - apply manual athlete merges from data/athlete_merges.csv
+#   2b. startlists  - load hand-entered long-course start lists (data/startlists/)
+#   3. fgp          - fetch French Grand Prix (triathlonseries.fr) results;
+#                     runs after WT (matches against the fresh WT roster) and
+#                     before PTO (so PTO matching sees FGP athletes)
+#   3b. bundesliga  - fetch German Triathlon-Bundesliga (race|result) results;
+#                     runs after FGP (matches against WT + FGP roster) and
+#                     before PTO
+#   4. pto          - scrape stats.protriathletes.org for long-course results
+#   4. merges       - apply manual athlete merges from data/athlete_merges.csv,
+#                     then undo rejected auto-links from data/athlete_no_merge.csv
+#   4c. instagram   - apply data/instagram.csv (manual handles + skips)
 #   5. ignored      - auto-detect subset/oversized races, then apply manual ignored.csv overrides
 #   6. stages       - flag combined rows of multi-stage events (heats/semis/A-B finals);
 #                     must run after ignored (writes to ignored_races)
@@ -14,20 +23,29 @@
 #                     uncaught by series rules
 #   9. autocorr     - detect mechanical anomalies, write auto-correction rows
 #  10. ratings      - load corrections.csv, recompute ELO ratings + rankings
+#  11. predictions  - precompute race predictions + course conditions into
+#                     race_predictions / race_course_conditions (served directly
+#                     by race/athlete/event pages; must run after ratings)
+#  12. compact      - rewrite the DB file to reclaim space from wiped/recomputed tables
 #
 # Usage:
 #   ./build_db.sh                     # run all steps
 #   ./build_db.sh --skip-ingest       # skip WT API fetch (e.g. data already ingested)
 #   ./build_db.sh --skip-startlist    # skip upcoming-race/start-list fetch
+#   ./build_db.sh --skip-fgp          # skip French Grand Prix fetch
+#   ./build_db.sh --skip-bundesliga   # skip German Bundesliga fetch
 #   ./build_db.sh --skip-pto          # skip PTO scrape
 #   ./build_db.sh --skip-merges       # skip manual athlete merges
+#   ./build_db.sh --skip-instagram    # skip instagram.csv load
 #   ./build_db.sh --skip-stages       # skip multi-stage flagging
 #   ./build_db.sh --skip-ignored      # skip ignored-race detection
 #   ./build_db.sh --skip-series       # skip series membership rebuild
 #   ./build_db.sh --skip-recurring    # skip fuzzy-name recurring fallback
 #   ./build_db.sh --skip-autocorr     # skip auto-correction pass
 #   ./build_db.sh --skip-ratings      # skip ratings/rankings recompute
-#   ./build_db.sh --ratings-only      # shortcut: auto-corr + recompute ratings + rankings
+#   ./build_db.sh --skip-predictions  # skip prediction precompute
+#   ./build_db.sh --skip-compact      # skip post-build DB compaction
+#   ./build_db.sh --ratings-only      # shortcut: auto-corr + recompute ratings + rankings + predictions
 #   ./build_db.sh --extend            # ratings/rankings: wipe from earliest new race date
 #                                       forward and rebuild from there, instead of full
 #                                       clear+recompute. Combine with --ratings-only for
@@ -44,22 +62,27 @@ step()    { echo -e "\n${GREEN}${BOLD}==> $*${RESET}"; }
 note()    { echo -e "${YELLOW}    $*${RESET}"; }
 elapsed() { echo -e "    done in ${BOLD}$(( SECONDS - $1 ))s${RESET}"; }
 
-DO_INGEST=true; DO_STARTLIST=true; DO_PTO=true; DO_MERGES=true; DO_STAGES=true; DO_IGNORED=true; DO_SERIES=true; DO_RECURRING=true; DO_AUTOCORR=true; DO_RATINGS=true
+DO_INGEST=true; DO_STARTLIST=true; DO_FGP=true; DO_BUNDESLIGA=true; DO_PTO=true; DO_MERGES=true; DO_INSTAGRAM=true; DO_STAGES=true; DO_IGNORED=true; DO_SERIES=true; DO_RECURRING=true; DO_AUTOCORR=true; DO_RATINGS=true; DO_PREDICTIONS=true; DO_COMPACT=true
 EXTEND=false
 
 for arg in "$@"; do
     case $arg in
         --skip-ingest)    DO_INGEST=false ;;
         --skip-startlist) DO_STARTLIST=false ;;
+        --skip-fgp)       DO_FGP=false ;;
+        --skip-bundesliga) DO_BUNDESLIGA=false ;;
         --skip-pto)       DO_PTO=false ;;
         --skip-merges)    DO_MERGES=false ;;
+        --skip-instagram) DO_INSTAGRAM=false ;;
         --skip-stages)    DO_STAGES=false ;;
         --skip-ignored)   DO_IGNORED=false ;;
         --skip-series)    DO_SERIES=false ;;
         --skip-recurring) DO_RECURRING=false ;;
         --skip-autocorr)  DO_AUTOCORR=false ;;
         --skip-ratings)   DO_RATINGS=false ;;
-        --ratings-only)   DO_INGEST=false; DO_STARTLIST=false; DO_PTO=false; DO_MERGES=false; DO_STAGES=false; DO_IGNORED=false; DO_SERIES=false; DO_RECURRING=false ;;
+        --skip-predictions) DO_PREDICTIONS=false ;;
+        --skip-compact)   DO_COMPACT=false ;;
+        --ratings-only)   DO_INGEST=false; DO_STARTLIST=false; DO_FGP=false; DO_BUNDESLIGA=false; DO_PTO=false; DO_MERGES=false; DO_INSTAGRAM=false; DO_STAGES=false; DO_IGNORED=false; DO_SERIES=false; DO_RECURRING=false ;;
         --extend)         EXTEND=true ;;
     esac
 done
@@ -85,7 +108,36 @@ if $DO_STARTLIST; then
     elapsed $T
 fi
 
-# ── 3. PTO scrape ─────────────────────────────────────────────────────────────
+# ── 2b. Manual long-course start lists ───────────────────────────────────────
+# Hand-entered via /admin/startlist, pulled by weekly.sh into data/startlists/.
+# Same tables as the WT start lists, so predictions and /upcoming just work.
+if $DO_STARTLIST; then
+    step "Manual start lists - load data/startlists/*.json"
+    T=$SECONDS
+    python3 -c "from ptd_data import db; conn = db.get_conn(read_only=False); db.load_manual_startlists(conn); conn.close()"
+    elapsed $T
+fi
+
+# ── 3. French Grand Prix ──────────────────────────────────────────────────────
+# Runs after WT (matches against the fresh roster) and before PTO (so PTO's
+# athlete matching can link against FGP-minted athletes).
+if $DO_FGP; then
+    step "FGP - fetch French Grand Prix results (triathlonseries.fr)"
+    T=$SECONDS
+    python3 -m ptd_data.fgp_ingest
+    elapsed $T
+fi
+
+# ── 3b. German Triathlon-Bundesliga ───────────────────────────────────────────
+# Runs after FGP (matches against WT + FGP roster) and before PTO.
+if $DO_BUNDESLIGA; then
+    step "Bundesliga - fetch German Triathlon-Bundesliga results (race|result)"
+    T=$SECONDS
+    python3 -m ptd_data.bundesliga_ingest
+    elapsed $T
+fi
+
+# ── 4. PTO scrape ─────────────────────────────────────────────────────────────
 if $DO_PTO; then
     if $EXTEND; then
         step "PTO - scrape stats.protriathletes.org (current year only)"
@@ -108,6 +160,36 @@ if $DO_MERGES; then
     step "Merges - apply data/athlete_merges.csv"
     T=$SECONDS
     python3 -c "from ptd_data import db; conn = db.get_conn(read_only=False); db.apply_athlete_merges(conn); conn.close()"
+    elapsed $T
+fi
+
+# ── 4a. Rejected auto-links ───────────────────────────────────────────────────
+# Undo any link data/athlete_no_merge.csv rejects that a pre-block ingest had
+# already persisted. The matchers refuse to re-form them, so this converges.
+if $DO_MERGES; then
+    step "Un-links - apply data/athlete_no_merge.csv"
+    T=$SECONDS
+    python3 -c "from ptd_data import db; conn = db.get_conn(read_only=False); db.apply_athlete_no_merge(conn); conn.close()"
+    elapsed $T
+fi
+
+# ── 4b. Doping bans ───────────────────────────────────────────────────────────
+# Rebuild the doping_bans table from data/doping_bans.csv. Runs after merges so
+# athlete_ids resolve to their final (post-merge) rows.
+if $DO_MERGES; then
+    step "Doping bans - load data/doping_bans.csv"
+    T=$SECONDS
+    python3 -c "from ptd_data import db; conn = db.get_conn(read_only=False); db.load_doping_bans(conn); conn.close()"
+    elapsed $T
+fi
+
+# ── 4c. Instagram handles ─────────────────────────────────────────────────────
+# Manual handles and skips from data/instagram.csv; these always win over the
+# WT-sourced handle the ingest picks up for new elite athletes.
+if $DO_INSTAGRAM; then
+    step "Instagram - load data/instagram.csv"
+    T=$SECONDS
+    python3 -c "from ptd_data import db; conn = db.get_conn(read_only=False); db.load_instagram_csv(conn); conn.close()"
     elapsed $T
 fi
 
@@ -165,6 +247,27 @@ if $DO_RATINGS; then
     else
         python3 -m ptd_data.ratings
     fi
+    elapsed $T
+fi
+
+# ── 11. Predictions ───────────────────────────────────────────────────────────
+# Precompute race predictions + course conditions. Must run after ratings
+# (reads ratings, form, prediction_models) and after start lists.
+if $DO_PREDICTIONS; then
+    step "Predictions - precompute race predictions + course conditions"
+    T=$SECONDS
+    python3 -m ptd_data.predictions
+    elapsed $T
+fi
+
+# ── 12. Compact ────────────────────────────────────────────────────────────────
+# Ratings/rankings/form are wiped and recomputed every run above; DuckDB never
+# shrinks the file in place, so the stranded blocks from the old versions just
+# accumulate. Rewrite into a fresh file so the copy to Render stays small.
+if $DO_COMPACT; then
+    step "Compact - rewrite DB to reclaim space from wiped/recomputed tables"
+    T=$SECONDS
+    python3 -m ptd_data.compact
     elapsed $T
 fi
 

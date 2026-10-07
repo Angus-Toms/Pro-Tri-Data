@@ -1,8 +1,11 @@
+import re
+
 from fastapi import HTTPException, Request, APIRouter
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
-from config import ASSET_VERSION, STATIC_BASE_URL, flag
+from config import ASSET_VERSION, STATIC_BASE_URL
+from app.display_helpers import flag
 from ptd_data import queries
 from app.routers.router_utils import format_time, format_time_behind
 
@@ -16,13 +19,16 @@ _DISCS = ["overall", "swim", "bike", "run", "transition"]
 
 # Human labels for program tab bar
 _SUB_LABELS = {"elite": "Elite", "u23": "U23", "junior": "Junior", "youth": "Youth", "ag": "AG"}
-_GENDER_LABELS = {"male": "Men", "female": "Women", "mixed": "Mixed"}
+# 'mixed' is only ever a mixed team relay program, so label it MTR
+# ("Elite MTR", "U23 MTR") rather than the ambiguous "Elite Mixed".
+_GENDER_LABELS = {"male": "Men", "female": "Women", "mixed": "MTR"}
 
 # Tier order + labels for the index page groupings
 _TIER_ORDER = [
     "olympic-games", "championship", "im-worlds", "im-703-worlds", "t100",
     "wtcs", "world-cup", "commonwealth-games", "fisu-games",
-    "continental-championship", "continental-cup", "ag-championship", "custom",
+    "continental-championship", "continental-cup", "national-series",
+    "ag-championship", "custom",
 ]
 _TIER_LABELS = {
     "olympic-games":            "Olympic Games",
@@ -36,6 +42,7 @@ _TIER_LABELS = {
     "fisu-games":               "World University Championships",
     "continental-championship": "Continental Championships",
     "continental-cup":          "Continental Cups",
+    "national-series":          "National Series",
     "ag-championship":          "Age-Group World Championships",
     "custom":                   "Other",
 }
@@ -99,6 +106,45 @@ def _races_to_json(races):
     return out
 
 
+def _relay_races_to_json(races):
+    """Relay sibling of `_races_to_json`: podium entries are teams and their
+    splits are the four legs."""
+    out = []
+    for r in races:
+        rdate = r["race_date"]
+        out.append({
+            "race_id":     r["race_id"],
+            "race_date":   rdate.isoformat() if rdate else None,
+            "year":        rdate.year if rdate else None,
+            "race_handle": r.get("race_handle"),
+            "event_name":  r.get("event_name"),
+            "race_title":  r.get("race_title"),
+            "venue":       r.get("venue"),
+            "country":     r.get("country"),
+            "podium": [
+                {
+                    "position":       p["position"],
+                    "name":           p["name"],
+                    "country_full":   p["country_full"],
+                    "country_alpha3": p["country_alpha3"],
+                    "overall_s":      p["overall_s"],
+                    "gap":            p["gap"],
+                    "time_fmt":       p["time_fmt"],
+                    "gap_fmt":        p["gap_fmt"],
+                    "legs": [
+                        {"leg_num": l["leg_num"], "athlete_id": l["athlete_id"],
+                         "name": l["name"], "leg_s": l["leg_s"], "leg_fmt": l["leg_fmt"]}
+                        for l in p["legs"]
+                    ],
+                }
+                for p in r["podium"]
+            ],
+            "standards":        None,
+            "standard_classes": None,
+        })
+    return out
+
+
 def _resolve_program(program_options, program_slug):
     """Pick the active program tuple (sub, gender, prog_name) from the request
     slug + the available options. Defaults:
@@ -117,7 +163,9 @@ def _resolve_program(program_options, program_slug):
     for sub in ("elite", "u23", "junior", "youth"):
         for o in program_options:
             if o["sub_category"] == sub and o["gender"] == "male":
-                return (sub, "male", None)
+                # Carry prog_name so a division-split default (FGP D1 Men) filters
+                # to one division; it's None for ordinary collapsed programs.
+                return (sub, "male", o.get("prog_name"))
     # AG fallback: pick the densest male program in the popular 25-44 range,
     # standard distance preferred. Same ranking as `_build_program_tabs` so
     # the resolved default matches the male pinned tab.
@@ -242,7 +290,92 @@ def _build_program_payload(races, leaders, perf_history, medal_table,
             {**r, "year": r["race_date"].year, "race_date": r["race_date"].isoformat()}
             for r in standards_hist
         ],
+        "is_relay":             False,
     }
+
+
+def _build_relay_payload(races, leaders, perf_history, prog):
+    """Mixed team relay sibling of `_build_program_payload`: teams stand in for
+    athletes and legs for disciplines. Winner ages and race standards have no
+    relay equivalent (no race_rankings rows, no single athlete), so they ship
+    empty and the template drops those sections."""
+    for race in races:
+        podium = race["podium"]
+        for p in podium:
+            p["time_fmt"] = format_time(p["overall_s"])
+            gap = p["gap"]
+            if gap is None:
+                p["gap_fmt"] = ""
+            elif gap == 0:
+                p["gap_fmt"] = "+0:00"
+            else:
+                p["gap_fmt"] = format_time_behind(gap)
+            for leg in p["legs"]:
+                leg["leg_fmt"] = format_time(leg["leg_s"]) if leg["leg_s"] else ""
+
+    for row in perf_history:
+        row["year"]      = row["race_date"].year
+        row["race_date"] = row["race_date"].isoformat()
+
+    years = {r["race_date"].year for r in races if r["race_date"]}
+    year_span = ""
+    if years:
+        y0, y1 = min(years), max(years)
+        year_span = f"{y0}" if y0 == y1 else f"{y0}-{y1}"
+
+    return {
+        "active_program":       _program_slug(*prog),
+        "active_program_label": _program_label(*prog),
+        "hero_stats":           {"editions": len(races), "year_span": year_span},
+        "races_json":           _relay_races_to_json(races),
+        "leaders":              leaders,
+        "medal_table":          [],
+        "youngest_winners":     [],
+        "oldest_winners":       [],
+        "perf_history":         perf_history,
+        "standards_history":    [],
+        "is_relay":             True,
+    }
+
+
+def _program_payload(scope_id, prog, recurring=False):
+    """Program-scoped payload for a series (`scope_id` = series_id) or a
+    recurring group (`recurring=True`, `scope_id` = recurring_event_id).
+    Mixed programs are team relays and read from the relay tables."""
+    if prog and prog[1] == "mixed":
+        if recurring:
+            return _build_relay_payload(
+                races        = queries.get_recurring_relay_races(scope_id, program=prog),
+                leaders      = queries.get_recurring_relay_leaders(scope_id, program=prog),
+                perf_history = queries.get_recurring_relay_performance_history(scope_id, program=prog),
+                prog         = prog,
+            )
+        return _build_relay_payload(
+            races        = queries.get_series_relay_races(scope_id, program=prog),
+            leaders      = queries.get_series_relay_leaders(scope_id, program=prog),
+            perf_history = queries.get_series_relay_performance_history(scope_id, program=prog),
+            prog         = prog,
+        )
+
+    if recurring:
+        return _build_program_payload(
+            races          = queries.get_recurring_races(scope_id, program=prog),
+            leaders        = queries.get_recurring_all_time_leaders(scope_id, program=prog),
+            perf_history   = queries.get_recurring_performance_history(scope_id, program=prog),
+            medal_table    = queries.get_recurring_medal_table(scope_id, program=prog),
+            winners_age    = queries.get_recurring_winners_with_age(scope_id, program=prog),
+            standards_hist = queries.get_recurring_standards_history(scope_id, program=prog),
+            prog           = prog,
+        )
+    return _build_program_payload(
+        races          = queries.get_series_races(scope_id, program=prog),
+        leaders        = queries.get_series_all_time_leaders(scope_id, program=prog),
+        perf_history   = queries.get_series_performance_history(scope_id, program=prog),
+        medal_table    = queries.get_series_medal_table(scope_id, program=prog),
+        winners_age    = queries.get_series_winners_with_age(scope_id, program=prog),
+        standards_hist = queries.get_series_standards_history(scope_id, program=prog),
+        prog           = prog,
+    )
 
 
 def _winners_age_to_json(rows):
@@ -273,6 +406,12 @@ def _program_label(sub, gender, prog_name=None):
     # (e.g. Ironman 70.3 Worlds prog_name='Pro Men'); render them as-is.
     if prog_name in ("Pro Men", "Pro Women"):
         return prog_name
+    # Division-split programs (French Grand Prix D1/D2): the division is the
+    # meaningful distinction, so surface it in place of the redundant "Elite"
+    # (e.g. "D1 Men", "D2 Women").
+    div = queries.program_division(prog_name)
+    if div:
+        return f"{div} {_GENDER_LABELS.get(gender, gender.title())}"
     base = f"{_SUB_LABELS.get(sub, sub.title())} {_GENDER_LABELS.get(gender, gender.title())}"
     if sub == "ag" and prog_name:
         parts = prog_name.split()
@@ -287,6 +426,9 @@ def _program_slug_for_option(o):
     individual age bands round-trip cleanly through the URL; non-AG keeps the
     legacy `{sub}-{gender_word}` form for stable bookmarks."""
     sub, gender, prog_name = o["sub_category"], o["gender"], o.get("prog_name")
+    div = queries.program_division(prog_name)
+    if div:
+        return f"{div.lower()}-{_GENDER_SLUG.get(gender, gender)}"
     if sub == "ag" and prog_name:
         return prog_name.lower().replace(" ", "-")
     return f"{sub}-{_GENDER_SLUG.get(gender, gender)}"
@@ -303,7 +445,7 @@ def _program_slug(sub, gender, prog_name=None):
 
 
 @router.get("/series/list")
-async def series_list():
+def series_list():
     """Lightweight list of all series for the global search modal."""
     return JSONResponse([
         {"name": s["name"], "slug": s["slug"], "race_count": s["race_count"]}
@@ -312,13 +454,13 @@ async def series_list():
 
 
 @router.get("/recurring/list")
-async def recurring_list():
+def recurring_list():
     """Lightweight list of recurring events for the global search modal."""
     return JSONResponse(queries.get_all_recurring_events())
 
 
 @router.get("/series", response_class=HTMLResponse)
-async def series_index(request: Request):
+def series_index(request: Request):
     series_list = queries.get_all_series()
     sids = [s["series_id"] for s in series_list]
     highlights = queries.get_series_index_highlights(sids)
@@ -374,7 +516,7 @@ async def series_index(request: Request):
 
 
 @router.get("/series/{slug}", response_class=HTMLResponse)
-async def series_detail(request: Request, slug: str, program: str | None = None):
+def series_detail(request: Request, slug: str, program: str | None = None):
     series = queries.get_series_by_slug(slug)
     if not series:
         raise HTTPException(status_code=404)
@@ -394,15 +536,7 @@ async def series_detail(request: Request, slug: str, program: str | None = None)
     active_slug = _program_slug(*prog) if prog else None
     program_tabs, program_overflow = _build_program_tabs(program_options, active_slug)
 
-    payload = _build_program_payload(
-        races          = queries.get_series_races(sid, program=prog),
-        leaders        = queries.get_series_all_time_leaders(sid, program=prog),
-        perf_history   = queries.get_series_performance_history(sid, program=prog),
-        medal_table    = queries.get_series_medal_table(sid, program=prog),
-        winners_age    = queries.get_series_winners_with_age(sid, program=prog),
-        standards_hist = queries.get_series_standards_history(sid, program=prog),
-        prog           = prog,
-    )
+    payload = _program_payload(sid, prog)
 
     return templates.TemplateResponse("series.html", {
         "request":      request,
@@ -415,7 +549,7 @@ async def series_detail(request: Request, slug: str, program: str | None = None)
 
 
 @router.get("/series/{slug}/data")
-async def series_data(slug: str, program: str | None = None):
+def series_data(slug: str, program: str | None = None):
     """JSON sibling of /series/{slug} - returns the program-scoped payload
     so the page can switch programs without a full reload."""
     series = queries.get_series_by_slug(slug)
@@ -423,19 +557,93 @@ async def series_data(slug: str, program: str | None = None):
         raise HTTPException(status_code=404)
     sid = series["series_id"]
     prog = _resolve_program(queries.get_program_options_for_series(sid), program)
-    return JSONResponse(_build_program_payload(
-        races          = queries.get_series_races(sid, program=prog),
-        leaders        = queries.get_series_all_time_leaders(sid, program=prog),
-        perf_history   = queries.get_series_performance_history(sid, program=prog),
-        medal_table    = queries.get_series_medal_table(sid, program=prog),
-        winners_age    = queries.get_series_winners_with_age(sid, program=prog),
-        standards_hist = queries.get_series_standards_history(sid, program=prog),
-        prog           = prog,
-    ))
+    return JSONResponse(_program_payload(sid, prog))
+
+
+# Hardcoded majors pinned to the top of the /recurring index, in display
+# order. Recurring groups are venue-keyed, so events that move venues every
+# year (the Olympics, 70.3 Worlds, WTCS Finals) have no group to pin - the
+# Olympics live under /series instead.
+_MAJOR_SLUGS = [
+    "hawaii-im-world-championships",   # Kona
+    "nice-im-world-championships",
+    "challenge-roth",
+    "ironman-frankfurt",
+    "ironman-lanzarote",
+    "ironman-nice",
+    "embrun",                          # Embrunman
+    "alpe-d-huez-l",
+    "wildflower",
+    "collins-cup",
+]
+
+# Brand buckets for the /recurring index, in display order. Matched on the
+# group name because 519 of 928 recurring groups (all the Ironman / 70.3 /
+# Challenge long-course events) have no series link to take a tier from.
+_RECURRING_BRANDS = [
+    ("Major Events",    None),  # matched by slug against _MAJOR_SLUGS
+    ("World Championships & Games", lambda n: "championship" in n or "games" in n),
+    ("WTCS",            lambda n: "championship series" in n or "wtcs" in n),
+    ("T100 / PTO",      lambda n: "t100" in n or n.startswith("pto ")),
+    ("Ironman",         lambda n: "ironman" in n and "70.3" not in n),
+    ("Ironman 70.3",    lambda n: n.startswith("ironman 70.3")),
+    ("Challenge",       lambda n: n.startswith("challenge")),
+    ("World Cup",       lambda n: "world cup" in n),
+    ("Continental Championships", lambda n: bool(re.search(
+        r"\b(european|americas|american|asian|african|africa|oceania|zonal)\b.*champ", n))),
+    ("Continental Cups", lambda n: bool(re.search(
+        r"\b(european|africa|african|americas|asian|oceania|junior) cup\b", n))),
+    ("Development Cups", lambda n: "development regional cup" in n),
+    ("National Series", lambda n: "french grand prix" in n or "bundesliga" in n),
+    ("National Championships", lambda n: "national championship" in n),
+    ("Other Races",     lambda n: True),
+]
+# Match order differs from display order: WTCS names contain "Championship
+# Series", national/continental championships contain "Championships", and
+# 70.3 names contain "Ironman", so the specific buckets must claim theirs
+# before the broad ones do.
+_RECURRING_MATCH_ORDER = [
+    "Ironman 70.3", "WTCS", "T100 / PTO", "Ironman", "Challenge", "World Cup",
+    "National Championships", "Continental Championships", "Development Cups",
+    "National Series", "Continental Cups", "World Championships & Games", "Other Races",
+]
+
+
+@router.get("/recurring", response_class=HTMLResponse)
+def recurring_index(request: Request):
+    """Index of all recurring event groups: the crawl hub that puts every
+    /recurring/<slug> page (and through them every edition) at depth 1."""
+    rows = queries.get_recurring_index()
+
+    matchers = dict(_RECURRING_BRANDS)
+    major_rank = {slug: i for i, slug in enumerate(_MAJOR_SLUGS)}
+    groups = {label: [] for label, _ in _RECURRING_BRANDS}
+    for r in rows:
+        r["year_span"] = (str(r["first_date"].year) if r["first_date"].year == r["last_date"].year
+                          else f"{r['first_date'].year} - {r['last_date'].year}")
+        if r["slug"] in major_rank:
+            groups["Major Events"].append(r)
+            continue
+        n = r["name"].lower()
+        brand = next(b for b in _RECURRING_MATCH_ORDER if matchers[b](n))
+        groups[brand].append(r)
+    groups["Major Events"].sort(key=lambda r: major_rank[r["slug"]])
+
+    brand_blocks = [
+        {"brand": b, "anchor": re.sub(r"[^a-z0-9]+", "-", b.lower()).strip("-"), "races": groups[b]}
+        for b, _ in _RECURRING_BRANDS if groups[b]
+    ]
+
+    return templates.TemplateResponse("recurring_index.html", {
+        "request":      request,
+        "active_page":  "races",
+        "brand_blocks": brand_blocks,
+        "total":        len(rows),
+    })
 
 
 @router.get("/recurring/{slug}", response_class=HTMLResponse)
-async def recurring_detail(request: Request, slug: str, program: str | None = None):
+def recurring_detail(request: Request, slug: str, program: str | None = None):
     """Page for one recurring event group (e.g. all editions of Kona).
 
     Reuses the series template — same data shape (races, leaders, medals,
@@ -452,27 +660,29 @@ async def recurring_detail(request: Request, slug: str, program: str | None = No
     active_slug = _program_slug(*prog) if prog else None
     program_tabs, program_overflow = _build_program_tabs(program_options, active_slug)
 
-    payload = _build_program_payload(
-        races          = queries.get_recurring_races(rid, program=prog),
-        leaders        = queries.get_recurring_all_time_leaders(rid, program=prog),
-        perf_history   = queries.get_recurring_performance_history(rid, program=prog),
-        medal_table    = queries.get_recurring_medal_table(rid, program=prog),
-        winners_age    = queries.get_recurring_winners_with_age(rid, program=prog),
-        standards_hist = queries.get_recurring_standards_history(rid, program=prog),
-        prog           = prog,
-    )
+    payload = _program_payload(rid, prog, recurring=True)
 
     series_like = {
         "name":        rec["name"],
         "slug":        rec["slug"],
-        "description": rec.get("description") or f"All editions of {rec['name']}.",
+        "description": rec.get("description")
+                       or f"Every edition of {rec['name']}: results, winners, podiums and records.",
     }
+
+    # Whole-event year span for the <title>. hero_stats.year_span is scoped to
+    # the default program, which undershoots events like Kona where men and
+    # women race in different years.
+    y0, y1 = rec["first_date"], rec["last_date"]
+    event_year_span = ""
+    if y0 and y1:
+        event_year_span = str(y0.year) if y0.year == y1.year else f"{y0.year}-{y1.year}"
 
     return templates.TemplateResponse("series.html", {
         "request":      request,
         "active_page":  "races",
         "series":       series_like,
         "is_recurring": True,
+        "event_year_span": event_year_span,
         "program_tabs":     program_tabs,
         "program_overflow": program_overflow,
         **payload,
@@ -480,19 +690,11 @@ async def recurring_detail(request: Request, slug: str, program: str | None = No
 
 
 @router.get("/recurring/{slug}/data")
-async def recurring_data(slug: str, program: str | None = None):
+def recurring_data(slug: str, program: str | None = None):
     """JSON sibling of /recurring/{slug}."""
     rec = queries.get_recurring_event_by_slug(slug)
     if not rec:
         raise HTTPException(status_code=404)
     rid = rec["recurring_event_id"]
     prog = _resolve_program(queries.get_program_options_for_recurring(rid), program)
-    return JSONResponse(_build_program_payload(
-        races          = queries.get_recurring_races(rid, program=prog),
-        leaders        = queries.get_recurring_all_time_leaders(rid, program=prog),
-        perf_history   = queries.get_recurring_performance_history(rid, program=prog),
-        medal_table    = queries.get_recurring_medal_table(rid, program=prog),
-        winners_age    = queries.get_recurring_winners_with_age(rid, program=prog),
-        standards_hist = queries.get_recurring_standards_history(rid, program=prog),
-        prog           = prog,
-    ))
+    return JSONResponse(_program_payload(rid, prog, recurring=True))

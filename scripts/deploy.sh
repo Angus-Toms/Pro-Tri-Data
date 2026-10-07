@@ -1,16 +1,17 @@
 #!/bin/bash
-# deploy.sh - commit/push, upload static assets to R2, copy DB to Render
+# deploy.sh - commit/push, upload static assets to R2, copy DB + code to the
+# Hetzner box, restart the service
 #
 # Usage:
-#   ./deploy.sh                   # run all four steps
-#   ./deploy.sh --no-git          # skip git step
+#   ./deploy.sh                   # run all steps
+#   ./deploy.sh --no-git          # skip git commit/push AND the remote git pull
 #   ./deploy.sh --no-static       # skip Cloudflare R2 upload
 #   ./deploy.sh --no-db           # skip DB copy
-#   ./deploy.sh --no-restart      # skip Render service restart
+#   ./deploy.sh --no-restart      # skip service restart
 #
 # Requires:
 #   - wrangler (npm i -g wrangler) logged in
-#   - scripts/.env with RENDER_API_KEY set (only for the restart step)
+#   - ssh access to PROD_SSH (config.py) with the local ed25519 key
 
 set -euo pipefail
 
@@ -20,17 +21,10 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 STATIC_DIR="$PROJECT_ROOT/static"
 DB_LOCAL="$PROJECT_ROOT/ptd_data/ptd.duckdb"
 _py() { python3 -c "import sys; sys.path.insert(0,'$PROJECT_ROOT'); from config import $1; print($1)"; }
-BUCKET=$(    _py CF_BUCKET)
-RENDER_SSH=$(  _py RENDER_SSH)
-DB_REMOTE=$(   _py RENDER_DB)
-
-# Load local secrets (RENDER_API_KEY etc). Not required for git/static/db steps.
-if [ -f "$SCRIPT_DIR/.env" ]; then
-    set -a
-    # shellcheck source=/dev/null
-    source "$SCRIPT_DIR/.env"
-    set +a
-fi
+BUCKET=$(      _py CF_BUCKET)
+PROD_SSH=$(    _py PROD_SSH)
+DB_REMOTE=$(   _py PROD_DB)
+APP_REMOTE=$(  _py PROD_APP_DIR)
 # ─────────────────────────────────────────────────────────────────────────────
 
 DO_GIT=true; DO_STATIC=true; DO_DB=true; DO_RESTART=true
@@ -48,6 +42,16 @@ step() { echo -e "\n${GREEN}==> $*${RESET}"; }
 note() { echo -e "${YELLOW}    $*${RESET}"; }
 
 cd "$PROJECT_ROOT"
+
+# The server pulls main, so a deploy from any other branch either fails at
+# the push (no upstream) or ships a DB built against code the server never
+# sees. Refuse up front rather than part-way through.
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$BRANCH" != "main" ]; then
+    echo -e "${RED}Refusing to deploy from branch '$BRANCH' - the server runs main.${RESET}"
+    echo "  git checkout main   (merge or cherry-pick what you want to ship first)"
+    exit 1
+fi
 
 # ── 1. Git commit + push ──────────────────────────────────────────────────────
 if $DO_GIT; then
@@ -122,39 +126,85 @@ if $DO_STATIC; then
             ct=$(content_type_for "$f")
             cc=$(cache_control_for "$f")
             printf "    %-60s" "$key"
-            wrangler r2 object put "$BUCKET/$key" --file "$f" \
-                --content-type "$ct" --cache-control "$cc" --remote > /dev/null 2>&1 \
-                && echo "ok" || echo "FAILED"
+            # env -u: scripts/.env exports CF_API_TOKEN / CF_ACCOUNT_ID, which
+            # wrangler reads as its deprecated auth aliases. That token has no
+            # R2 write scope, so every upload 403s; unset for this call and
+            # wrangler falls back to the OAuth login, which does. Keep the log
+            # on failure - silencing it turned a 403 into a bare "FAILED".
+            if env -u CF_API_TOKEN -u CF_ACCOUNT_ID \
+                wrangler r2 object put "$BUCKET/$key" --file "$f" \
+                --content-type "$ct" --cache-control "$cc" --remote > /tmp/wrangler-put.log 2>&1; then
+                echo "ok"
+            else
+                echo "FAILED"
+                grep -m1 "ERROR" /tmp/wrangler-put.log | sed 's/^/      /' || true
+            fi
         done
     done
     note "If assets look stale, purge the Cloudflare cache for static.protridata.com."
 fi
 
-# ── 3. DB → Render (atomic swap via tmp file) ─────────────────────────────────
+# ── 3. DB → server (atomic swap via tmp file) ────────────────────────────────
 if $DO_DB; then
     DB_SIZE=$(du -sh "$DB_LOCAL" | cut -f1)
-    step "Render: copying DB ($DB_SIZE)"
-    # Upload to a temp path first, then mv - avoids a window where the file is half-written
-    scp "$DB_LOCAL" "$RENDER_SSH:${DB_REMOTE}.new"
-    ssh "$RENDER_SSH" "mv '${DB_REMOTE}.new' '${DB_REMOTE}'"
+    step "Server: copying DB ($DB_SIZE)"
+    # Upload to a temp path first, then mv - avoids a window where the app
+    # could open a half-written file.
+    scp "$DB_LOCAL" "$PROD_SSH:${DB_REMOTE}.new"
+    ssh "$PROD_SSH" "mv '${DB_REMOTE}.new' '${DB_REMOTE}'"
     echo "  Copied."
 fi
 
-# ── 4. Restart Render service (so the running app picks up the new DB) ───────
+# ── 3b. Athlete images → server ──────────────────────────────────────────────
+# The share-card renderer reads faces from disk (Cloudflare refuses CDN
+# requests coming from the box itself). Only new files travel; the set is
+# ~100MB in total.
+if $DO_DB; then
+    step "Server: syncing athlete images"
+    IMG_LOCAL=$(_py RUNTIME_ATHLETE_IMAGES_DIR)
+    IMG_REMOTE=$(dirname "$DB_REMOTE")/athlete_imgs
+    rsync -a --ignore-existing --stats "$IMG_LOCAL/128" "$IMG_LOCAL/512" "$PROD_SSH:$IMG_REMOTE/" | grep -E "files transferred|Number of files" | sed 's/^/  /'
+fi
+
+# ── 4. Code → server (git pull + pip) ────────────────────────────────────────
+# Render used to rebuild from GitHub on push; now we pull explicitly.
+if $DO_GIT; then
+    step "Server: pulling code"
+    ssh "$PROD_SSH" "cd '$APP_REMOTE' && git pull --ff-only && .venv/bin/pip install -q -r requirements.txt && PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64 .venv/bin/playwright install chromium"
+    echo "  Pulled $(ssh "$PROD_SSH" "cd '$APP_REMOTE' && git rev-parse --short HEAD")."
+fi
+
+# ── 5. Restart service (picks up new DB and/or code) ─────────────────────────
 if $DO_RESTART; then
-    step "Render: restarting service"
-    if [ -z "${RENDER_API_KEY:-}" ]; then
-        echo "  ERROR: RENDER_API_KEY not set. Add it to scripts/.env or pass --no-restart."
-        exit 1
+    step "Server: restarting ptd"
+    ssh "$PROD_SSH" "sudo systemctl restart ptd"
+    echo "  Restarted."
+fi
+
+# ── 6. Prediction-code drift check (data-only deploys) ───────────────────────
+# A --no-git deploy ships the DB but not the app code, so the live site can run
+# prediction logic older than the local tree - and the social-post generator
+# renders from the local tree, so the two silently disagree (Edmonton: local
+# had Pye 1st, the month-behind live site had him 6th). Compare the server's
+# checked-out commit to local HEAD across the prediction-model core and warn
+# loudly if they diverge. Read-only; never fails the deploy.
+if ! $DO_GIT; then
+    step "Server: checking deployed code vs local"
+    # The prediction-model core. Deliberately narrow (not queries.py, which
+    # churns for unrelated page/leaderboard work) so the warning stays signal.
+    PRED_FILES="app/routers/race_page.py ptd_data/ratings.py ptd_data/form.py"
+    LIVE_SHA=$(ssh "$PROD_SSH" "cd '$APP_REMOTE' && git rev-parse HEAD" 2>/dev/null || true)
+    if [ -z "$LIVE_SHA" ]; then
+        echo "  [WARN] CODE DRIFT: could not read the server's commit (ssh issue)."
+    elif ! git cat-file -e "${LIVE_SHA}^{commit}" 2>/dev/null; then
+        echo "  [WARN] CODE DRIFT: server commit ${LIVE_SHA:0:8} not in local history - run 'git fetch' to compare."
+    elif git diff --quiet "$LIVE_SHA" HEAD -- $PRED_FILES; then
+        echo "  Prediction code in sync with server (live ${LIVE_SHA:0:8})."
+    else
+        DRIFTED=$(git diff --name-only "$LIVE_SHA" HEAD -- $PRED_FILES | tr '\n' ' ')
+        echo "  [WARN] CODE DRIFT: server runs ${LIVE_SHA:0:8}, local HEAD $(git rev-parse --short HEAD) - prediction code differs: ${DRIFTED}"
+        echo "  [WARN] Live-site predictions may not match freshly-generated social posts. Run ./deploy.sh (with git) to ship it."
     fi
-    # Service ID is the part of RENDER_SSH before the @ (e.g. srv-d58k...).
-    RENDER_SERVICE_ID="${RENDER_SSH%%@*}"
-    curl -fsS -X POST \
-        -H "Authorization: Bearer $RENDER_API_KEY" \
-        -H "Accept: application/json" \
-        "https://api.render.com/v1/services/$RENDER_SERVICE_ID/restart" \
-        > /dev/null
-    echo "  Restart triggered for $RENDER_SERVICE_ID."
 fi
 
 step "Done"

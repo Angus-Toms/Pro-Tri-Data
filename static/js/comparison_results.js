@@ -1,10 +1,15 @@
 (function () {
     'use strict';
 
-    // yearBandsPlugin only needs to exist once per page, even if this script re-runs
-    if (!window._yearBandsPlugin) {
-        window._yearBandsPlugin = {
-            id: 'yearBands',
+    // Career-aligned year bands. Distinct id from the global 'yearBands' plugin
+    // (utils.js) so the two don't collide: in actual-dates mode the x-axis is a
+    // time scale and the global plugin paints calendar-year bands; in aligned
+    // mode the x-axis is linear (ms-since-debut) so this one paints relative
+    // "Year N" bands instead. Sharing an id previously let this one shadow the
+    // global plugin, suppressing zebra stripes entirely in actual-dates mode.
+    if (!window._alignedYearBandsPlugin) {
+        window._alignedYearBandsPlugin = {
+            id: 'alignedYearBands',
             beforeDraw(chart) {
                 if (!isAligned) return;
                 const xScale = chart.scales.x;
@@ -16,6 +21,7 @@
                 const numYears = Math.ceil(xScale.max / msPerYear) + 1;
 
                 ctx.save();
+                const step = yearLabelStep(numYears, xScale.right - xScale.left);
                 for (let i = 0; i < numYears; i++) {
                     const x1 = Math.max(xScale.getPixelForValue(i * msPerYear), xScale.left);
                     const x2 = Math.min(xScale.getPixelForValue((i + 1) * msPerYear), xScale.right);
@@ -24,16 +30,17 @@
                         ctx.fillStyle = 'rgba(0,0,0,0.04)';
                         ctx.fillRect(x1, top, x2 - x1, bottom - top);
                     }
+                    if (i % step !== 0) continue;  // thin labels when years are dense
                     ctx.fillStyle = 'rgba(0,0,0,0.25)';
                     ctx.font = '10px Arial';
                     ctx.textAlign = 'center';
-                    ctx.fillText(`Year ${i + 1}`, (x1 + x2) / 2, bottom - 4);
+                    ctx.fillText(`Year ${i + 1}`, (x1 + x2) / 2, bottom - YEAR_LABEL_OFFSET);
                 }
                 ctx.restore();
             }
         };
     }
-    const yearBandsPlugin = window._yearBandsPlugin;
+    const yearBandsPlugin = window._alignedYearBandsPlugin;
 
     // --- State (reset fresh on each comparison) ---
     let isAligned = false;
@@ -193,16 +200,7 @@
         const ctx = document.getElementById(canvasId);
         if (!ctx) return null;
 
-        let data = getJSON(`${disc}-${dataPrefix}-data`);
-
-        // Compute alignment offsets from the overall ratings dataset (done once)
-        if (disc === 'overall' && dataPrefix === 'ratings' && isAligned) {
-            athleteFirstDates = data.datasets.map(dataset =>
-                Math.min(...dataset.data.map(d => new Date(d.x).getTime()))
-            );
-        }
-
-        data = applyAlignmentToData(data);
+        let data = applyAlignmentToData(getJSON(`${disc}-${dataPrefix}-data`));
 
         // Style each dataset with matching hover points
         data = {
@@ -225,11 +223,13 @@
         const yAxis = isRankings
             ? { reverse: true, min: 1, beginAtZero: false,
                 grid: { color: 'rgba(0,0,0,0.05)' },
-                ticks: { color: '#999', stepSize: 1, callback: v => '#' + v },
+                afterBuildTicks: s => applyNiceTicks(s, { includeMin: true }),
+                ticks: { color: '#999', autoSkip: false, callback: v => '#' + v },
                 title: { display: true, text: 'Ranking' } }
             : { beginAtZero: false,
                 grid: { color: 'rgba(0,0,0,0.05)' },
-                ticks: { color: '#999' },
+                afterBuildTicks: s => applyNiceTicks(s),
+                ticks: { color: '#999', autoSkip: false },
                 title: { display: true, text: 'Rating' } };
 
         return new Chart(ctx, {
@@ -360,7 +360,13 @@
     function setAlignMode(aligned) {
         if (isAligned === aligned) return;
         isAligned = aligned;
-        initRatings();   // sets athleteFirstDates
+        // Per-athlete debut date from the overall ratings series; every chart
+        // (any discipline, ratings or rankings) shifts by the same offsets.
+        athleteFirstDates = aligned
+            ? getJSON('overall-ratings-data').datasets.map(ds =>
+                Math.min(...ds.data.map(d => new Date(d.x).getTime())))
+            : null;
+        initRatings();
         initRankings();
     }
 
@@ -374,34 +380,56 @@
         });
     }
 
-    // --- H2H discipline picker (overall / swim / bike / run) ---
+    // --- H2H race table: discipline picker (overall / swim / bike / run) and,
+    // for 3+ athletes, a presence filter (any 2+ present / everyone present).
+    // The win tallies and race count are recomputed from the visible rows so
+    // both toggles stay consistent with what the table shows.
 
-    function switchH2hDisc(disc) {
+    function refreshH2hTable() {
         const table = document.querySelector('.h2h-table');
-        if (table) {
-            table.dataset.disc = disc;
-            table.querySelectorAll('.h2h-disc-val').forEach(el => {
+        if (!table) return;
+        const disc     = table.dataset.disc;
+        const allOnly  = table.dataset.presence === 'all';
+        const rows     = table.querySelectorAll('tbody tr');
+        const winsEls  = document.querySelectorAll('.h2h-wins-ath');
+        const wins     = Array.from(winsEls, () => 0);
+        let visible = 0;
+
+        rows.forEach(row => {
+            const show = !allOnly || row.dataset.allPresent === '1';
+            row.hidden = !show;
+            row.querySelectorAll('.h2h-disc-val').forEach(el => {
                 el.hidden = !el.classList.contains(`h2h-disc-${disc}`);
             });
-        }
-        const a1El = document.querySelector('.h2h-wins-a1');
-        const a2El = document.querySelector('.h2h-wins-a2');
-        if (a1El && a2El) {
-            const n1 = parseInt(a1El.dataset[disc] || '0', 10);
-            const n2 = parseInt(a2El.dataset[disc] || '0', 10);
-            a1El.textContent = n1;
-            a2El.textContent = n2;
-            a1El.classList.toggle('h2h-wins-leader', n1 > n2);
-            a2El.classList.toggle('h2h-wins-leader', n2 > n1);
-        }
+            if (!show) return;
+            visible++;
+            row.querySelectorAll('.h2h-time-cell').forEach((cell, i) => {
+                if (cell.querySelector(`.h2h-disc-${disc}.h2h-winner`)) wins[i]++;
+            });
+        });
+
+        const best = Math.max(0, ...wins);
+        winsEls.forEach((el, i) => {
+            el.textContent = wins[i];
+            el.classList.toggle('h2h-wins-leader', wins[i] > 0 && wins[i] === best);
+        });
+        const countEl = document.getElementById('h2h-race-count');
+        if (countEl) countEl.textContent = visible;
+        const emptyNote = document.getElementById('h2h-empty-note');
+        if (emptyNote) emptyNote.hidden = visible > 0;
     }
 
-    function wireH2hDiscChips() {
-        const chips = document.getElementById('h2h-disc-chips');
-        if (!chips) return;
-        chips.querySelectorAll('input[name="h2h-disc"]').forEach(r => {
+    function wireH2hChips() {
+        const table = document.querySelector('.h2h-table');
+        if (!table) return;
+        document.querySelectorAll('#h2h-disc-chips input[name="h2h-disc"]').forEach(r => {
             r.addEventListener('change', () => {
-                if (r.checked) switchH2hDisc(r.value);
+                if (r.checked) { table.dataset.disc = r.value; refreshH2hTable(); }
+            });
+        });
+        document.querySelectorAll('#h2h-presence-chips input[name="h2h-presence"]').forEach(r => {
+            r.addEventListener('change', () => {
+                if (r.checked) { table.dataset.presence = r.value; refreshH2hTable(); }
             });
         });
     }
@@ -416,6 +444,6 @@
     initRatings();
     initRankings();
     wireAlignChips();
-    wireH2hDiscChips();
+    wireH2hChips();
 
 })();

@@ -23,6 +23,22 @@ Low-data pass-through cases (NOT treated as anomalies):
     - all splits zero, only overall recorded  -> no corrections written
     - both transitions zero, main splits fine -> no corrections written
 
+Mixed relays live in relay_legs, not results, so they get their own pass
+(_apply_relay) writing to the same corrections table, keyed on the leg's
+athlete_id with 'overall' standing for leg_s:
+
+    R1. Field floor      split < RELAY_FLOOR_FRAC of the field median -> zero
+    R2. Transition ceil  T1/T2 over RELAY_T_CEILING -> zero
+    R3. MAD slow         main split far above the field median -> zero
+    R4. Leg time         leg_s missing -> sum of splits; leg_s short of the
+                         splits sum -> blame the one inflated split if there
+                         is exactly one, else recompute leg_s
+
+The relay pass ignores team status entirely. Relay statuses are unreliable:
+WT labels whole fields 'DNF'/'NC' when only the top three get a classified
+time, so teams marked DNF routinely have four complete, valid legs. Validity
+is judged from the splits themselves.
+
 Run standalone:
     python -m ptd_data.auto_corrections
 """
@@ -72,6 +88,44 @@ OVERALL_RECOMPUTE_MIN = 120.0
 # Plausible transition duration for T1/T2 recovery.
 T_MIN, T_MAX = 5, 300
 
+# Above this a transition is a parse artifact, not a real transition. No
+# elite short/middle-course T1/T2 is anywhere near 30 min, so this is a very
+# safe ceiling for detecting the H:MM:SS-parsed-as-MM:SS inflation (see the
+# de-inflation step in apply()).
+TRANSITION_CEILING = 1800
+
+# --- Relay pass ---------------------------------------------------------
+# Relay legs are super-sprints whose course length varies wildly by event
+# (race-median swims run from 97s to 440s), so every relay threshold is
+# relative to the field median for that (leg_num, gender) group.
+#
+# RELAY_FLOOR_FRAC replaces both the absolute FLOOR and the fast side of the
+# MAD: nothing legitimate comes in under half the field median, and the
+# observed ratio distribution has a clean gap either side of 0.45 (fastest
+# real split 0.60x, next worst error 0.44x).
+RELAY_FLOOR_FRAC = 0.45
+
+# Slow side only. The MAD floor is 3x the individual-race one because relay
+# fields legitimately span developing-nation athletes 2-3x off the median —
+# any tighter and continental-championship legs get deleted as "errors".
+RELAY_MAD_FLOOR_FRAC = 0.15
+RELAY_MIN_DELTA      = 30.0
+
+# A relay transition is ~30s. Anything past 3 min is a timing-mat failure
+# that rolled an adjacent split into the transition, never a real one
+# (observed p99: T1 103s, T2 86s).
+RELAY_T_CEILING = 180.0
+
+# Gap between the splits sum and leg_s worth reconciling.
+RELAY_LEG_RECOMPUTE_MIN = 60.0
+
+# Share of the splits-sum overrun a single split must account for to be
+# blamed for it rather than recomputing leg_s.
+RELAY_ROLL_IN_SHARE = 0.6
+
+RELAY_MAIN   = ('swim', 'bike', 'run')
+RELAY_SPLITS = ('swim', 't1', 'bike', 't2', 'run')
+
 
 def apply(conn):
     """Recompute auto corrections. Returns a summary dict of counts.
@@ -88,10 +142,17 @@ def apply(conn):
         'placeholders': 0,
         'mad': 0,
         'overall_recomputed': 0,
+        't_deinflated': 0,
         'recovered': 0,
         't_recovered': 0,
         'multi_zeroed': 0,
         'dnf_kept': 0,
+        'relay_floored': 0,
+        'relay_t_ceiling': 0,
+        'relay_mad': 0,
+        'relay_roll_in': 0,
+        'relay_leg_recovered': 0,
+        'relay_leg_recomputed': 0,
     }
 
     race_rows = conn.execute("""
@@ -129,6 +190,38 @@ def apply(conn):
                     if leg in ('swim', 'bike', 'run'):
                         flagged.add(leg)
                     summary['impossible'] += 1
+
+            # Step A1b - de-inflate H:MM:SS-parsed transitions. Some sources
+            # render T1/T2 as H:MM:SS but the field is read as MM:SS, inflating
+            # the transition by exactly 60x (a 2:46 transition becomes
+            # 2:46:00 = 9960s). MAD (Step C) can't catch it because the whole
+            # field is inflated by the same factor, so no single value is an
+            # outlier; and left alone, Step A0 below would "reconcile" the
+            # bloat by folding it into overall. Divide by 60 when the result is
+            # a plausible transition and, where overall + main splits exist,
+            # reconciles the residual (overall - swim - bike - run). Runs
+            # before A0 so the corrected transitions feed the overall check.
+            for leg in ('t1', 't2'):
+                if s[leg] <= TRANSITION_CEILING:
+                    continue
+                cand = round(s[leg] / 60.0)
+                if not (T_MIN <= cand <= T_MAX):
+                    continue
+                if (is_finisher and s['overall'] > 0
+                        and s['swim'] > 0 and s['bike'] > 0 and s['run'] > 0):
+                    other = 't2' if leg == 't1' else 't1'
+                    other_val = (s[other] / 60.0 if s[other] > TRANSITION_CEILING
+                                 else s[other])
+                    residual = s['overall'] - s['swim'] - s['bike'] - s['run']
+                    if abs((cand + other_val) - residual) > OVERALL_RECOMPUTE_MIN:
+                        continue  # doesn't reconcile - leave it for A0/MAD
+                insert_batch.append((race_id, aid, leg, float(cand), 'auto',
+                                     f'{_leg_name(leg)} de-inflated from H:MM:SS parse'))
+                s[leg] = cand
+                # Drop any raw MAD flag so Step C doesn't re-zero the value we
+                # just fixed (matters when only some of the field is inflated).
+                mad_flags.pop((aid, leg), None)
+                summary['t_deinflated'] += 1
 
             # Step A0 - overall sanity. Two modes:
             #   (a) recompute: all three main splits present and their sum is
@@ -274,15 +367,139 @@ def apply(conn):
             _flush(conn, insert_batch)
             insert_batch.clear()
 
+    _apply_relay(conn, insert_batch, summary)
+
     _flush(conn, insert_batch)
 
     print(
         "auto-corr: impossible={impossible} placeholders={placeholders} "
-        "mad={mad} overall_recomputed={overall_recomputed} recovered={recovered} "
+        "mad={mad} overall_recomputed={overall_recomputed} "
+        "t_deinflated={t_deinflated} recovered={recovered} "
         "t_recovered={t_recovered} multi_zeroed={multi_zeroed} "
         "dnf_kept={dnf_kept}".format(**summary)
     )
+    print(
+        "auto-corr relay: floored={relay_floored} t_ceiling={relay_t_ceiling} "
+        "mad={relay_mad} roll_in={relay_roll_in} "
+        "leg_recovered={relay_leg_recovered} "
+        "leg_recomputed={relay_leg_recomputed}".format(**summary)
+    )
     return summary
+
+
+
+def _apply_relay(conn, insert_batch, summary):
+    """Relay leg corrections, appended to insert_batch (see module docstring).
+
+    Thresholds are all relative to the field median for the leg's
+    (leg_num, gender) group, because relay course lengths vary hugely by event
+    and because leg 1 is a mass start while legs 2-4 are chases. Team status is
+    deliberately not consulted - see the module docstring.
+    """
+    race_rows = conn.execute("""
+        SELECT race_id FROM races WHERE distance = 'relay'
+        ORDER BY race_date, race_id
+    """).fetchall()
+
+    for (race_id,) in tqdm(race_rows, desc="Auto-corrections (relay)", unit="race"):
+        legs = conn.execute("""
+            SELECT l.athlete_id, l.leg_num, a.gender,
+                   l.leg_s, l.swim_s, l.t1_s, l.bike_s, l.t2_s, l.run_s
+            FROM relay_legs l
+            JOIN athletes a USING (athlete_id)
+            WHERE l.race_id = ?
+        """, [race_id]).fetchall()
+        if not legs:
+            continue
+
+        # Field median + effective MAD per (leg_num, gender, discipline).
+        groups = {}
+        for aid, leg_num, gender, *times in legs:
+            for disc, value in zip(('overall',) + RELAY_SPLITS, times):
+                if value > 0:
+                    groups.setdefault((leg_num, gender, disc), []).append(value)
+        stats = {}
+        for key, values in groups.items():
+            if len(values) < MIN_GROUP:
+                continue
+            med = statistics.median(values)
+            mad = statistics.median(abs(v - med) for v in values)
+            stats[key] = (med, max(mad, RELAY_MAD_FLOOR_FRAC * med))
+
+        for aid, leg_num, gender, *times in legs:
+            s = dict(zip(('overall',) + RELAY_SPLITS, (float(t) for t in times)))
+            touched = False
+
+            # R1 - field floor. Catches the 1s/11s placeholder splits and the
+            # partial split of an athlete pulled part-way through a leg.
+            for disc in RELAY_SPLITS:
+                key = (leg_num, gender, disc)
+                if s[disc] <= 0 or key not in stats:
+                    continue
+                med = stats[key][0]
+                if s[disc] < RELAY_FLOOR_FRAC * med:
+                    insert_batch.append((race_id, aid, disc, 0.0, 'auto',
+                                         f'{_leg_name(disc)} under {RELAY_FLOOR_FRAC:.0%} of the relay field; removed'))
+                    s[disc] = 0.0
+                    touched = True
+                    summary['relay_floored'] += 1
+
+            # R2 - transition ceiling. A 30s distribution is far too tight for
+            # MAD (its effective MAD collapses to ~1.5s, which would delete
+            # every merely-slow transition), so this one is absolute.
+            for disc in ('t1', 't2'):
+                if s[disc] > RELAY_T_CEILING:
+                    insert_batch.append((race_id, aid, disc, 0.0, 'auto',
+                                         f'{_leg_name(disc)} too long to be a relay transition; removed'))
+                    s[disc] = 0.0
+                    touched = True
+                    summary['relay_t_ceiling'] += 1
+
+            # R3 - MAD, slow side only. The fast side is R1's job.
+            for disc in RELAY_MAIN:
+                key = (leg_num, gender, disc)
+                if s[disc] <= 0 or key not in stats:
+                    continue
+                med, emad = stats[key]
+                if abs(s[disc] - med) < RELAY_MIN_DELTA:
+                    continue
+                if s[disc] > med + SLOW_MULT * emad:
+                    insert_batch.append((race_id, aid, disc, 0.0, 'auto',
+                                         f'{_leg_name(disc)} far off relay field pace; removed'))
+                    s[disc] = 0.0
+                    touched = True
+                    summary['relay_mad'] += 1
+
+            # R4 - leg time, only on rows R1-R3 left alone (a corrected row has
+            # no splits sum left to reconcile against).
+            if touched or not all(s[disc] > 0 for disc in RELAY_SPLITS):
+                continue
+            splits_sum = sum(s[disc] for disc in RELAY_SPLITS)
+            if s['overall'] == 0:
+                # Whole teams go unclassified with all four legs complete;
+                # without this their legs never reach the relay overall ELO.
+                insert_batch.append((race_id, aid, 'overall', splits_sum, 'auto',
+                                     'Leg time recalculated from splits'))
+                summary['relay_leg_recovered'] += 1
+                continue
+            overrun = splits_sum - s['overall']
+            if overrun <= RELAY_LEG_RECOMPUTE_MIN:
+                continue
+            # Either leg_s is short or one split swallowed a handover wait. One
+            # split sitting above its field median by most of the overrun is the
+            # culprit; anything else means leg_s is the odd one out.
+            culprits = [disc for disc in RELAY_MAIN
+                        if (leg_num, gender, disc) in stats
+                        and s[disc] - stats[(leg_num, gender, disc)][0] > RELAY_ROLL_IN_SHARE * overrun]
+            if len(culprits) == 1:
+                disc = culprits[0]
+                insert_batch.append((race_id, aid, disc, 0.0, 'auto',
+                                     f'{_leg_name(disc)} overruns the leg time; removed'))
+                summary['relay_roll_in'] += 1
+            else:
+                insert_batch.append((race_id, aid, 'overall', splits_sum, 'auto',
+                                     'Leg time recalculated from splits'))
+                summary['relay_leg_recomputed'] += 1
 
 
 def _compute_mad_flags(results):

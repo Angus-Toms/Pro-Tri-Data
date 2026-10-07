@@ -2,6 +2,25 @@ import os
 import time
 from pathlib import Path
 
+PROJECT_ROOT_FOR_ENV = Path(__file__).resolve().parent
+
+
+def load_dotenv(path: Path = PROJECT_ROOT_FOR_ENV / ".env") -> None:
+    """Load KEY=VALUE lines from the project-root .env into the environment
+    (existing variables win). Holds the R2 token and Meta API keys, so any
+    script that imports config can talk to Cloudflare without a shell source."""
+    if not path.exists():
+        return
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+
+
+load_dotenv()
+
 # Project paths
 PROJECT_ROOT = Path(__file__).resolve().parent
 
@@ -67,19 +86,7 @@ def _compute_asset_version() -> str:
 # share the same value.
 ASSET_VERSION = _compute_asset_version()
 
-# Country flag SVG helper, exposed as a Jinja global by each router.
-def flag(code, country="", cls=""):
-    if not code:
-        return ""
-    from markupsafe import Markup
-    cls_attr = "flag" + (f" {cls}" if cls else "")
-    return Markup(
-        f'<img src="{STATIC_BASE_URL}flags/{code}.svg" alt="{country or code}" '
-        f'class="{cls_attr}" loading="lazy">'
-    )
-
-
-# Runtime data (local: ./data, render: /var/data via DATA_ROOT)
+# Runtime data (local: ./ptd_data, prod: /var/lib/ptd via DATA_ROOT)
 RUNTIME_ATHLETE_IMAGES_DIR = RUNTIME_DATA_DIR / "athlete_imgs"
 
 # DuckDB
@@ -88,8 +95,19 @@ DB_PATH = RUNTIME_DATA_DIR / "ptd.duckdb"
 # WorldTriathlon API
 WORLD_TRIATHLON_API_KEY = "aac0df989cb613114241670ca2f5ff75"
 
-# Deployment
+# Admin tool (/admin/*). Long random secret from .env; visiting
+# /admin/login?token=<ADMIN_TOKEN> once sets the cookie. Unset = admin
+# routes 404 like any unknown page.
+ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")
+
+# IndexNow. Bing verifies ownership by fetching this key back from the domain
+# root, so /<key>.txt must stay publicly reachable (served by routers/robots.py)
+# and must match the key sent when pinging the IndexNow API.
+INDEXNOW_KEY = "41a7559f57e14a1a8e3cbf17dc8146c5"
+
+# Deployment (Hetzner CX23, see deploy/hetzner/)
 CF_BUCKET    = "ptd-static-assets"
-RENDER_SSH   = "srv-d58kqtemcj7s73ciqqjg@ssh.frankfurt.render.com"
-RENDER_DB    = "/var/data/ptd.duckdb"
+PROD_SSH     = "ptd@77.42.41.185"
+PROD_DB      = "/var/lib/ptd/ptd.duckdb"
+PROD_APP_DIR = "/opt/ptd"
 

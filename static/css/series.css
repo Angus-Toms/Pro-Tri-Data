@@ -504,6 +504,8 @@
     position: relative;
     z-index: 2;
 }
+/* An <a> to the edition's race page, so the timeline is crawlable; every
+   child sets its own colour, so only the underline needs suppressing. */
 .tyear {
     flex: 1 1 0;
     min-width: 0;
@@ -513,6 +515,7 @@
     cursor: pointer;
     padding-top: 0.1rem;
     position: relative;
+    text-decoration: none;
 }
 .tyear-img {
     width: 34px;
@@ -630,6 +633,10 @@
     border-radius: var(--border-radius-lg);
     overflow: hidden;
     box-shadow: var(--box-shadow);
+    transition: border-color var(--transition-fast);
+}
+.edition-panel:hover {
+    border-color: var(--primary-color);
 }
 .ep-empty {
     padding: 2rem 1.25rem;
@@ -671,6 +678,16 @@
     overflow-wrap: anywhere;
 }
 .ep-title:hover { color: var(--primary-color); }
+/* "predicted podium" sublabel sitting after an upcoming race's prog name. */
+.ep-subtitle {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-left: 0.4em;
+    white-space: nowrap;
+}
 .ep-meta {
     font-size: 0.72rem;
     color: rgba(255, 255, 255, 0.55);
@@ -776,6 +793,10 @@
     }
     .ch-std-v { font-size: 0.8rem; }
     .ch-std-d { font-size: 0.5rem; letter-spacing: 0.05em; }
+
+    /* Drop the transition columns so the three real splits (swim/bike/run)
+       stay on one line instead of wrapping. */
+    .w1-table td.w1-num--t { display: none; }
 }
 
 /* Mobile: collapse the dense w1-table into a stacked card per row.
@@ -795,13 +816,14 @@
         padding: 0.55rem 0.7rem;
         border-bottom: 0;
     }
-    /* Force splits onto their own line, with a subtle separator. */
+    /* Force splits onto their own line, with a subtle separator. Keep the
+       separator close under the name/info row rather than floating far below. */
     .w1-table tr::after {
         content: "";
         flex-basis: 100%;
         height: 1px;
         background: rgba(0, 0, 0, 0.06);
-        margin: 0.7rem 0 0.2rem;
+        margin: 0.2rem 0;
         order: 50;
     }
     .w1-table tbody td {
@@ -1258,3 +1280,111 @@
 }
 .ct-row span { color: rgba(255, 255, 255, 0.55); }
 .ct-row b { font-weight: 700; color: #fff; }
+
+/* ── /recurring index ──────────────────────────────────────────────────── */
+
+.ri-page { display: flex; flex-direction: column; gap: 0.5rem; }
+
+/* Filter + section chips pinned under the sticky 52px site header, so the
+   jump nav is reachable from any scroll depth. Background matches the page
+   so scrolled content doesn't show through the gaps. */
+.ri-toolbar {
+    position: sticky;
+    top: 52px;
+    z-index: 10;
+    background: var(--bg-color);
+    padding: 0.5rem 0 0.6rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.ri-filter {
+    width: 100%;
+    max-width: 420px;
+    padding: 0.55rem 0.9rem;
+    font: inherit;
+    font-size: 0.9rem;
+    color: var(--text-color);
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+}
+.ri-filter:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+/* Single scrollable row, never wrapping: keeps the sticky toolbar a constant
+   height so the .ri-group scroll-margin works at every viewport width. */
+.ri-section-nav {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.3rem;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+    scrollbar-width: thin;
+}
+.ri-section-chip {
+    padding: 0.22rem 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-light);
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+.ri-section-chip:hover {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+/* Anchor targets land below the sticky header (52px) + toolbar (~100px). */
+.ri-group { scroll-margin-top: 162px; }
+
+/* Breathing room between a table's bottom edge and the next section head.
+   The .ri-page flex gap alone (0.5rem) reads as cramped against the 1rem
+   .page-section-head leaves below itself. */
+.ri-group + .ri-group { margin-top: 1.5rem; }
+
+.ri-count {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-lighter);
+    margin-left: 0.35rem;
+}
+
+.ri-table .ri-name { font-weight: 600; }
+.ri-table .ri-years { font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Winner names wrap rather than overflow: nowrap here pushed long names
+   (e.g. "Alejandro Rodriguez Diez") into the next column / off the card. */
+.ri-table .ri-winner { white-space: normal; overflow-wrap: break-word; }
+
+/* Column balance: race name gets the most room, venue and winners breathe,
+   the years+editions column stays as thin as its nowrap content allows.
+   Columns: 1 race, 2 venue, 3 years (editions), 4/5 winners. */
+.ri-table th:nth-child(1) { width: 31%; }
+.ri-table th:nth-child(2) { width: 21%; }
+.ri-table th:nth-child(3) { width: 12%; }
+.ri-table th:nth-child(4),
+.ri-table th:nth-child(5) { width: 18%; }
+
+.ri-empty {
+    padding: 2rem 0;
+    color: var(--text-lighter);
+    text-align: center;
+}
+
+/* The shared .series-data-card clips overflow; here the table can be wider
+   than a phone, so let it scroll inside the card instead of clipping. */
+.ri-group .series-data-card { overflow-x: auto; }
+
+/* Narrow screens: drop the venue column (secondary info), keep race +
+   years/editions + both winners - the card scrolls if still too wide. */
+@media (max-width: 720px) {
+    .ri-table th:nth-child(2), .ri-table td:nth-child(2) { display: none; }
+}

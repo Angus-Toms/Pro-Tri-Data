@@ -1,19 +1,25 @@
 {% extends "base.html" %}
 
-{% block title %}{{ event.name }} - Pro Tri Data{% endblock %}
+{% block title %}{{ title_words(event.name) }} - Results{% endblock %}
+
+{# Outside the blocks so the JSON-LD can reuse it as the Event description. #}
+{% set desc %}Results for every category at {{ event.name }}{% if event.venue %}, {{ event.venue }}{% endif %}, with swim, bike and run splits and rating changes.{% endset %}
 
 {% block meta %}
-<meta name="description" content="{{ event.name }}{% if event.venue %} in {{ event.venue }}{% endif %}. Race results, splits, and performance analysis for every category.">
+<meta name="description" content="{{ desc }}">
 <meta property="og:site_name" content="Pro Tri Data">
 <meta property="og:type" content="website">
-<meta property="og:title" content="{{ event.name }} - Pro Tri Data">
-<meta property="og:description" content="{{ event.name }}{% if event.venue %} in {{ event.venue }}{% endif %}. Race results, splits, and performance analysis for every category.">
+<meta property="og:title" content="{{ title_words(event.name) }} - Results">
+<meta property="og:description" content="{{ desc }}">
 <meta property="og:image" content="{{ STATIC_BASE_URL }}imgs/logo-512.webp">
 {% endblock %}
 
 {% block jsonld %}
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"SportsEvent","name":{{ event.name | tojson }},"sport":"Triathlon","url":"https://www.protridata.com/event/{{ event.event_id }}"{% if event.start_date %},"startDate":"{{ event.start_date.isoformat() }}"{% endif %}{% if event.end_date %},"endDate":"{{ event.end_date.isoformat() }}"{% endif %}{% if event.venue %},"location":{"@type":"Place","name":{{ event.venue | tojson }}}{% endif %}}
+{#- location is required by Google's Event type, so it must never be conditional.
+    Venue is missing on 17% of indexed events and all of those have a country, so
+    it is the fallback rather than a reason to emit markup that logs an error. -#}
+{"@context":"https://schema.org","@type":"SportsEvent","name":{{ event.name | tojson }},"sport":"Triathlon","url":"https://www.protridata.com/event/{{ event.event_id }}"{% if event.start_date %},"startDate":"{{ event.start_date.isoformat() }}"{% endif %}{% if event.end_date %},"endDate":"{{ event.end_date.isoformat() }}"{% endif %},"description":{{ desc | trim | tojson }},"image":"{{ STATIC_BASE_URL }}imgs/logo-512.webp","location":{"@type":"Place","name":{{ (event.venue or event.country) | tojson }}{% if event.country %},"address":{{ event.country | tojson }}{% endif %}}}
 </script>
 {% endblock %}
 
@@ -25,7 +31,7 @@
 {% block hero %}
 <div class="event-hero">
     <div class="event-hero-inner">
-        <h1 class="event-hero-title">{{ event.name }}</h1>
+        <h1 class="event-hero-title">{{ event.name }}{% if is_upcoming %} <span class="upcoming-badge">Upcoming</span>{% endif %}</h1>
         <div class="event-hero-meta">
             {% if event.venue %}
             <span>{{ event.venue }}</span>
@@ -66,7 +72,7 @@
     <div class="ep-head">
         <div class="ep-head-l">
             <span class="ep-kicker">{{ race.race_date.strftime('%d %B %Y') }}</span>
-            <a href="/race/{{ race.race_id }}" class="ep-title">{{ race.prog_name }}</a>
+            <a href="/race/{{ race.race_id }}" class="ep-title">{{ race.prog_name }}{% if race.is_upcoming %} <span class="ep-subtitle">Predicted Podium</span>{% endif %}</a>
         </div>
         {% if race.standards %}
         <div class="ep-head-stds">
@@ -83,17 +89,25 @@
         {% endif %}
     </div>
     {% if race.podium %}
+    {% set is_relay = race.distance == 'relay' %}
     <table class="w1-table">
         <thead>
             <tr>
+                {% set pred = 'Pred. ' if race.is_upcoming else '' %}
                 <th>#</th>
-                <th>Athlete</th>
-                <th class="num">Swim</th>
+                <th>{{ 'Team' if is_relay else 'Athlete' }}</th>
+                {% if is_relay %}
+                {% for i in [1, 2, 3, 4] %}
+                <th class="num">Leg {{ i }}</th>
+                {% endfor %}
+                {% else %}
+                <th class="num">{{ pred }}Swim</th>
                 <th class="num w1-num--t">T1</th>
-                <th class="num">Bike</th>
+                <th class="num">{{ pred }}Bike</th>
                 <th class="num w1-num--t">T2</th>
-                <th class="num">Run</th>
-                <th class="num w1-num--total">{{ 'Predicted' if is_upcoming else 'Total' }}</th>
+                <th class="num">{{ pred }}Run</th>
+                {% endif %}
+                <th class="num w1-num--total">{{ 'Predicted' if race.is_upcoming else 'Total' }}</th>
             </tr>
         </thead>
         <tbody>
@@ -102,20 +116,32 @@
             <tr class="{{ tier }}-row">
                 <td class="w1-pos"><span class="pos-circle {{ tier }}">{{ p.position }}</span></td>
                 <td class="w1-ath-cell">
+                    {% if p.is_relay %}
+                    <a href="/country/{{ p.country_alpha3 }}" class="w1-ath {{ tier }}-img">
+                        <span class="w1-ath-name"><b>{{ p.name }}</b> {{ flag(p.country_alpha3) }}</span>
+                    </a>
+                    {% else %}
                     <a href="/athlete/{{ p.athlete_id }}" class="w1-ath {{ tier }}-img">
                         <img src="{{ STATIC_BASE_URL }}{{ 'athlete_imgs/128/' ~ p.athlete_id ~ '.webp' if p.profile_img else 'imgs/default_user_64.webp' }}" alt="{{ p.name }}">
                         <span class="w1-ath-name"><b>{{ p.name }}</b> {{ flag(p.country_alpha3) }}</span>
                     </a>
+                    {% endif %}
                 </td>
+                {% if is_relay %}
+                {% for leg in p.legs %}
+                {{ cell(leg, 'Leg ' ~ leg.leg_num) }}
+                {% endfor %}
+                {% else %}
                 {{ cell(p.swim, 'Swim') }}
                 {{ cell(p.t1,   'T1', transition=True) }}
                 {{ cell(p.bike, 'Bike') }}
                 {{ cell(p.t2,   'T2', transition=True) }}
                 {{ cell(p.run,  'Run') }}
+                {% endif %}
                 {# Total cell: format depends on past vs upcoming. Past races
                    show the actual time + gap-to-winner; upcoming races show
                    the predicted time (no gap, no field-fastest concept). #}
-                <td class="w1-num w1-num--total" data-label="{{ 'Predicted' if is_upcoming else 'Total' }}">
+                <td class="w1-num w1-num--total" data-label="{{ 'Predicted' if race.is_upcoming else 'Total' }}">
                     {% if p.time %}
                     <span class="w1-cell w1-cell--total">
                         <span class="w1-cell-val">{{ p.time }}</span>

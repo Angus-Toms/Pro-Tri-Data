@@ -7,7 +7,8 @@ from fastapi.templating import Jinja2Templates
 from markupsafe import Markup, escape
 from pydantic import BaseModel
 
-from config import ASSET_VERSION, ENV, STATIC_BASE_URL, flag
+from config import ASSET_VERSION, ENV, STATIC_BASE_URL
+from app.display_helpers import flag
 from ptd_data import queries
 from ptd_users import queries as uq
 from ptd_users.auth import current_user, require_admin, require_user

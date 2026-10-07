@@ -45,6 +45,29 @@ if (!window._ptdAthleteNavBound) {
     window.addEventListener('popstate', () => { window.location.reload(); });
 }
 
+// ---------- Doping sanction interstitial -----------------------------------
+// Full-screen acknowledgement shown once per session per athlete before the
+// profile is revealed. The overlay lives outside the AJAX-swapped hero/content
+// so course switches leave it (and the rotating marquee) untouched.
+(function initDopingOverlay() {
+    const overlay = document.getElementById('dopingOverlay');
+    if (!overlay || overlay.dataset.bound) return;
+    overlay.dataset.bound = '1';
+    const key = 'dopingSeen:' + overlay.dataset.athlete;
+    if (sessionStorage.getItem(key)) {
+        overlay.remove();
+        return;
+    }
+    document.body.style.overflow = 'hidden';
+    const dismiss = () => {
+        sessionStorage.setItem(key, '1');
+        overlay.classList.add('is-hiding');
+        document.body.style.overflow = '';
+        setTimeout(() => overlay.remove(), 400);
+    };
+    document.getElementById('dopingContinue')?.addEventListener('click', dismiss);
+})();
+
 // Shared constants used by both rankings and ratings charts
 const DISC_COLORS = {
     overall:    '#E87722',  // orange
@@ -224,7 +247,8 @@ function buildMainRankingChart(disc, type) {
                 y: {
                     reverse: true, min: 1, beginAtZero: false,
                     grid: { color: 'rgba(0,0,0,0.05)' },
-                    ticks: { color: '#999', callback: v => '#' + v },
+                    afterBuildTicks: s => applyNiceTicks(s, { includeMin: true }),
+                    ticks: { color: '#999', autoSkip: false, callback: v => '#' + v },
                 }
             }
         }
@@ -627,7 +651,9 @@ function buildMainChart(disc) {
             },
             scales: {
                 x: { type: 'time', grid: { display: false }, ticks: { display: false } },
-                y: { beginAtZero: false, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#999' } }
+                y: { beginAtZero: false, grid: { color: 'rgba(0,0,0,0.05)' },
+                     afterBuildTicks: s => applyNiceTicks(s),
+                     ticks: { color: '#999', autoSkip: false } }
             }
         }
     });
@@ -786,7 +812,8 @@ function buildMainPctBehindChart(disc) {
                 y: {
                     min: 0,
                     grid: { color: 'rgba(0,0,0,0.05)' },
-                    ticks: { color: '#999', callback: v => v.toFixed(1) + '%' },
+                    afterBuildTicks: s => applyNiceTicks(s),
+                    ticks: { color: '#999', autoSkip: false, callback: v => v.toFixed(1) + '%' },
                 }
             }
         }

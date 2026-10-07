@@ -1,0 +1,7 @@
+# Cloudflare proxies protridata.com and talks to this origin over TLS using a
+# Cloudflare Origin CA cert (SSL mode: Full (strict)). No Let's Encrypt needed.
+protridata.com, www.protridata.com {
+    tls /etc/caddy/origin.pem /etc/caddy/origin.key
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:8000
+}

@@ -98,16 +98,28 @@
     font-variant-numeric: tabular-nums;
 }
 
-/* Year picker — clickable year + dropdown of past editions w/ winners. */
+/* Year picker — the year links to the event page (this edition), the chevron
+   beside it opens the dropdown of sibling editions w/ winners. Two separate
+   controls so the year can be a real crawlable <a href="/event/..."> while
+   the popover keeps its click-to-toggle behaviour. */
 .race-year-picker {
     position: relative;
     display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+.race-year-link {
+    font-variant-numeric: tabular-nums;
 }
 .race-year-trigger {
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
-    font-variant-numeric: tabular-nums;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
 }
 .race-year-trigger-ic {
     width: 0.85em;
@@ -116,7 +128,7 @@
     transition: transform 0.18s ease;
 }
 .race-year-picker.open .race-year-trigger-ic { transform: rotate(90deg); }
-.race-year-picker.open .race-year-trigger {
+.race-year-picker.open .race-year-link {
     color: var(--primary-color);
     border-bottom-color: var(--primary-color);
 }
@@ -258,23 +270,7 @@
     user-select: none;
 }
 
-.upcoming-badge {
-    display: inline-block;
-    background: var(--primary-color);
-    color: var(--white);
-    border-radius: var(--border-radius-sm);
-    font-size: 0.55em;          /* relative to the title (~1rem on mobile, ~1rem on desktop) */
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding: 0.25em 0.55em;
-    margin-left: 0.4em;
-    vertical-align: middle;
-    /* Sit a touch above the typographic baseline so the pill aligns with
-       the cap height of the title, not the descender. */
-    position: relative;
-    top: -0.15em;
-}
+/* .upcoming-badge now lives in base.css (shared by race + event heroes). */
 
 /* Podium - right column */
 .race-hero-podium {
@@ -435,37 +431,13 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;    /* phones: controls drop under the heading instead of widening the page */
     margin-bottom: 1rem;
     gap: 1rem;
 }
 
 .results-section-head .page-section-head {
     margin-bottom: 0;   /* parent owns the margin */
-}
-
-.btn-add-prediction {
-    flex-shrink: 0;
-    background: var(--primary-color);
-    color: #fff;
-    border: none;
-    border-radius: var(--border-radius);
-    padding: 0.4rem;
-    width: 2rem;
-    height: 2rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: background var(--transition-fast), transform var(--transition-fast);
-}
-
-.btn-add-prediction .lucide-user-plus {
-    width: 1.1rem;
-    height: 1.1rem;
-}
-
-.btn-add-prediction:hover {
-    background: var(--primary-hover);
 }
 
 /* Full-screen modal overlay */
@@ -721,13 +693,16 @@
 }
 
 .race-view.hidden { display: none; }
-.hidden { display: none; }
 
 /* Position diff badges */
+/* Fixed-width, centred: "-" and "^25" occupy the same box so the badges line
+   up row to row and the athlete name next to them doesn't shift. */
 .pos-diff {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.25em;
+    min-width: 2.4em;
     font-size: 0.65rem;
     font-weight: 700;
     margin-left: 3px;
@@ -742,6 +717,12 @@
 /* Debut row in predictions table - de-emphasised (no pre-race ratings so less reliable) */
 .debut-row td { color: var(--text-light); font-style: italic; }
 .debut-label { font-size: 0.75em; color: var(--text-lighter); font-style: italic; }
+
+/* Low-confidence prediction rows (few career starts): de-emphasised, marked with
+   the sprout badge next to the name. */
+.low-conf-row td { color: var(--text-light); }
+.low-conf-mark { margin-left: 0.2rem; }
+.low-conf-mark svg { width: 0.95em; height: 0.95em; }
 
 /* Corrections table */
 .corrections-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
@@ -793,3 +774,55 @@
         width: auto;
     }
 }
+
+/* ── Mixed team relay page ──────────────────────────────────────────────── */
+
+.relay-team-row.has-legs { cursor: pointer; }
+
+.relay-leg-name {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--text-light);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 9rem;
+}
+
+/* The expandable leg-splits panel lives in base.css - the country page uses
+   the same markup for its relay results table. */
+
+/* Fastest-legs filters: two segmented radio-chip switchers (reused from the
+   leaderboard) laid side by side, wrapped in the same white filter-card widget
+   the leaderboard uses. The white card lets the base light-grey (var(--bg-
+   color)) chip track show through and bleed around the white selected pill -
+   which it can't do on the bare page, whose background is itself var(--bg-
+   color). */
+.relay-leg-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1.25rem 1.5rem;
+    margin-bottom: 0.85rem;
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    padding: 1rem 1.25rem;
+}
+
+/* Relay tables carry no "vs prediction" diff badge, so the position column
+   doesn't need the 90px the individual results/rating tables reserve. */
+.relay-teams-table .position-col,
+.relay-fastest-table .position-col,
+.rating-table.relay-sortable .position-col { width: 48px; }
+
+/* Fastest-legs zebra is driven by JS (.zebra on visible rows) so it stays
+   correct after filtering; cancel the site-wide nth-child striping here. */
+.relay-fastest-table tbody tr:nth-child(even) td { background: transparent; }
+.relay-fastest-table tbody tr.zebra td { background: #f2f4f6; }
+
+/* Relay team rows keep the expand chevron visible on desktop (unlike the
+   individual results table, where the toggle is a mobile-only splits reveal). */
+/* The always-visible chevron column and the fastest-split annotation are
+   shared with the country page's relay table; both live in base.css. */
+

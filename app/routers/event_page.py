@@ -1,19 +1,18 @@
-import re
-
 from fastapi import HTTPException, Request, APIRouter
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from config import ASSET_VERSION, STATIC_BASE_URL, flag
+from config import ASSET_VERSION, STATIC_BASE_URL
+from app.display_helpers import flag, program_label, title_words
 
 from ptd_data import queries
-from ptd_data.ratings import SCALE
-from app.routers.router_utils import format_time, format_time_behind
-from app.routers.race_page import _course_signal_for_race
+from app.routers.router_utils import format_time, format_time_behind, format_course_conditions
 
 templates = Jinja2Templates(directory="templates")
 templates.env.globals["STATIC_BASE_URL"] = STATIC_BASE_URL
 templates.env.globals["ASSET_VERSION"] = ASSET_VERSION
 templates.env.globals["flag"]          = flag
+templates.env.globals["program_label"] = program_label
+templates.env.globals["title_words"]   = title_words
 router = APIRouter()
 
 _DISCS = ["overall", "swim", "bike", "run", "transition"]
@@ -39,48 +38,15 @@ def _sort_races(races):
     ))
 
 
-def _compute_event_course_conditions(races, models):
-    """Pool course condition signals from all elite races in this event.
-
-    Returns a dict of disc -> {formatted, category}, or {} if insufficient data.
-    """
-    pooled = {}           # disc -> [(pct_signal, total_w)]
-    pred_overall_refs = []  # (avg_pred_overall, total_w)
-
+def _event_course_conditions(races):
+    """Course conditions for the event, precomputed at build time. Every race
+    in an event carries identical stored rows (they're pooled per event), so
+    the first race with rows wins. {} if no elite race has conditions."""
     for race in races:
-        if queries.get_race_category(race['race_id']) != 'elite':
-            continue
-        out = _course_signal_for_race(race['race_id'], race['gender'], models)
-        if not out:
-            continue
-        signal, s_total_w, s_avg_pred_overall = out
-        pred_overall_refs.append((s_avg_pred_overall, s_total_w))
-        for disc, pct in signal.items():
-            pooled.setdefault(disc, []).append((pct, s_total_w))
-
-    combined_ref_w = sum(w for _, w in pred_overall_refs)
-    if not combined_ref_w:
-        return {}
-    combined_avg_pred_overall = sum(p * w for p, w in pred_overall_refs) / combined_ref_w
-
-    conditions = {}
-    for disc in ['overall', 'swim', 'bike', 'run']:
-        race_signals = pooled.get(disc, [])
-        if not race_signals:
-            continue
-        combined_w = sum(w for _, w in race_signals)
-        avg_pct    = sum(p * w for p, w in race_signals) / combined_w
-        if   avg_pct >  0.03: category = 'very_fast'
-        elif avg_pct >  0.01: category = 'fast'
-        elif avg_pct > -0.01: category = 'normal'
-        elif avg_pct > -0.03: category = 'slow'
-        else:                  category = 'very_slow'
-        avg_diff_s = avg_pct * combined_avg_pred_overall
-        sign  = '-' if avg_diff_s >= 0 else '+'
-        abs_s = abs(round(avg_diff_s))
-        mins, secs = divmod(abs_s, 60)
-        conditions[disc] = {'formatted': f"{sign}{mins:02d}:{secs:02d}", 'category': category}
-    return conditions
+        raw = queries.get_race_course_conditions(race['race_id'])
+        if raw:
+            return format_course_conditions(raw)
+    return {}
 
 
 def _classify(val, thresholds):
@@ -94,55 +60,36 @@ def _classify(val, thresholds):
     return "beginner"
 
 
-def _predicted_podium(top3, gender, event_spec_ids, models):
-    """Predicted overall + per-discipline splits for the top-3 rated athletes.
+def _predicted_podium(entries, race):
+    """Predicted podium (top-3 by predicted overall) with per-leg splits.
 
-    Each leg (swim/bike/run) is predicted off the leader's anchor time for
-    that discipline, scaled by 10^((leader_rating - athlete_rating)/SCALE).
-    Transitions don't have their own population model, so we estimate them
-    by subtracting the predicted leg sum from the predicted overall.
+    Reads the stored predictions (same rows the race page serves, so the two
+    always agree). Transitions don't have their own model, so we estimate
+    them as the slack between predicted overall and the predicted leg sum,
+    split evenly between T1 and T2.
+
+    Only elite races get a predicted podium: AG start lists are athletes without
+    a meaningful rating history, so the prediction machinery has nothing to work
+    with (matches the race page, which only predicts when category == 'elite').
     """
-    spec = event_spec_ids or ''
-    has_sprint   = '376' in spec
-    has_standard = '377' in spec
-    if has_sprint and not has_standard:
-        distance = 'sprint'
-    elif has_standard and not has_sprint:
-        distance = 'standard'
-    else:
-        distance = None
+    if race.get('category') != 'elite':
+        return []
+    stored = queries.get_race_predictions(race['race_id'])
+    preds = {r['athlete_id']: {d: r[f'{d}_s'] or None
+                               for d in ('overall', 'swim', 'bike', 'run')}
+             for r in stored}
+    ranked = [r['athlete_id'] for r in stored if r['overall_s']][:3]
+    if not ranked:
+        return []
+    emap = {e['athlete_id']: e for e in entries}
 
-    START_RATING = 1500
+    # Field-fastest per leg, within the displayed top-3, for the "fastest" tag
+    # and gap-to-fastest annotations the wide podium widget renders.
+    def _ff(disc):
+        vals = [preds[a].get(disc) for a in ranked if preds[a].get(disc)]
+        return min(vals) if vals else None
 
-    # Predict one leg (or overall) for every athlete in top3, returning a
-    # list of integer seconds aligned with `top3`. Each athlete's time is
-    # the leader's anchor time scaled by their rating ratio.
-    def _predict(disc):
-        m = models.get((gender, distance, disc)) if distance else None
-        if not (m and top3):
-            return [None] * len(top3)
-        rating_key = 'overall_rating' if disc == 'overall' else f'{disc}_rating'
-        leader_rating = top3[0][rating_key] or START_RATING
-        leader_time   = m['slope'] * leader_rating + m['intercept']
-        out = []
-        for a in top3:
-            r = a[rating_key] or START_RATING
-            out.append(max(0, round(leader_time * (10 ** ((leader_rating - r) / SCALE)))))
-        return out
-
-    overall_t = _predict('overall')
-    swim_t    = _predict('swim')
-    bike_t    = _predict('bike')
-    run_t     = _predict('run')
-
-    # Field-fastest per leg (within the top-3 here, since we don't have
-    # the full field's predictions). Used for the "fastest" tag + gap-to-
-    # fastest annotations the wide podium widget renders.
-    def _ff(values):
-        clean = [v for v in values if v]
-        return min(clean) if clean else None
-
-    ff = {'swim': _ff(swim_t), 'bike': _ff(bike_t), 'run': _ff(run_t)}
+    ff = {'swim': _ff('swim'), 'bike': _ff('bike'), 'run': _ff('run')}
 
     def _leg(val, leg_key):
         if not val:
@@ -156,32 +103,32 @@ def _predicted_podium(top3, gender, event_spec_ids, models):
             'gap':     f'+{format_time(val - best)}' if best else None,
         }
 
+    leader_overall = preds[ranked[0]]['overall']
     podium = []
-    for i, athlete in enumerate(top3):
-        position = i + 1
-        o = overall_t[i]
-        # Transition slack = predicted overall − (swim + bike + run). Split
-        # it evenly between T1 and T2 so the row totals back up to the
-        # predicted overall. Skip if any leg is missing.
-        legs = [swim_t[i], bike_t[i], run_t[i]]
-        if o and all(legs):
-            slack = max(0, o - sum(legs))
+    for i, aid in enumerate(ranked):
+        p = preds[aid]
+        e = emap[aid]
+        o, sw, bk, rn = p.get('overall'), p.get('swim'), p.get('bike'), p.get('run')
+        # Transition slack = predicted overall − (swim + bike + run), split
+        # evenly so the row totals back up to the predicted overall.
+        if o and sw and bk and rn:
+            slack = max(0, o - (sw + bk + rn))
             t1 = slack // 2
             t2 = slack - t1
         else:
             t1 = t2 = None
         podium.append({
-            'position':    position,
-            'athlete_id':  athlete['athlete_id'],
-            'name':        athlete['name'],
-            'country_alpha3': athlete['country_alpha3'],
-            'profile_img': athlete['profile_img'],
+            'position':    i + 1,
+            'athlete_id':  aid,
+            'name':        e['name'],
+            'country_alpha3': e.get('country_alpha3', ''),
+            'profile_img': e.get('profile_img', ''),
             'time':        format_time(o) if o else None,
-            'gap':         format_time_behind(o - overall_t[0])
-                           if (o and overall_t[0] and position > 1) else None,
-            'swim': _leg(swim_t[i], 'swim'),
-            'bike': _leg(bike_t[i], 'bike'),
-            'run':  _leg(run_t[i],  'run'),
+            'gap':         format_time_behind(o - leader_overall)
+                           if (o and leader_overall and i > 0) else None,
+            'swim': _leg(sw, 'swim'),
+            'bike': _leg(bk, 'bike'),
+            'run':  _leg(rn, 'run'),
             # Transitions get a formatted value but no fastest/gap context
             # since the slack estimate is the same for every athlete by
             # construction (we just halve the same number).
@@ -192,17 +139,30 @@ def _predicted_podium(top3, gender, event_spec_ids, models):
 
 
 @router.get("/event/{event_id}", response_class=HTMLResponse)
-async def get_event(request: Request, event_id: int):
+def get_event(request: Request, event_id: int):
     event = queries.get_event_info(event_id)
     if not event:
         raise HTTPException(status_code=404, detail=f"Event {event_id} not found")
 
-    upcoming_races = queries.get_upcoming_event_races_detail(event_id)
+    # A multi-day event (Champs Finals: juniors Thursday, elite Sunday) sits
+    # in both tables mid-week. Render the finished programs with real podiums
+    # and the pending ones with predicted podiums, in one list, rather than
+    # letting a single leftover upcoming row hide every result already in.
+    # Standards and ratings must come from the event's own course: a hand-
+    # entered 70.3 start list read off short-course ratings looks like a
+    # field of novices. One distance per event is enough.
+    upcoming_ids = [r["race_id"] for r in queries.get_upcoming_races_by_event(event_id)]
+    upcoming_course = 'short'
+    if upcoming_ids:
+        upcoming_course = queries.course_for_distance(
+            queries.get_upcoming_race_distance_type(upcoming_ids[0])) or 'short'
+    upcoming_races = queries.get_upcoming_event_races_detail(event_id, course=upcoming_course)
     if upcoming_races:
-        models = queries.get_prediction_models()
+        entries_by_race = queries.get_upcoming_race_entries_bulk(
+            [r["race_id"] for r in upcoming_races], course=upcoming_course)
         thresholds_by_gender = {
             g: queries.get_race_standard_thresholds(g)
-            for g in {r["gender"] for r in upcoming_races if r.get("gender")}
+            for g in {r["gender"] for r in upcoming_races if r.get("gender") in ("male", "female")}
         }
         for race in upcoming_races:
             raw = race.pop("standards_raw", None)
@@ -215,24 +175,19 @@ async def get_event(request: Request, event_id: int):
             else:
                 race["standards"]        = None
                 race["standard_classes"] = None
+            race["event_id"] = event_id
+            race["is_upcoming"] = True
             race["podium"] = _predicted_podium(
-                race.pop("top3", []), race["gender"], race.get("event_spec_ids", ""), models
-            )
-        return templates.TemplateResponse("event.html", {
-            "request":          request,
-            "active_page":      "upcoming",
-            "event":            event,
-            "races":            _sort_races(upcoming_races),
-            "is_upcoming":      True,
-            "course_conditions": {},
-        })
+                entries_by_race.get(race["race_id"], []), race)
 
     races = queries.get_event_races_detail(event_id)
 
     # Fetch thresholds once per gender present (cached after first call).
+    # No thresholds for 'mixed': relay races have no race_rankings rows and
+    # the quantile query would return NULLs.
     thresholds_by_gender = {
         g: queries.get_race_standard_thresholds(g)
-        for g in {r["gender"] for r in races if r.get("gender")}
+        for g in {r["gender"] for r in races if r.get("gender") in ("male", "female")}
     }
 
     for race in races:
@@ -247,16 +202,18 @@ async def get_event(request: Request, event_id: int):
         else:
             race["standards"]        = None
             race["standard_classes"] = None
+        race["is_upcoming"] = False
 
-    sorted_races = _sort_races(races)
-    models = queries.get_prediction_models()
-    course_conditions = _compute_event_course_conditions(sorted_races, models)
+    sorted_races = _sort_races(races + upcoming_races)
+    course_conditions = _event_course_conditions(races)
 
     return templates.TemplateResponse("event.html", {
         "request":          request,
-        "active_page":      "races",
+        "active_page":      "races" if races else "upcoming",
         "event":            event,
         "races":            sorted_races,
-        "is_upcoming":      False,
+        # Hero badge only when nothing has been raced yet; mid-event the
+        # per-race "Predicted Podium" subtitle carries that signal.
+        "is_upcoming":      bool(upcoming_races) and not races,
         "course_conditions": course_conditions,
     })

@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}{{ athlete.name }} - Career Ratings &amp; Results | Pro Tri Data{% endblock %}
+{% block title %}{{ athlete.name }} - Triathlon Results &amp; Ratings{% endblock %}
 
-{% set desc %}Career ELO ratings and race history for {{ athlete.name }}{% if athlete.country_full %}, {{ athlete.country_full }}{% endif %}{% if current_ratings and current_ratings.overall %}. Overall rating: {{ current_ratings.overall }}{% endif %}. View splits, discipline ratings, ranking history and more.{% endset %}
+{% set desc %}{{ seo_intro }}{% endset %}
 {% set img_url %}{{ STATIC_BASE_URL }}{% if athlete.profile_img %}athlete_imgs/512/{{ athlete.athlete_id }}.webp{% else %}imgs/logo-512.webp{% endif %}{% endset %}
 
 {% block meta %}
 <meta name="description" content="{{ desc }}">
 <meta property="og:site_name" content="Pro Tri Data">
 <meta property="og:type" content="profile">
-<meta property="og:title" content="{{ athlete.name }} - Career Ratings &amp; Results | Pro Tri Data">
+<meta property="og:title" content="{{ athlete.name }} - Triathlon Results &amp; Ratings">
 <meta property="og:description" content="{{ desc }}">
 <meta property="og:image" content="{{ img_url }}">
 {% endblock %}
@@ -26,6 +26,36 @@
 {% endblock %}
 
 {% block hero %}
+{% if doping_ban %}
+<div class="doping-overlay" id="dopingOverlay" data-athlete="{{ athlete.athlete_id }}">
+    <div class="doping-overlay-card">
+        <svg class="doping-overlay-icon" xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div class="doping-overlay-kicker">Anti-Doping Record</div>
+        <h2 class="doping-overlay-name">{{ athlete.name }}</h2>
+        <p class="doping-overlay-text">{{ doping_ban.summary }}</p>
+        {% if doping_ban.evidence_url %}
+        <a href="{{ doping_ban.evidence_url }}" class="doping-overlay-link" target="_blank" rel="noopener noreferrer nofollow">Read more</a>
+        {% endif %}
+        <p class="doping-overlay-note">Doping undermines fair competition and puts athletes' health at risk. Results achieved in connection with an anti-doping rule violation cannot be regarded as valid. If you are an athlete or support person, check the <a href="https://www.wada-ama.org/en/prohibited-list" target="_blank" rel="noopener noreferrer nofollow">WADA Prohibited List</a> to see which substances and methods are banned.</p>
+        <div class="doping-overlay-actions">
+            <button type="button" class="doping-overlay-btn" id="dopingContinue">Continue to profile</button>
+        </div>
+    </div>
+</div>
+{% set _marquee_msg %}Anti-Doping Sanction{% if doping_ban.period %} &middot; {{ doping_ban.period }}{% endif %}{% if doping_ban.substance %} &middot; {{ doping_ban.substance }}{% endif %} &middot; {{ doping_ban.summary }}{% endset %}
+<div class="doping-marquee" role="alert" aria-label="Anti-doping sanction notice">
+    <div class="doping-marquee-track" aria-hidden="true">
+        {% for _ in range(6) %}<span class="doping-marquee-item">{{ _marquee_msg }}</span>{% endfor %}
+    </div>
+    <div class="doping-marquee-track" aria-hidden="true">
+        {% for _ in range(6) %}<span class="doping-marquee-item">{{ _marquee_msg }}</span>{% endfor %}
+    </div>
+</div>
+{% endif %}
 <div class="athlete-hero" id="athlete-ajax-hero">
     <div class="athlete-hero-inner">
 
@@ -42,7 +72,12 @@
                 <h1 class="athlete-hero-name">
                     {{ athlete.name }}
                     {{ flag(athlete.country_alpha3, athlete.country_full, 'flag-lg') }}
-                    <span class="athlete-status-chip {{ 'status-active' if athlete.active else 'status-retired' }}">{{ 'Active' if athlete.active else 'Retired' }}</span>
+                    {% if athlete.instagram %}
+                    <a href="https://www.instagram.com/{{ athlete.instagram }}/" class="athlete-hero-instagram" target="_blank" rel="noopener noreferrer nofollow" aria-label="{{ athlete.name }} on Instagram" title="@{{ athlete.instagram }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+                    </a>
+                    {% endif %}
+                    {% if not athlete.active %}<span class="athlete-status-chip status-retired">Retired</span>{% endif %}
                 </h1>
                 <div class="follow-group">
                     {% with follow_kind = 'athlete', follow_id = athlete.athlete_id %}{% include "_follow_button.html" %}{% endwith %}
@@ -90,7 +125,7 @@
                 <span class="hero-meta-dot">·</span> <span class="athlete-hero-nickname">"{{ athlete.nickname }}"</span>
                 {% endif %}
                 <span class="hero-meta-dot">·</span>
-                <a href="/athlete-compare?athlete1={{ athlete.athlete_id }}&course={{ course }}" class="athlete-compare-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="compare-ic"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg><span class="athlete-compare-label">Compare</span></a>
+                <a href="/athlete-compare?athlete1={{ athlete.athlete_id }}&course={{ course }}" rel="nofollow" class="athlete-compare-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="compare-ic"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg><span class="athlete-compare-label">Compare</span></a>
             </div>
             <div class="athlete-hero-stats">
                 <span class="hero-stat-n">{{ athlete.race_starts }}</span> starts
@@ -98,32 +133,63 @@
                 <span class="hero-stat-n">{{ athlete.win_count }}</span> wins <span class="hero-stat-pct">({{ "%.1f"|format(athlete.win_pct * 100) }}%)</span>
                 <span class="hero-meta-dot">·</span>
                 <span class="hero-stat-n">{{ athlete.podium_count }}</span> podiums <span class="hero-stat-pct">({{ "%.1f"|format(athlete.podium_pct * 100) }}%)</span>
+                {% if athlete.is_low_confidence %}
+                <span class="hero-meta-dot">·</span>
+                <span class="hero-lowconf" title="Provisional rating - few career starts, so ratings and predictions for this athlete are not yet settled">Provisional</span>
+                {% endif %}
             </div>
         </div>
 
-        <!-- Actions: course/category switcher on the right -->
-        {% if mode_summaries and mode_summaries|length > 1 %}
-        <div class="athlete-hero-actions">
-            <div class="athlete-mode-switcher" role="tablist" aria-label="Profile mode">
-                {% for m in mode_summaries %}
-                {% set is_active = m.key == active_mode %}
-                <a href="/athlete/{{ athlete.athlete_id }}?course={{ m.course }}&category={{ m.category }}"
-                   class="athlete-mode-pill{% if is_active %} active{% endif %}"
-                   role="tab"
-                   aria-selected="{{ 'true' if is_active else 'false' }}"
-                   data-ptd-nav="athlete">
-                    {{ m.label }}
-                </a>
-                {% endfor %}
+        <!-- Right column: compact mode switcher above the current-form widget
+             (mirrors the race hero's podium column). -->
+        <div class="athlete-hero-right">
+            {% if mode_summaries and mode_summaries|length > 1 %}
+            <div class="athlete-hero-actions">
+                <div class="athlete-mode-switcher" role="tablist" aria-label="Profile mode">
+                    {% for m in mode_summaries %}
+                    {% set is_active = m.key == active_mode %}
+                    <a href="/athlete/{{ athlete.athlete_id }}?course={{ m.course }}&category={{ m.category }}"
+                       rel="nofollow"
+                       class="athlete-mode-pill{% if is_active %} active{% endif %}"
+                       role="tab"
+                       aria-selected="{{ 'true' if is_active else 'false' }}"
+                       data-ptd-nav="athlete">
+                        {{ m.label }}
+                    </a>
+                    {% endfor %}
+                </div>
             </div>
+            {% endif %}
+
+            {% if current_form %}
+            {# Current form: equivalent race-day splits from the form model,
+               styled for the dark hero like the race podium. The distance is
+               clear from each cell's leg subtitle, so no column headers. #}
+            <div class="athlete-hero-form">
+                <div class="hero-form-label">Current Form</div>
+                <div class="form-table" style="--form-cols: {{ current_form.cols|length }}">
+                    {% for row in current_form.rows %}
+                    <div class="form-row">
+                        <span class="form-disc">{{ row.label }}</span>
+                        {% for cell in row.cells %}
+                        <span class="form-cell">
+                            <span class="form-time">{{ cell.time }}</span>
+                            <span class="form-leg">{{ cell.leg }}</span>
+                        </span>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
         </div>
-        {% endif %}
 
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
+{% from "partials/_icons.html" import help_icon %}
 <div id="athlete-ajax-content">
 {% set discs = [('overall','Overall'),('swim','Swim'),('bike','Bike'),('run','Run'),('transition','Transition')] %}
 
@@ -168,11 +234,15 @@
    Table is horizontally scrollable inside its own container so no column
    is hidden on small screens. #}
 {% set ag_prefix = 'AG ' if category == 'ag' else '' %}
-{% set has_change_col = current_rankings and rating_changes_1yr %}
+{# Show the 1y Change column only if there's actually something in it. An athlete
+   dormant in this course for over a year has current==year-ago (change 0, blank)
+   and no sparkline, which would otherwise render an empty column. #}
+{% set has_change_data = sparklines or (rating_changes_1yr and rating_changes_1yr.values() | selectattr('formatted_str') | list) %}
+{% set has_change_col = current_rankings and has_change_data %}
 {% set has_rank_col   = current_rankings or peak_rankings %}
 {% set rank_col_label = ('Peak ' if not current_rankings and peak_rankings else '') ~ ag_prefix ~ 'World' %}
 
-<div class="page-section-head"><span>Ratings</span></div>
+<div class="page-section-head"><span>Ratings {{ help_icon('athlete-ratings') }}</span></div>
 
 <div class="ratings-section">
     <div class="ratings-table-scroll">
@@ -198,7 +268,7 @@
                     {% if has_rank_col %}
                     <td class="rt-rank">
                         {% if current_rankings and current_rankings['world_'~disc] %}
-                        <a href="/athlete-leaderboard?gender={{ athlete.gender }}&disc={{ disc }}&category={{ category }}&course={{ course }}" class="ranking-link">{{ current_rankings['world_'~disc].n }}<sup class="ordinal-suffix">{{ current_rankings['world_'~disc].suffix }}</sup></a>
+                        <a href="/athlete-leaderboard?gender={{ athlete.gender }}&disc={{ disc }}&category={{ category }}&course={{ course }}" rel="nofollow" class="ranking-link">{{ current_rankings['world_'~disc].n }}<sup class="ordinal-suffix">{{ current_rankings['world_'~disc].suffix }}</sup></a>
                         {% elif peak_rankings and peak_rankings['world_'~disc] %}
                         <span>{{ peak_rankings['world_'~disc].n }}<sup class="ordinal-suffix">{{ peak_rankings['world_'~disc].suffix }}</sup></span>
                         {% else %}<span class="no-data">-</span>{% endif %}
@@ -206,7 +276,7 @@
                     {% if current_rankings %}
                     <td class="rt-rank">
                         {% if current_rankings['national_'~disc] %}
-                        <a href="/athlete-leaderboard?gender={{ athlete.gender }}&disc={{ disc }}&category={{ category }}&course={{ course }}&country={{ athlete.country_full | urlencode }}" class="ranking-link">{{ current_rankings['national_'~disc].n }}<sup class="ordinal-suffix">{{ current_rankings['national_'~disc].suffix }}</sup></a>
+                        <a href="/athlete-leaderboard?gender={{ athlete.gender }}&disc={{ disc }}&category={{ category }}&course={{ course }}&country={{ athlete.country_full | urlencode }}" rel="nofollow" class="ranking-link">{{ current_rankings['national_'~disc].n }}<sup class="ordinal-suffix">{{ current_rankings['national_'~disc].suffix }}</sup></a>
                         {% else %}<span class="no-data">-</span>{% endif %}
                     </td>
                     {% endif %}
@@ -242,7 +312,7 @@
 {% endif %}{# has_ratings #}
 
 {% if upcoming_races %}
-<div class="page-section-head">Upcoming Races</div>
+<div class="page-section-head"><span>Upcoming Races {{ help_icon('athlete-upcoming') }}</span></div>
 <p class="page-section-sub" style="margin-bottom:0.75rem">Predicted positions and splits are based on current ratings. Actual results may vary.</p>
 <div class="table-section results-table upcoming-races-table">
     <table class="sortable-table">
@@ -315,7 +385,7 @@
 <div class="rivals-row">
     {% for r in rivals %}
     <div class="rival-card">
-        <a class="rival-link" href="/athlete/{{ r.athlete_id }}?course={{ course }}&category={{ category }}">
+        <a class="rival-link" href="/athlete/{{ r.athlete_id }}">
             <img class="rival-img"
                  src="{{ STATIC_BASE_URL ~ 'athlete_imgs/128/' ~ r.athlete_id ~ '.webp' if r.profile_img else STATIC_BASE_URL ~ 'imgs/default_user_64.webp' }}"
                  alt="{{ r.name }}" loading="lazy" width="80" height="80">
@@ -324,6 +394,7 @@
         </a>
         <a class="rival-compare"
            href="/athlete-compare?a1={{ athlete.athlete_id }}&a2={{ r.athlete_id }}&program={{ category }}-{{ course }}"
+           rel="nofollow"
            aria-label="Compare with {{ r.name }}" title="Compare">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>
@@ -335,8 +406,8 @@
 {% endif %}
 
 <div class="page-section-head">
-    <span>Race Results</span>
-    {% with download_url = "/api/v1/athletes/" ~ athlete.athlete_id ~ "/results?category=" ~ category ~ "&course=" ~ course %}{% include "partials/download_button.html" %}{% endwith %}
+    <span>Race Results {{ help_icon('athlete-results') }}</span>
+    {% with download_url = "/download/athletes/" ~ athlete.athlete_id ~ "/results?category=" ~ category ~ "&course=" ~ course %}{% include "partials/download_button.html" %}{% endwith %}
 </div>
 <div class="results-sort-chips" role="tablist" aria-label="Sort race results">
     <button class="sort-chip" data-sort-col="0" type="button">Date<svg class="chip-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
@@ -376,7 +447,7 @@
                 </td>
                 <td class="race-col" data-value="{{ race.race_title }}">
                     <a href="/race/{{ race.race_id }}" class="link">{{ race.race_title }}</a>
-                    <span class="std-pill std-pill--{{ race.standard_class }}">{{ race.standard_class|title }}</span>
+                    {% if race.standard_class %}<span class="std-pill std-pill--{{ race.standard_class }}">{{ race.standard_class|title }}</span>{% endif %}
                 </td>
                 <td class="program-col muted-col" data-value="{{ race.program }}">{{ race.program }}</td>
                 <td class="position-col" data-value="{{ race.position or 9999 }}">
@@ -489,8 +560,8 @@
 
 {% if has_ratings %}
 <div class="page-section-head">
-    <span>Rating History</span>
-    {% with download_url = "/api/v1/athletes/" ~ athlete.athlete_id ~ "/ratings?category=" ~ category ~ "&course=" ~ course %}{% include "partials/download_button.html" %}{% endwith %}
+    <span>Rating History {{ help_icon('athlete-rating-history') }}</span>
+    {% with download_url = "/download/athletes/" ~ athlete.athlete_id ~ "/ratings?category=" ~ category ~ "&course=" ~ course %}{% include "partials/download_button.html" %}{% endwith %}
 </div>
 <div class="ratings-sort-chips" role="tablist" aria-label="Sort rating history">
     <button class="sort-chip" data-sort-col="0" data-sort-axis="date"       type="button">Date<svg class="chip-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
@@ -638,6 +709,5 @@
 
 {% block extra_js %}
 <!-- Load JS (always needed for table sorting) -->
-<script src="{{ STATIC_BASE_URL }}js/utils.js?v={{ ASSET_VERSION }}"></script>
 <script src="{{ STATIC_BASE_URL }}js/athlete.js?v={{ ASSET_VERSION }}"></script>
 {% endblock %}

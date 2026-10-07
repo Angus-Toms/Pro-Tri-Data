@@ -3,6 +3,7 @@ from functools import lru_cache
 from urllib.parse import quote
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import PlainTextResponse, Response
+from config import INDEXNOW_KEY
 from ptd_data import db
 
 router = APIRouter()
@@ -11,29 +12,23 @@ router = APIRouter()
 # so each file stays well under both limits.
 ATHLETES_PER_SITEMAP = 25_000
 
-# Shared read-only connection reused across requests. DuckDB connections are
-# heavyweight to open and serialise queries internally, so a single shared
-# read-only handle is cheaper and safe.
-_conn = None
-
-
 def _get_conn():
-    global _conn
-    if _conn is None:
-        _conn = db.get_conn(read_only=True)
-    return _conn
+    return db.get_read_cursor()
 
 
 @lru_cache(maxsize=1)
 def _athlete_rows():
-    """All athlete IDs ordered by peak rating. Cached for process lifetime —
-    the ratings table only changes on rebuild, which restarts the app. This
-    query scans the full ratings table and was previously rerun on every
-    sitemap-shard request."""
-    return _get_conn().execute("""
+    """Indexable athlete IDs ordered by peak rating. Cached for process
+    lifetime — the ratings table only changes on rebuild, which restarts the
+    app. Only athletes passing queries.ATHLETE_INDEXABLE_SQL are submitted;
+    single-result age-groupers are noindex'd thin pages we keep out of the
+    sitemap so Google spends its crawl budget on pages that can rank."""
+    from ptd_data.queries import ATHLETE_INDEXABLE_SQL
+    return _get_conn().execute(f"""
         SELECT a.athlete_id, MAX(r.overall) AS peak_rating
         FROM athletes a
         JOIN ratings r ON a.athlete_id = r.athlete_id
+        WHERE a.athlete_id IN ({ATHLETE_INDEXABLE_SQL})
         GROUP BY a.athlete_id
         ORDER BY peak_rating DESC
     """).fetchall()
@@ -44,22 +39,46 @@ def _athlete_count() -> int:
 
 
 @router.get("/robots.txt", response_class=PlainTextResponse)
-async def robots_txt(request: Request) -> str:
+def robots_txt(request: Request) -> str:
     base_url = str(request.base_url).rstrip("/")
     return f"""User-agent: *
 
-# Comparison result pages generate too many URL combinations
+# Comparison result pages generate too many URL combinations. The deep
+# routes 302 to ?a1=/?r1= query URLs on the landing pages, so block those
+# query forms too (path-only Disallow doesn't match them).
 Disallow: /compare/
 Disallow: /athlete-compare/
 Disallow: /race-compare/
+Disallow: /*?*a1=
+Disallow: /*?*r1=
+
+# Course/category mode variants serve different content under a single
+# path-only canonical. Crawling them wastes budget and lands them in
+# "Crawled - currently not indexed"; the bare canonical paths are in the
+# sitemap, so block the parameterised variants and the AJAX partials.
+Disallow: /*?*course=
+Disallow: /*?*category=
+Disallow: /*?*partial=
+
+# Data download endpoints back the table download buttons via JS; they are
+# not pages to index.
+Disallow: /download/
 
 # Static assets & internal paths
 Disallow: /static/
+Disallow: /admin/
 Disallow: /favicon.ico
 
 # Sitemap index
 Sitemap: {base_url}/sitemap.xml
 """
+
+
+# IndexNow ownership proof: the key file's body is the key itself. Bing refetches
+# it on every ping, so this route has to keep working for raceday pings to land.
+@router.get(f"/{INDEXNOW_KEY}.txt", response_class=PlainTextResponse)
+def indexnow_key() -> str:
+    return INDEXNOW_KEY
 
 
 def _url(loc: str, lastmod: str | None = None, changefreq: str | None = None,
@@ -98,7 +117,7 @@ def _xml_response(content: str) -> Response:
 
 
 @router.get("/sitemap.xml")
-async def sitemap_index(request: Request) -> Response:
+def sitemap_index(request: Request) -> Response:
     base = str(request.base_url).rstrip("/")
     today = date.today().isoformat()
     athlete_count = _athlete_count()
@@ -107,6 +126,8 @@ async def sitemap_index(request: Request) -> Response:
     entries = [
         f'  <sitemap><loc>{base}/sitemap-static.xml</loc><lastmod>{today}</lastmod></sitemap>',
         f'  <sitemap><loc>{base}/sitemap-races.xml</loc><lastmod>{today}</lastmod></sitemap>',
+        f'  <sitemap><loc>{base}/sitemap-events.xml</loc><lastmod>{today}</lastmod></sitemap>',
+        f'  <sitemap><loc>{base}/sitemap-upcoming.xml</loc><lastmod>{today}</lastmod></sitemap>',
         f'  <sitemap><loc>{base}/sitemap-countries.xml</loc><lastmod>{today}</lastmod></sitemap>',
         f'  <sitemap><loc>{base}/sitemap-series.xml</loc><lastmod>{today}</lastmod></sitemap>',
         f'  <sitemap><loc>{base}/sitemap-recurring.xml</loc><lastmod>{today}</lastmod></sitemap>',
@@ -126,7 +147,7 @@ async def sitemap_index(request: Request) -> Response:
 
 
 @router.get("/sitemap-static.xml")
-async def sitemap_static(request: Request) -> Response:
+def sitemap_static(request: Request) -> Response:
     from app.routers.about import load_blogs
     base = str(request.base_url).rstrip("/")
     today = date.today().isoformat()
@@ -140,6 +161,7 @@ async def sitemap_static(request: Request) -> Response:
         _url(f"{base}/athletes",    today, "weekly", 0.8),
         _url(f"{base}/countries",   today, "weekly", 0.7),
         _url(f"{base}/series",      today, "weekly", 0.7),
+        _url(f"{base}/recurring",   today, "weekly", 0.7),
         _url(f"{base}/athlete-compare", today, "monthly", 0.5),
         _url(f"{base}/race-compare",    today, "monthly", 0.5),
         _url(f"{base}/about",       today, "monthly", 0.5),
@@ -150,7 +172,7 @@ async def sitemap_static(request: Request) -> Response:
 
 
 @router.get("/sitemap-athletes-{shard}.xml")
-async def sitemap_athletes(request: Request, shard: int) -> Response:
+def sitemap_athletes(request: Request, shard: int) -> Response:
     base = str(request.base_url).rstrip("/")
     rows = _athlete_rows()
     total = len(rows)
@@ -192,7 +214,7 @@ def _country_rows():
 
 
 @router.get("/sitemap-countries.xml")
-async def sitemap_countries(request: Request) -> Response:
+def sitemap_countries(request: Request) -> Response:
     base = str(request.base_url).rstrip("/")
     today = date.today().isoformat()
     rows = _country_rows()
@@ -219,7 +241,7 @@ def _race_rows():
 
 
 @router.get("/sitemap-races.xml")
-async def sitemap_races(request: Request) -> Response:
+def sitemap_races(request: Request) -> Response:
     base = str(request.base_url).rstrip("/")
     today = date.today()
     # Every race (elite, AG, short and long course) for all time, keyed by race_id.
@@ -250,6 +272,68 @@ async def sitemap_races(request: Request) -> Response:
 
 
 @lru_cache(maxsize=1)
+def _event_rows():
+    """Events with at least one race, past or upcoming. Events with neither
+    render an empty page, so they stay out of the sitemap for the same reason
+    single-result age-groupers do."""
+    return _get_conn().execute("""
+        SELECT e.event_id, e.start_date
+        FROM events e
+        WHERE EXISTS (SELECT 1 FROM races r WHERE r.event_id = e.event_id)
+           OR EXISTS (SELECT 1 FROM upcoming_races u WHERE u.event_id = e.event_id)
+        ORDER BY e.start_date DESC
+    """).fetchall()
+
+
+@router.get("/sitemap-events.xml")
+def sitemap_events(request: Request) -> Response:
+    """Event pages group a venue's races on one URL, which is what "kona 2026"
+    style queries actually want. Priority tiers mirror the races sitemap."""
+    base = str(request.base_url).rstrip("/")
+    today = date.today()
+
+    urls = []
+    for event_id, start_date in _event_rows():
+        days_ago = (today - start_date).days
+        if days_ago <= 30:
+            priority, changefreq = 0.9, "weekly"
+        elif days_ago <= 365:
+            priority, changefreq = 0.8, "monthly"
+        elif days_ago <= 365 * 3:
+            priority, changefreq = 0.7, "yearly"
+        else:
+            priority, changefreq = 0.5, "never"
+        urls.append(_url(
+            f"{base}/event/{event_id}",
+            lastmod=start_date.isoformat(),
+            changefreq=changefreq,
+            priority=priority,
+        ))
+
+    return _xml_response(_wrap_urlset(urls))
+
+
+@lru_cache(maxsize=1)
+def _upcoming_race_ids():
+    return [r[0] for r in _get_conn().execute(
+        "SELECT race_id FROM upcoming_races ORDER BY race_date"
+    ).fetchall()]
+
+
+@router.get("/sitemap-upcoming.xml")
+def sitemap_upcoming(request: Request) -> Response:
+    """Upcoming races (served at /race/<id> from the upcoming_races table).
+    Start-list queries spike in the days before a race, so these need to be
+    submitted the moment they exist - waiting for the race to land in the
+    races sitemap misses the demand window entirely."""
+    base = str(request.base_url).rstrip("/")
+    today = date.today().isoformat()
+    urls = [_url(f"{base}/race/{rid}", lastmod=today, changefreq="daily", priority=0.9)
+            for rid in _upcoming_race_ids()]
+    return _xml_response(_wrap_urlset(urls))
+
+
+@lru_cache(maxsize=1)
 def _series_slugs():
     return [r[0] for r in _get_conn().execute(
         "SELECT slug FROM series ORDER BY sort_order, name"
@@ -257,7 +341,7 @@ def _series_slugs():
 
 
 @router.get("/sitemap-series.xml")
-async def sitemap_series(request: Request) -> Response:
+def sitemap_series(request: Request) -> Response:
     base = str(request.base_url).rstrip("/")
     today = date.today().isoformat()
     urls = [_url(f"{base}/series/{quote(s, safe='')}", lastmod=today, changefreq="weekly", priority=0.7)
@@ -272,13 +356,17 @@ def _recurring_slugs():
         FROM recurring_events re
         JOIN event_recurring er ON er.recurring_event_id = re.recurring_event_id
         JOIN events e ON e.event_id = er.event_id
+        -- Groups whose only editions were cancelled (no races) render an
+        -- empty page; keep them out for the same reason race-less events
+        -- stay out of the events sitemap.
+        WHERE EXISTS (SELECT 1 FROM races r WHERE r.event_id = e.event_id)
         GROUP BY re.recurring_event_id, re.slug
         ORDER BY MAX(e.start_date) DESC
     """).fetchall()]
 
 
 @router.get("/sitemap-recurring.xml")
-async def sitemap_recurring(request: Request) -> Response:
+def sitemap_recurring(request: Request) -> Response:
     base = str(request.base_url).rstrip("/")
     today = date.today().isoformat()
     urls = [_url(f"{base}/recurring/{quote(slug, safe='')}", lastmod=today, changefreq="yearly", priority=0.6)
