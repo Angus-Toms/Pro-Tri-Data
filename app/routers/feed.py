@@ -61,7 +61,7 @@ async def feed(request: Request):
         r["change"]  = format_rating_change(r["overall_change"])
 
     # --- recent comments on followed races ---
-    comments = await uq.get_recent_comments_for_races(follows["races"])
+    comments = await uq.get_recent_comments_for_feed(follows["races"], follows["users"])
     comment_races = queries.get_races_brief_bulk({c["race_id"] for c in comments})
     for c in comments:
         race = comment_races.get(c["race_id"])
@@ -72,7 +72,7 @@ async def feed(request: Request):
         "request":        request,
         "active_page":    "feed",
         "user":           user,
-        "has_follows":    bool(follows["athletes"] or follows["races"]),
+        "has_follows":    bool(follows["athletes"] or follows["races"] or follows["users"]),
         "n_athletes":     len(follows["athletes"]),
         "n_races":        len(follows["races"]),
         "upcoming_races": upcoming_races,

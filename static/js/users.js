@@ -65,9 +65,21 @@ function setFollowState(btn, following) {
 }
 
 function syncFollowButtons(me, root) {
+    const lists = { athlete: me.follows.athletes, race: me.follows.races, user: me.follows.users };
     (root || document).querySelectorAll('[data-follow-kind]').forEach(btn => {
-        const ids = btn.dataset.followKind === 'athlete' ? me.follows.athletes : me.follows.races;
-        setFollowState(btn, ids.includes(Number(btn.dataset.followId)));
+        const id = Number(btn.dataset.followId);
+        // No following yourself: hide the button on your own profile and card.
+        if (btn.dataset.followKind === 'user' && id === me.user_id) { btn.hidden = true; return; }
+        setFollowState(btn, lists[btn.dataset.followKind].includes(id));
+    });
+}
+
+// Every follower figure for this target on the page: counts beside buttons,
+// profile header stats and hover cards.
+function setFollowerCount(kind, id, n) {
+    document.querySelectorAll(`[data-follower-count="${kind}:${id}"]`).forEach(el => {
+        el.querySelector('[data-num]').textContent = n;
+        el.querySelector('[data-label]').textContent = n === 1 ? 'follower' : 'followers';
     });
 }
 
@@ -83,8 +95,10 @@ async function handleFollowClick(btn) {
         body: JSON.stringify({ kind: btn.dataset.followKind, ref_id: Number(btn.dataset.followId) }),
     });
     if (!res.ok) return;
-    const { following } = await res.json();
-    setFollowState(btn, following);
+    const { following, followers } = await res.json();
+    document.querySelectorAll(`[data-follow-kind="${btn.dataset.followKind}"][data-follow-id="${btn.dataset.followId}"]`)
+        .forEach(b => setFollowState(b, following));
+    setFollowerCount(btn.dataset.followKind, btn.dataset.followId, followers);
     window.ptdUser.invalidate();
 }
 
@@ -555,6 +569,7 @@ document.addEventListener('DOMContentLoaded', () => {
         card.innerHTML = html;
         card.hidden = false;
         position(anchor);
+        initFollowButtons(card);
     }
 
     document.addEventListener('mouseover', (e) => {

@@ -1559,7 +1559,7 @@ a.mention-user:hover {
 /* ---------- Public profile: about card ---------- */
 .profile-bio {
     margin: 0 0 var(--spacing-md);
-    font-size: 0.95rem;
+    font-size: var(--font-size-sm);  /* site body text, 0.875rem */
     line-height: 1.55;
     white-space: pre-line;
     overflow-wrap: anywhere;
@@ -1722,10 +1722,50 @@ a.profile-link--ext:hover {
 }
 
 @media (max-width: 768px) {
+    /* Stacked header: identity block, then one row of actions. The headline
+       figures are dropped; the profile below says the same things. */
+    .profile-hero {
+        gap: 0.9rem;
+    }
+
+    .profile-hero-id {
+        align-items: flex-start;
+    }
+
+    .profile-hero-id .avatar-lg {
+        width: 56px;
+        height: 56px;
+        font-size: 1.3rem;
+    }
+
+    .profile-hero-text h1 {
+        font-size: 1.35rem;
+        line-height: 1.2;
+    }
+
     .profile-hero-side {
         width: 100%;
-        justify-content: space-between;
-        flex-direction: row-reverse;
+        gap: 0.5rem;
+        /* line the actions up with the name, past the photo */
+        padding-left: calc(56px + var(--spacing-md));
+        box-sizing: border-box;
+    }
+
+    .profile-hero-side .hero-stats {
+        display: none;
+    }
+
+    .profile-hero-side .btn-follow {
+        order: -1;
+        margin-right: 0.25rem;
+    }
+
+    .page-hero--user .btn-follow .follow-label {
+        display: inline;
+    }
+
+    .page-hero--user .btn-follow {
+        padding: 0.45rem 0.9rem;
     }
 }
 
@@ -1921,4 +1961,67 @@ a.profile-link--ext:hover {
     margin: var(--spacing-md) 0 0;
     font-size: 0.75rem;
     color: var(--text-lighter);
+}
+
+/* ---------- Follower counts and people-follow ---------- */
+.follow-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.follower-count {
+    font-size: 0.82rem;
+    color: var(--text-light);
+    white-space: nowrap;
+}
+
+.follower-count strong {
+    color: var(--text-color);
+    font-weight: 700;
+}
+
+/* On navy heroes (athlete page) */
+.athlete-hero .follower-count { color: rgba(255, 255, 255, 0.6); }
+.athlete-hero .follower-count strong { color: #fff; }
+
+.btn-follow[hidden] { display: none; }
+
+/* Follow button on the navy profile header, as on the race hero */
+.page-hero--user .btn-follow {
+    background: transparent;
+    border-color: rgba(255, 255, 255, 0.35);
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.page-hero--user .btn-follow:hover {
+    border-color: var(--primary-color);
+    color: var(--white);
+}
+
+.page-hero--user .btn-follow.following {
+    background: rgba(232, 93, 4, 0.18);
+    border-color: var(--primary-color);
+    color: var(--white);
+}
+
+.user-card .follower-count { font-size: inherit; }
+
+.user-card-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.user-card .btn-follow {
+    padding: 0.3rem 0.65rem;
+    font-size: 0.78rem;
+}
+
+.follow-list-person {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: 0;
+    text-decoration: none;
 }

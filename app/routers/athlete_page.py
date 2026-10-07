@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 from config import ASSET_VERSION, STATIC_BASE_URL, flag
 
 from ptd_data import queries
+from ptd_users import queries as uq
 from ptd_data.ratings import SCALE
 from app.routers.race_page import _anchor_time
 from app.routers.router_utils import (
@@ -674,7 +675,9 @@ async def get_athlete(request: Request, athlete_id: int,
     else:
         active_mode = f'elite-{course}'
 
+    follower_count = await uq.follower_count("athlete", athlete_id)
     return templates.TemplateResponse("athlete.html", {
+        "follower_count": follower_count,
         "request":        request,
         "active_page":    "athletes",
         "athlete":        athlete_dict,

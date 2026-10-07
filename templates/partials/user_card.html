@@ -6,7 +6,7 @@
         <div class="user-card-id">
             <a href="/user/{{ profile.user_id }}" class="user-card-name">{{ profile.display_name }}</a>
             {% if profile.country %}{{ flag(profile.country) }}{% endif %}
-            <span class="user-card-sub">Joined {{ profile.created_at.strftime("%b %Y") }} <span class="feed-dot">·</span> {{ profile.comment_count }} comment{{ '' if profile.comment_count == 1 else 's' }}</span>
+            <span class="user-card-sub">Joined {{ profile.created_at.strftime("%b %Y") }} <span class="feed-dot">·</span> {% with follow_kind = 'user', follow_id = profile.user_id, count = profile.follower_count %}{% include "_follower_count.html" %}{% endwith %}</span>
         </div>
     </div>
     {% if received %}
@@ -18,7 +18,10 @@
     {% endif %}
     {% if profile.club %}<div class="user-card-club">{{ profile.club }}</div>{% endif %}
     <div class="user-card-foot">
-        <a href="/user/{{ profile.user_id }}" class="section-link">View profile</a>
+        <span class="user-card-actions">
+            {% with follow_kind = 'user', follow_id = profile.user_id %}{% include "_follow_button.html" %}{% endwith %}
+            <a href="/user/{{ profile.user_id }}" class="section-link">View profile</a>
+        </span>
         {% if profile.instagram or profile.strava %}
         <span class="profile-socials">
             {% if profile.instagram %}

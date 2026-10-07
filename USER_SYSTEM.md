@@ -88,11 +88,12 @@ create table sessions (
 
 create table follows (
     user_id    bigint not null references users on delete cascade,
-    kind       text not null check (kind in ('athlete', 'race')),
-    ref_id     bigint not null,            -- id in the analytics DuckDB
+    kind       text not null check (kind in ('athlete', 'race', 'user')),
+    ref_id     bigint not null,            -- DuckDB athlete/race id, or a user_id
     created_at timestamptz not null default now(),
     primary key (user_id, kind, ref_id)
 );
+create index follows_by_target on follows (kind, ref_id);   -- follower counts
 
 create table comments (
     comment_id bigint generated always as identity primary key,
@@ -257,6 +258,11 @@ Profiles (`app/routers/profiles.py`)
   first, 30 per page, each linking to the comment on its race. Shows only what is
   already public on race pages; email and follows stay private. Banned users 404.
 - Comment author names, avatars and person tags link here.
+- People can follow people (`follows.kind = 'user'`, not yourself). A followed
+  person's comments appear in the feed's comments section. Profiles show
+  follower, following and comment counts; athlete pages show a follower count
+  beside the follow button. `POST /follow` returns the new count so every figure
+  for that target on the page updates in place.
 - Optional public fields, edited on the account page: bio (280 chars), club, an
   Instagram handle and a Strava athlete id (pasted links are reduced to these),
   and self-reported PBs for sprint, Olympic, 70.3 and 140.6, stored as seconds.

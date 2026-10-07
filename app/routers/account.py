@@ -49,12 +49,14 @@ async def _render_account(request, user, saved=False, error=None, status_code=20
     follows = await uq.get_follows(user["user_id"])
     athletes_by_id = queries.get_athletes_brief_bulk(follows["athletes"])
     races_by_id    = queries.get_races_brief_bulk(follows["races"])
+    users_by_id    = await uq.get_users_brief(follows["users"])
     return templates.TemplateResponse("account.html", {
         "request":     request,
         "active_page": "account",
         "user":        user,
         "followed_athletes": [athletes_by_id[a] for a in follows["athletes"] if a in athletes_by_id],
         "followed_races":    [races_by_id[r] for r in follows["races"] if r in races_by_id],
+        "followed_users":    [users_by_id[u] for u in follows["users"] if u in users_by_id],
         "countries":   queries.get_nationality_options(),
         "saved":       saved,
         "error":       error,
@@ -166,7 +168,7 @@ async def account_unfollow(request: Request,
                            kind: str = Form(...),
                            ref_id: int = Form(...)):
     user = await require_user(request)
-    if kind not in ("athlete", "race"):
+    if kind not in ("athlete", "race", "user"):
         raise HTTPException(status_code=400, detail="Invalid follow kind")
     # Toggle is safe here: the account page only lists existing follows.
     await uq.toggle_follow(user["user_id"], kind, ref_id)

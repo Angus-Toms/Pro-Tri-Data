@@ -1,0 +1,3 @@
+{# Follower count beside a follow button; users.js updates it after a toggle.
+   Set follow_kind, follow_id and count before including. #}
+<span class="follower-count" data-follower-count="{{ follow_kind }}:{{ follow_id }}"><strong data-num>{{ count }}</strong> <span data-label>follower{{ '' if count == 1 else 's' }}</span></span>

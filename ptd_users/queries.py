@@ -138,14 +138,20 @@ async def delete_session(token_hash):
 # --- follows ----------------------------------------------------------------
 
 async def get_follows(user_id):
-    """{'athletes': [ids], 'races': [ids]} ordered oldest-follow first."""
+    """{'athletes': [ids], 'races': [ids], 'users': [ids]} oldest-follow first."""
     rows = await db.pool.fetch("""
         select kind, ref_id from follows where user_id = $1 order by created_at
     """, user_id)
     return {
         "athletes": [r["ref_id"] for r in rows if r["kind"] == "athlete"],
         "races":    [r["ref_id"] for r in rows if r["kind"] == "race"],
+        "users":    [r["ref_id"] for r in rows if r["kind"] == "user"],
     }
+
+
+async def follower_count(kind, ref_id):
+    return await db.pool.fetchval(
+        "select count(*) from follows where kind = $1 and ref_id = $2", kind, ref_id)
 
 
 async def toggle_follow(user_id, kind, ref_id):
@@ -335,16 +341,17 @@ async def moderation_queue():
     return [dict(r) for r in rows]
 
 
-async def get_recent_comments_for_races(race_ids, limit=20):
-    """Latest visible comments on a set of races, for the feed."""
+async def get_recent_comments_for_feed(race_ids, user_ids, limit=20):
+    """Latest visible comments on followed races or by followed people."""
     rows = await db.pool.fetch("""
         select c.comment_id, c.race_id, c.user_id, c.body, c.created_at,
                u.display_name, u.country, case when u.avatar is null then 0 else u.avatar_version end as avatar_version
         from comments c join users u using (user_id)
-        where c.race_id = any($1) and c.hidden_at is null and c.deleted_at is null
+        where (c.race_id = any($1) or c.user_id = any($2))
+          and c.hidden_at is null and c.deleted_at is null
         order by c.created_at desc
-        limit $2
-    """, race_ids, limit)
+        limit $3
+    """, race_ids, user_ids, limit)
     return [dict(r) for r in rows]
 
 
@@ -413,7 +420,9 @@ async def get_public_profile(user_id):
                case when u.avatar is null then 0 else u.avatar_version end as avatar_version,
                u.bio, u.club, u.pb_sprint, u.pb_olympic, u.pb_703, u.pb_1406, u.instagram, u.strava,
                (select count(*) from comments c
-                where c.user_id = u.user_id and c.hidden_at is null and c.deleted_at is null) as comment_count
+                where c.user_id = u.user_id and c.hidden_at is null and c.deleted_at is null) as comment_count,
+               (select count(*) from follows f where f.kind = 'user' and f.ref_id = u.user_id) as follower_count,
+               (select count(*) from follows f where f.kind = 'user' and f.user_id = u.user_id) as following_count
         from users u where u.user_id = $1 and not u.is_banned
     """, user_id)
     return dict(row) if row else None

@@ -46,9 +46,22 @@
                 {% endif %}
             </span>
             {% endif %}
-            <div class="hero-stat">
-                <span class="hero-stat-num">{{ profile.comment_count }}</span>
-                <span class="hero-stat-lbl">comment{{ '' if profile.comment_count == 1 else 's' }}</span>
+            {% with follow_kind = 'user', follow_id = profile.user_id %}{% include "_follow_button.html" %}{% endwith %}
+            <div class="hero-stats">
+                <div class="hero-stat" data-follower-count="user:{{ profile.user_id }}">
+                    <span class="hero-stat-num" data-num>{{ profile.follower_count }}</span>
+                    <span class="hero-stat-lbl" data-label>follower{{ '' if profile.follower_count == 1 else 's' }}</span>
+                </div>
+                <div class="hero-stat-sep"></div>
+                <div class="hero-stat">
+                    <span class="hero-stat-num">{{ profile.following_count }}</span>
+                    <span class="hero-stat-lbl">following</span>
+                </div>
+                <div class="hero-stat-sep"></div>
+                <div class="hero-stat">
+                    <span class="hero-stat-num">{{ profile.comment_count }}</span>
+                    <span class="hero-stat-lbl">comment{{ '' if profile.comment_count == 1 else 's' }}</span>
+                </div>
             </div>
         </div>
     </div>

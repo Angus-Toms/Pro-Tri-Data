@@ -21,9 +21,16 @@ async def follow_toggle(request: Request, body: FollowBody):
         exists = bool(queries.get_athletes_brief_bulk([body.ref_id]))
     elif body.kind == "race":
         exists = bool(queries.get_races_brief_bulk([body.ref_id]))
+    elif body.kind == "user":
+        if body.ref_id == user["user_id"]:
+            raise HTTPException(status_code=400, detail="You can't follow yourself")
+        exists = await uq.get_public_profile(body.ref_id) is not None
     else:
-        raise HTTPException(status_code=400, detail="kind must be 'athlete' or 'race'")
+        raise HTTPException(status_code=400, detail="kind must be 'athlete', 'race' or 'user'")
     if not exists:
         raise HTTPException(status_code=404, detail=f"{body.kind} {body.ref_id} not found")
     following = await uq.toggle_follow(user["user_id"], body.kind, body.ref_id)
-    return JSONResponse({"following": following}, headers={"Cache-Control": "no-store"})
+    # The count lets follower figures on the page update without a reload.
+    return JSONResponse({"following": following,
+                         "followers": await uq.follower_count(body.kind, body.ref_id)},
+                        headers={"Cache-Control": "no-store"})

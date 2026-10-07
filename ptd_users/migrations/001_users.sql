@@ -37,11 +37,12 @@ create table sessions (
 
 create table follows (
     user_id    bigint not null references users on delete cascade,
-    kind       text not null check (kind in ('athlete', 'race')),
-    ref_id     bigint not null,            -- id in the analytics DuckDB
+    kind       text not null check (kind in ('athlete', 'race', 'user')),
+    ref_id     bigint not null,            -- DuckDB athlete/race id, or a user_id
     created_at timestamptz not null default now(),
     primary key (user_id, kind, ref_id)
 );
+create index follows_by_target on follows (kind, ref_id);   -- follower counts
 
 create table comments (
     comment_id bigint generated always as identity primary key,

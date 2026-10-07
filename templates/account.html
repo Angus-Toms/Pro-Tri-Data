@@ -111,7 +111,7 @@
 
     <section class="account-section" id="following">
         <div class="page-section-head">
-            <span>Following <span class="page-section-sub">{{ followed_athletes | length }} athlete{{ '' if followed_athletes | length == 1 else 's' }}, {{ followed_races | length }} race{{ '' if followed_races | length == 1 else 's' }}</span></span>
+            <span>Following <span class="page-section-sub">{{ followed_athletes | length }} athlete{{ '' if followed_athletes | length == 1 else 's' }}, {{ followed_races | length }} race{{ '' if followed_races | length == 1 else 's' }}, {{ followed_users | length }} {{ 'person' if followed_users | length == 1 else 'people' }}</span></span>
             <a href="/feed" class="section-link">Open feed</a>
         </div>
         <div class="follow-grid">
@@ -157,6 +157,28 @@
                 </ul>
                 {% else %}
                 <p class="follow-empty">No races yet. Browse <a href="/upcoming">upcoming races</a>.</p>
+                {% endif %}
+            </div>
+            <div class="account-card">
+                <div class="follow-card-title">People</div>
+                {% if followed_users %}
+                <ul class="follow-list">
+                    {% for u in followed_users %}
+                    <li class="follow-list-item">
+                        <a href="/user/{{ u.user_id }}" class="follow-list-person">
+                            {{ user_avatar(u.user_id, u.display_name, u.avatar_version, 'sm') }}
+                            <span class="follow-list-link">{{ u.display_name }} {% if u.country %}{{ flag(u.country) }}{% endif %}</span>
+                        </a>
+                        <form method="post" action="/account/unfollow" onsubmit="window.ptdUser.invalidate()">
+                            <input type="hidden" name="kind" value="user">
+                            <input type="hidden" name="ref_id" value="{{ u.user_id }}">
+                            <button type="submit" class="btn-secondary btn-small">Unfollow</button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="follow-empty">Nobody yet. Follow people from their profile or the card that appears when you hover over a commenter.</p>
                 {% endif %}
             </div>
         </div>
