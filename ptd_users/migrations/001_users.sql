@@ -7,9 +7,17 @@ create table users (
     country      char(3),                  -- optional, alpha-3, shown next to comments
     is_admin     boolean not null default false,
     is_banned    boolean not null default false,
-    email_digest boolean not null default true,
+    email_updates boolean not null default true,  -- results/start-list emails for follows
     avatar       bytea,                    -- 128px square webp, resized on upload
     avatar_version integer not null default 0,  -- bumped per upload; cache-busts the image URL
+    bio          text check (char_length(bio) <= 280),
+    club         text check (char_length(club) <= 60),
+    pb_sprint    integer,                  -- self-reported PBs, seconds
+    pb_olympic   integer,
+    pb_703       integer,
+    pb_1406      integer,
+    instagram    text,                     -- handle, validated in the route
+    strava       bigint,                   -- Strava athlete id
     created_at   timestamptz not null default now()
 );
 
@@ -74,3 +82,20 @@ create table notifications (
     unique (user_id, comment_id)
 );
 create index notifications_by_user on notifications (user_id, created_at desc);
+
+-- "Continue as" on the login page: a one-time token stored in a browser cookie
+-- at logout, so that browser can log straight back in without an email link.
+create table remembered_logins (
+    token_hash bytea primary key,
+    user_id    bigint not null references users on delete cascade,
+    expires_at timestamptz not null
+);
+
+-- Follow-update emails already sent, so each result or start list is emailed
+-- once. item is 'result:<race>:<athlete>', 'start:<race>:<athlete>' or 'race:<race>'.
+create table email_sent (
+    user_id bigint not null references users on delete cascade,
+    item    text not null,
+    sent_at timestamptz not null default now(),
+    primary key (user_id, item)
+);

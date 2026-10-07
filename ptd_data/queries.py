@@ -5231,3 +5231,22 @@ def search_races_for_mention(query, limit=5):
         LIMIT ?
     """, [q, limit]).fetchall()
     return [dict(zip(["race_id", "race_title", "prog_name", "race_date"], r)) for r in rows]
+
+
+def get_race_podiums_bulk(race_ids):
+    """{race_id: [top three finishers]} for race-result emails."""
+    if not race_ids:
+        return {}
+    placeholders = ",".join("?" * len(race_ids))
+    rows = _get_conn().execute(f"""
+        SELECT res.race_id, res.position, a.athlete_id, a.name, res.overall_s
+        FROM results res
+        JOIN athletes a ON res.athlete_id = a.athlete_id
+        WHERE res.race_id IN ({placeholders}) AND res.position BETWEEN 1 AND 3
+        ORDER BY res.race_id, res.position
+    """, list(race_ids)).fetchall()
+    out = {}
+    for race_id, position, athlete_id, name, overall_s in rows:
+        out.setdefault(race_id, []).append({"position": position, "athlete_id": athlete_id,
+                                            "name": name, "overall_s": overall_s})
+    return out

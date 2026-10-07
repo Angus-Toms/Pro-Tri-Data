@@ -4,6 +4,15 @@ from pathlib import Path
 
 # Project paths
 PROJECT_ROOT = Path(__file__).resolve().parent
+
+# Local dev reads secrets from the git-ignored .env; real environment
+# variables (Render in prod) always win.
+_ENV_FILE = PROJECT_ROOT / ".env"
+if _ENV_FILE.exists():
+    for _line in _ENV_FILE.read_text().splitlines():
+        _key, _sep, _value = _line.partition("=")
+        if _sep and not _line.lstrip().startswith("#"):
+            os.environ.setdefault(_key.strip(), _value.strip().strip('"').strip("'"))
 STATIC_DIR = PROJECT_ROOT / "static"
 STATIC_IMG_DIR = STATIC_DIR / "imgs"
 RUNTIME_DATA_DIR = Path(os.getenv("DATA_ROOT", PROJECT_ROOT / "ptd_data"))
@@ -32,6 +41,18 @@ if DATABASE_URL is None:
 
 # Resend email API key. Unset means dev mode: magic links are printed to stdout.
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+# Sender address. Must be on a domain verified in Resend; until protridata.com
+# is verified, "Pro Tri Data <onboarding@resend.dev>" works but only delivers to
+# the Resend account owner's own address.
+EMAIL_FROM = os.getenv("EMAIL_FROM", "Pro Tri Data <login@protridata.com>")
+
+# Signs unsubscribe links in emails. Prod must set it; changing it breaks links
+# in emails already sent.
+SECRET_KEY = os.getenv("SECRET_KEY")
+if SECRET_KEY is None:
+    if ENV in {"prod", "production"}:
+        raise RuntimeError("SECRET_KEY must be set in production")
+    SECRET_KEY = "local-dev-secret"
 
 
 def _compute_asset_version() -> str:

@@ -12,15 +12,48 @@
     <h1 class="auth-title">Check your email</h1>
     <p class="auth-text">If the address is valid, a login link is on its way. The link works once and expires in 15 minutes.</p>
     {% else %}
+    {% if accounts %}
+    <h1 class="auth-title">Welcome back</h1>
+    <p class="auth-text">Choose an account to continue.</p>
+    {% if error %}<p class="auth-error">{{ error }}</p>{% endif %}
+    <ul class="account-chooser">
+        {% for a in accounts %}
+        <li class="account-choice">
+            <form method="post" action="/auth/resume" class="account-choice-main">
+                <input type="hidden" name="user_id" value="{{ a.user_id }}">
+                <input type="hidden" name="next" value="{{ next }}">
+                <button type="submit" class="account-choice-btn" onclick="window.ptdUser.invalidate()">
+                    {{ user_avatar(a.user_id, a.display_name, a.avatar_version, 'md') }}
+                    <span class="account-choice-text">
+                        <span class="account-choice-name">{{ a.display_name }}</span>
+                        <span class="account-choice-email">{{ a.masked_email }}</span>
+                    </span>
+                    <span class="account-choice-go">Continue</span>
+                </button>
+            </form>
+            <form method="post" action="/auth/forget">
+                <input type="hidden" name="user_id" value="{{ a.user_id }}">
+                <input type="hidden" name="next" value="{{ next }}">
+                <button type="submit" class="account-choice-forget" aria-label="Forget {{ a.display_name }} on this device" title="Forget on this device">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+                </button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+    <div class="auth-divider"><span>or use another account</span></div>
+    {% else %}
     <h1 class="auth-title">Log in or sign up</h1>
     <p class="auth-text">Enter your email and we send you a login link. No password needed; new emails create an account automatically.</p>
     {% if error %}<p class="auth-error">{{ error }}</p>{% endif %}
+    {% endif %}
     <form method="post" action="/auth/request-link" class="auth-form">
         <input type="hidden" name="next" value="{{ next }}">
         <input type="text" name="website" value="" class="auth-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-        <input type="email" name="email" class="auth-input" placeholder="you@example.com" required autofocus>
-        <button type="submit" class="btn-primary">Send login link</button>
+        <input type="email" name="email" class="auth-input" placeholder="you@example.com" required{% if not accounts %} autofocus{% endif %}>
+        <button type="submit" class="{{ 'btn-secondary' if accounts else 'btn-primary' }}">Send login link</button>
     </form>
+    {% if accounts %}<p class="auth-note">On a shared computer, remove your account with the cross after logging out.</p>{% endif %}
     {% endif %}
 </div>
 {% endblock %}

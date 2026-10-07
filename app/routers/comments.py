@@ -91,8 +91,8 @@ async def tag_refs(bodies):
 
 
 def render_comment_body(body, refs):
-    """Escaped HTML with tags turned into chips. Athlete and race chips link
-    to their pages; user chips are plain since profiles are not public."""
+    """Escaped HTML with tags turned into chips that link to the athlete, race
+    or user profile. A tag of a deleted account stays as plain text."""
     out, pos = [], 0
     for m in TAG_RE.finditer(body):
         label, kind, ref_id = m.groups()
@@ -100,9 +100,11 @@ def render_comment_body(body, refs):
         if kind == "user":
             # Current name, so renames and deleted accounts are reflected.
             u = refs["user"].get(int(ref_id))
-            name = u["display_name"] if u else "deleted user"
-            out.append(Markup(f'<span class="mention mention-user">{AT_ICON}'
-                              f'<span>{escape(name)}</span></span>'))
+            if u:
+                out.append(Markup(f'<a class="mention mention-user" href="/user/{ref_id}">{AT_ICON}'
+                                  f'<span>{escape(u["display_name"])}</span></a>'))
+            else:
+                out.append(Markup(f'<span class="mention mention-user">{AT_ICON}<span>deleted user</span></span>'))
         elif kind == "athlete":
             # An athlete can vanish from a weekly rebuild; the chip then shows
             # the default photo and no flag.

@@ -33,6 +33,29 @@ def clear_session_cookie(response):
     response.delete_cookie(SESSION_COOKIE, path="/")
 
 
+# --- remembered accounts --------------------------------------------------------
+# Up to MAX_REMEMBERED one-time tokens, newest first, joined with "." (which
+# token_urlsafe never produces). The server only stores their hashes.
+REMEMBER_COOKIE = "ptd_remember"
+REMEMBER_MAX_AGE = 30 * 24 * 3600
+MAX_REMEMBERED = 3
+
+
+def remembered_tokens(request):
+    raw = request.cookies.get(REMEMBER_COOKIE, "")
+    return [t for t in raw.split(".") if t][:MAX_REMEMBERED]
+
+
+def set_remembered_cookie(response, tokens):
+    if not tokens:
+        response.delete_cookie(REMEMBER_COOKIE, path="/")
+        return
+    response.set_cookie(
+        REMEMBER_COOKIE, ".".join(tokens[:MAX_REMEMBERED]), max_age=REMEMBER_MAX_AGE,
+        httponly=True, secure=COOKIE_SECURE, samesite="lax", path="/",
+    )
+
+
 async def current_user(request: Request):
     """User dict for the request's session cookie, or None."""
     token = request.cookies.get(SESSION_COOKIE)

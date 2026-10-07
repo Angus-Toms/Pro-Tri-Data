@@ -49,6 +49,8 @@ mitigated by 90-day rolling sessions.
 ## 3. Schema
 
 ```sql
+create extension if not exists citext;
+
 create table users (
     user_id      bigint generated always as identity primary key,
     email        citext unique not null,
@@ -56,7 +58,17 @@ create table users (
     country      char(3),                  -- optional, alpha-3, shown next to comments
     is_admin     boolean not null default false,
     is_banned    boolean not null default false,
-    email_digest boolean not null default true,
+    email_updates boolean not null default true,  -- results/start-list emails for follows
+    avatar       bytea,                    -- 128px square webp, resized on upload
+    avatar_version integer not null default 0,  -- bumped per upload; cache-busts the image URL
+    bio          text check (char_length(bio) <= 280),
+    club         text check (char_length(club) <= 60),
+    pb_sprint    integer,                  -- self-reported PBs, seconds
+    pb_olympic   integer,
+    pb_703       integer,
+    pb_1406      integer,
+    instagram    text,                     -- handle, validated in the route
+    strava       bigint,                   -- Strava athlete id
     created_at   timestamptz not null default now()
 );
 
@@ -106,9 +118,9 @@ create table comment_reports (
 create table comment_reactions (
     comment_id bigint not null references comments on delete cascade,
     user_id    bigint not null references users on delete cascade,
-    kind       text not null check (kind in ('agree', 'insightful', 'impressive', 'funny')),
+    kind       text not null check (kind in ('up', 'down', 'rapid', 'paincave', 'podium')),
     created_at timestamptz not null default now(),
-    primary key (comment_id, user_id, kind)
+    primary key (comment_id, user_id)         -- one reaction per person per comment
 );
 
 create table notifications (
@@ -121,6 +133,23 @@ create table notifications (
     unique (user_id, comment_id)
 );
 create index notifications_by_user on notifications (user_id, created_at desc);
+
+-- "Continue as" on the login page: a one-time token stored in a browser cookie
+-- at logout, so that browser can log straight back in without an email link.
+create table remembered_logins (
+    token_hash bytea primary key,
+    user_id    bigint not null references users on delete cascade,
+    expires_at timestamptz not null
+);
+
+-- Follow-update emails already sent, so each result or start list is emailed
+-- once. item is 'result:<race>:<athlete>', 'start:<race>:<athlete>' or 'race:<race>'.
+create table email_sent (
+    user_id bigint not null references users on delete cascade,
+    item    text not null,
+    sent_at timestamptz not null default now(),
+    primary key (user_id, item)
+);
 ```
 
 `ref_id` and `race_id` get existence-checked against DuckDB in the route before insert.
@@ -146,9 +175,19 @@ experience is hydrated client-side:
 Auth (`app/routers/auth.py`)
 - `GET /login` - single page for both signup and login (email box)
 - `POST /auth/request-link` - send magic link
-- `GET /auth/verify?token=...` - create account if new, start session, redirect;
-  first-time users land on a one-field "pick a display name" step
-- `POST /auth/logout`
+- `GET /auth/verify?token=...` - the emailed link: shows a confirm page with a button
+  and does not use the token, because email security scanners open links.
+- `POST /auth/verify` - the button: uses the token, creates the account if new, starts
+  a session; first-time users land on a one-field "pick a display name" step
+- `POST /auth/logout` - also remembers the account on this browser: a one-time
+  token (hash stored in `remembered_logins`, 30 days) goes into an httpOnly
+  `ptd_remember` cookie holding up to 3 accounts.
+- `/login` lists remembered accounts ("Welcome back") above the email form.
+  `POST /auth/resume` consumes the token and starts a session with no email
+  round trip; a fresh token is issued at the next logout. `POST /auth/forget`
+  removes an account from the browser. Trade-off: on a remembered browser,
+  logging out no longer locks the account, so the page tells shared-computer
+  users to remove it. SameSite=Lax keeps cross-site posts from using the cookie.
 
 Account (`app/routers/account.py`)
 - `GET /account` - display name, email, country, digest toggle, followed athletes and
@@ -212,6 +251,18 @@ Comments (`app/routers/comments.py`)
   ("deleted user" once gone) and do not link, since profiles are not public.
   At most 10 tags per comment.
 
+Profiles (`app/routers/profiles.py`)
+- `GET /user/{id}` - public, anonymous page (noindex): photo, name, flag, join date,
+  comment and reactions-received counts, and the user's visible comments newest
+  first, 30 per page, each linking to the comment on its race. Shows only what is
+  already public on race pages; email and follows stay private. Banned users 404.
+- Comment author names, avatars and person tags link here.
+- Optional public fields, edited on the account page: bio (280 chars), club, an
+  Instagram handle and a Strava athlete id (pasted links are reduced to these),
+  and self-reported PBs for sprint, Olympic, 70.3 and 140.6, stored as seconds.
+  PBs outside a loose plausible range per distance are rejected; the profile
+  labels them self-reported. External links use rel="nofollow noopener ugc".
+
 Notifications
 - Two kinds, written in the same transaction as the comment: the author of the
   comment directly above a reply gets "X replied to your comment on Y race"; each
@@ -222,11 +273,22 @@ Notifications
   (`POST /notifications/read`). Each item links to `/race/{id}#comment-{id}`,
   which scrolls to and highlights the comment.
 
+Emails (`ptd_users/emails.py`, templates in `templates/emails/`)
+- Table-based HTML with inline styles in the site palette, plus a plain-text part.
+  Sent through Resend from `EMAIL_FROM` (default login@protridata.com).
+- Login: subject "Your login link", one button to the confirm page.
+- Follow updates: `scripts/send_update_emails.py`, run after the weekly build
+  against the production database. One email per opted-in user listing new
+  results for followed athletes (last 14 days, with rating change), new start-list
+  entries with a predicted finish (rank by rating, as the site's predicted podium),
+  and podiums of followed races. `email_sent` records each item so nothing is
+  emailed twice. Controlled by `users.email_updates`.
+- Every update email carries a signed unsubscribe link (HMAC of the user id with
+  `SECRET_KEY`) and List-Unsubscribe headers for one-click unsubscribe in mail apps.
+- Comment activity (replies, tags, reactions) stays in-app via the bell.
+
 ## 6. Extras worth adding
 
-- Weekly digest email (high value, cheap): after the weekly build finishes, send each
-  opted-in user their followed athletes' results and upcoming races. One script in
-  scripts/ called at the end of weekly.sh. The unsubscribe link flips email_digest.
 - Podium picks: before a followed upcoming race, the user picks a podium; after the
   weekly build the picks are scored against results and against the model's own
   prediction. One table `podium_picks (user_id, race_id, picks, score)`, a pick widget
@@ -240,8 +302,8 @@ Notifications
   debut, first elite start) into a DuckDB table and surface them as feed items and
   digest lines for followed athletes. Keeps the feed alive in weeks with no starts.
 - Saved comparisons: trivial later (one table, a Save button on the comparison page).
-- Deliberately skipped: OAuth providers (magic link is sufficient and keyless), public
-  profile pages (privacy and moderation burden for near-zero value), push notifications.
+- Deliberately skipped: OAuth providers (magic link is sufficient and keyless), push
+  notifications.
 
 ## 7. Build order
 

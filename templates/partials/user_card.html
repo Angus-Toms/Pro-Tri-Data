@@ -1,0 +1,37 @@
+{# Hover card for a comment author; fetched and positioned by users.js. #}
+{% from "_reaction_icons.html" import reaction_icon %}
+<div class="user-card-inner">
+    <div class="user-card-head">
+        {{ user_avatar(profile.user_id, profile.display_name, profile.avatar_version, 'md') }}
+        <div class="user-card-id">
+            <a href="/user/{{ profile.user_id }}" class="user-card-name">{{ profile.display_name }}</a>
+            {% if profile.country %}{{ flag(profile.country) }}{% endif %}
+            <span class="user-card-sub">Joined {{ profile.created_at.strftime("%b %Y") }} <span class="feed-dot">·</span> {{ profile.comment_count }} comment{{ '' if profile.comment_count == 1 else 's' }}</span>
+        </div>
+    </div>
+    {% if received %}
+    <div class="user-card-badges">
+        {% for kind, label, n in received %}
+        <span class="received-badge received-badge--light reaction--{{ kind }}" title="{{ n }} {{ label }}">{{ reaction_icon(kind) }}<span>{{ n }}</span></span>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% if profile.club %}<div class="user-card-club">{{ profile.club }}</div>{% endif %}
+    <div class="user-card-foot">
+        <a href="/user/{{ profile.user_id }}" class="section-link">View profile</a>
+        {% if profile.instagram or profile.strava %}
+        <span class="profile-socials">
+            {% if profile.instagram %}
+            <a class="social-icon social-icon--instagram" href="https://www.instagram.com/{{ profile.instagram }}/" target="_blank" rel="nofollow noopener ugc" aria-label="Instagram" title="Instagram">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+            </a>
+            {% endif %}
+            {% if profile.strava %}
+            <a class="social-icon social-icon--strava" href="https://www.strava.com/athletes/{{ profile.strava }}" target="_blank" rel="nofollow noopener ugc" aria-label="Strava" title="Strava">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+            </a>
+            {% endif %}
+        </span>
+        {% endif %}
+    </div>
+</div>

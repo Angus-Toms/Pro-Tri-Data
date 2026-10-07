@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% macro section_head(title) %}
+{#- Matches the site's section heading: orange left bar, sentence case. -#}
+<p style="margin:30px 0 6px;padding-left:10px;border-left:4px solid #e85d04;font-size:18px;font-weight:700;letter-spacing:-0.01em;line-height:1.3;color:#111827;">{{ title }}</p>
+{% endmacro %}
+{% macro pos(p, status) -%}
+{%- set medal = {1: ('#f5c842', '#5a4000'), 2: ('#c8d8e0', '#3a4a50'), 3: ('#d4a870', '#5a3000')} -%}
+{%- if p in medal -%}
+<span style="display:inline-block;width:24px;height:24px;line-height:24px;border-radius:12px;text-align:center;font-size:12px;font-weight:700;background:{{ medal[p][0] }};color:{{ medal[p][1] }};">{{ p }}</span>
+{%- elif p -%}
+<span style="display:inline-block;width:24px;text-align:center;font-size:13px;color:#9ca3af;">{{ p }}</span>
+{%- else -%}
+<span style="font-size:11px;font-style:italic;color:#9ca3af;">{{ status }}</span>
+{%- endif -%}
+{%- endmacro %}
+{% macro photo(src, size) -%}
+<img src="{{ src }}" width="{{ size }}" height="{{ size }}" alt="" style="display:block;width:{{ size }}px;height:{{ size }}px;border-radius:50%;border:0;object-fit:cover;background:#f4f4f2;">
+{%- endmacro %}
+
+{% block body %}
+<h1 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-0.02em;">{{ title }}</h1>
+
+{% if results %}
+{% if show_heads %}{{ section_head('Your athletes') }}{% else %}<div style="height:14px;"></div>{% endif %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+{% for r in results %}
+<tr>
+  <td width="32" style="padding:10px 0;border-bottom:1px solid #e5e7eb;vertical-align:middle;">{{ pos(r.position, r.status) }}</td>
+  <td width="44" style="padding:10px 0;border-bottom:1px solid #e5e7eb;vertical-align:middle;">{{ photo(r.photo, 34) }}</td>
+  <td style="padding:10px 8px 10px 0;border-bottom:1px solid #e5e7eb;">
+    <a href="{{ site }}/athlete/{{ r.athlete_id }}" style="font-size:15px;font-weight:700;color:#111827;text-decoration:none;">{{ r.name }}</a><br>
+    <a href="{{ site }}/race/{{ r.race_id }}" style="font-size:13px;color:#6b7280;text-decoration:none;">{{ r.race_title }} · {{ r.prog_name }} · {{ r.date }}</a>
+  </td>
+  <td align="right" style="padding:10px 0;border-bottom:1px solid #e5e7eb;white-space:nowrap;font-size:14px;">
+    <span style="font-weight:600;">{{ r.time }}</span>
+    {%- if r.change %}<br><span style="font-size:12px;font-weight:700;color:{{ '#059669' if r.change > 0 else '#dc2626' }};"><span style="font-size:9px;">{{ '&#9650;' | safe if r.change > 0 else '&#9660;' | safe }}</span>&nbsp;{{ r.change | abs }}</span>{% endif %}
+  </td>
+</tr>
+{% endfor %}
+</table>
+{% endif %}
+
+{% if starts %}
+{% if show_heads %}{{ section_head('Upcoming starts') }}{% else %}<div style="height:14px;"></div>{% endif %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+{% for s in starts %}
+<tr>
+  <td width="44" style="padding:10px 0;border-bottom:1px solid #e5e7eb;vertical-align:middle;">{{ photo(s.photo, 34) }}</td>
+  <td style="padding:10px 8px 10px 0;border-bottom:1px solid #e5e7eb;">
+    <a href="{{ site }}/athlete/{{ s.athlete_id }}" style="font-size:15px;font-weight:700;color:#111827;text-decoration:none;">{{ s.name }}</a><br>
+    <a href="{{ site }}/race/{{ s.race_id }}" style="font-size:13px;color:#6b7280;text-decoration:none;">{{ s.race_title }} · {{ s.prog_name }} · {{ s.date }}</a>
+  </td>
+  <td align="right" style="padding:10px 0;border-bottom:1px solid #e5e7eb;white-space:nowrap;">
+    {% if s.predicted %}<span style="font-size:12px;color:#9ca3af;">Predicted</span><br><span style="font-size:15px;font-weight:800;color:#e85d04;">{{ s.predicted }}</span>{% if s.predicted_gap %}<br><span style="font-size:12px;color:#6b7280;">{{ s.predicted_gap }}</span>{% endif %}{% endif %}
+  </td>
+</tr>
+{% endfor %}
+</table>
+{% endif %}
+
+{% if races %}
+{% if show_heads %}{{ section_head('Your races') }}{% else %}<div style="height:6px;"></div>{% endif %}
+{% for race in races %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:10px;border:1px solid #e5e7eb;border-radius:8px;">
+<tr><td colspan="4" style="padding:12px 14px 6px;">
+  <a href="{{ site }}/race/{{ race.race_id }}" style="font-size:15px;font-weight:700;color:#111827;text-decoration:none;">{{ race.race_title }}</a>
+  <span style="font-size:13px;color:#6b7280;"> · {{ race.prog_name }} · {{ race.date }}</span>
+</td></tr>
+{% for p in race.podium %}
+<tr>
+  <td width="32" style="padding:5px 0 5px 14px;vertical-align:middle;">{{ pos(p.position, '') }}</td>
+  <td width="40" style="padding:5px 0;vertical-align:middle;">{{ photo(p.photo, 28) }}</td>
+  <td style="padding:5px 0;font-size:14px;vertical-align:middle;"><a href="{{ site }}/athlete/{{ p.athlete_id }}" style="color:#111827;text-decoration:none;font-weight:600;">{{ p.name }}</a></td>
+  <td align="right" style="padding:5px 14px 5px 0;font-size:14px;vertical-align:middle;{{ 'font-weight:700;color:#111827;' if loop.first else 'color:#6b7280;' }}">{{ p.time }}</td>
+</tr>
+{% endfor %}
+{% if not single_race %}
+<tr><td colspan="4" style="padding:6px 14px 12px;"><a href="{{ site }}/race/{{ race.race_id }}" style="font-size:13px;font-weight:700;color:#e85d04;text-decoration:none;">Full results</a></td></tr>
+{% else %}
+<tr><td colspan="4" style="height:8px;"></td></tr>
+{% endif %}
+</table>
+{% endfor %}
+{% endif %}
+
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:26px 0 0;"><tr>
+{% if single_race %}
+{% with href = site ~ '/race/' ~ races[0].race_id, label = 'Full results', secondary = false %}{% include "_button.html" %}{% endwith %}
+<td width="10"></td>
+{% with href = site ~ '/feed', label = 'Your feed', secondary = true %}{% include "_button.html" %}{% endwith %}
+{% else %}
+{% with href = site ~ '/feed', label = 'Your feed', secondary = false %}{% include "_button.html" %}{% endwith %}
+{% endif %}
+</tr></table>
+{% endblock %}
+
+{% block footer %}
+You're getting this because you follow athletes or races on Pro Tri Data.<br>
+<a href="{{ unsubscribe_url }}" style="color:#9ca3af;">Unsubscribe from these emails</a>
+{% endblock %}

@@ -30,6 +30,13 @@ async def insert_login_token(token_hash, email):
     """, token_hash, email, LOGIN_TOKEN_LIFETIME)
 
 
+async def peek_login_token(token_hash):
+    """Email for a live login token without using it up, or None."""
+    return await db.pool.fetchval("""
+        select email from login_tokens where token_hash = $1 and expires_at > now()
+    """, token_hash)
+
+
 async def take_login_token(token_hash):
     """Single use: atomically expire the token and return its email, or None.
     The row is kept (not deleted) so the per-address rate limit still sees it."""
@@ -54,11 +61,12 @@ async def create_user(email, display_name):
     return dict(row)
 
 
-async def update_user(user_id, display_name, country, email_digest):
-    await db.pool.execute("""
-        update users set display_name = $2, country = $3, email_digest = $4
-        where user_id = $1
-    """, user_id, display_name, country, email_digest)
+async def update_user(user_id, fields):
+    """fields: validated column -> value dict from the account form."""
+    cols = list(fields)
+    sets = ", ".join(f"{c} = ${i + 2}" for i, c in enumerate(cols))
+    await db.pool.execute(f"update users set {sets} where user_id = $1",
+                          user_id, *[fields[c] for c in cols])
 
 
 async def set_display_name(user_id, display_name):
@@ -106,7 +114,8 @@ async def get_session_user(token_hash):
     row = await db.pool.fetchrow("""
         -- Explicit columns: u.* would drag the avatar bytes into every request.
         select u.user_id, u.email, u.display_name, u.country, u.is_admin,
-               u.is_banned, u.email_digest, u.created_at, case when u.avatar is null then 0 else u.avatar_version end as avatar_version,
+               u.is_banned, u.email_updates, u.created_at, case when u.avatar is null then 0 else u.avatar_version end as avatar_version,
+               u.bio, u.club, u.pb_sprint, u.pb_olympic, u.pb_703, u.pb_1406, u.instagram, u.strava,
                s.last_seen_at
         from sessions s join users u using (user_id)
         where s.token_hash = $1 and s.expires_at > now()
@@ -392,3 +401,109 @@ async def mark_notifications_read(user_id):
     await db.pool.execute("""
         update notifications set read_at = now() where user_id = $1 and read_at is null
     """, user_id)
+
+
+# --- public profiles -----------------------------------------------------------
+# Only what is already public on race pages: name, flag, photo, join date and
+# visible comments. Email and follows stay private.
+
+async def get_public_profile(user_id):
+    row = await db.pool.fetchrow("""
+        select u.user_id, u.display_name, u.country, u.created_at,
+               case when u.avatar is null then 0 else u.avatar_version end as avatar_version,
+               u.bio, u.club, u.pb_sprint, u.pb_olympic, u.pb_703, u.pb_1406, u.instagram, u.strava,
+               (select count(*) from comments c
+                where c.user_id = u.user_id and c.hidden_at is null and c.deleted_at is null) as comment_count
+        from users u where u.user_id = $1 and not u.is_banned
+    """, user_id)
+    return dict(row) if row else None
+
+
+async def list_user_comments(user_id, offset, limit=30):
+    """A user's visible comments, newest first, with positive reaction counts.
+    Returns (comments, has_more)."""
+    rows = await db.pool.fetch("""
+        select c.comment_id, c.race_id, c.parent_id, c.body, c.created_at,
+               (select count(*) from comment_reactions r
+                where r.comment_id = c.comment_id and r.kind <> 'down') as reactions
+        from comments c
+        where c.user_id = $1 and c.hidden_at is null and c.deleted_at is null
+        order by c.created_at desc, c.comment_id desc
+        limit $2 offset $3
+    """, user_id, limit + 1, offset)
+    return [dict(r) for r in rows[:limit]], len(rows) > limit
+
+
+async def reactions_received(user_id):
+    """{kind: count} of reactions on a user's visible comments, thumbs down excluded."""
+    rows = await db.pool.fetch("""
+        select r.kind, count(*) as n
+        from comment_reactions r join comments c using (comment_id)
+        where c.user_id = $1 and r.kind <> 'down'
+          and c.hidden_at is null and c.deleted_at is null
+        group by r.kind
+    """, user_id)
+    return {r["kind"]: r["n"] for r in rows}
+
+
+# --- remembered logins ("continue as" after logout) ---------------------------
+
+REMEMBER_LIFETIME = timedelta(days=30)
+
+
+async def create_remembered(token_hash, user_id):
+    await db.pool.execute("""
+        insert into remembered_logins (token_hash, user_id, expires_at) values ($1, $2, now() + $3)
+    """, token_hash, user_id, REMEMBER_LIFETIME)
+
+
+async def get_remembered(token_hashes):
+    """Live remembered accounts for a browser's tokens: [{token_hash, user_id,
+    display_name, email, avatar_version}], in cookie order."""
+    rows = await db.pool.fetch("""
+        select r.token_hash, u.user_id, u.display_name, u.email,
+               case when u.avatar is null then 0 else u.avatar_version end as avatar_version
+        from remembered_logins r join users u using (user_id)
+        where r.token_hash = any($1) and r.expires_at > now() and not u.is_banned
+    """, token_hashes)
+    by_hash = {bytes(r["token_hash"]): dict(r) for r in rows}
+    return [by_hash[h] for h in token_hashes if h in by_hash]
+
+
+async def take_remembered(token_hash):
+    """Single use: delete the token and return its user_id, or None."""
+    return await db.pool.fetchval("""
+        delete from remembered_logins where token_hash = $1 and expires_at > now()
+        returning user_id
+    """, token_hash)
+
+
+async def delete_remembered(token_hashes):
+    await db.pool.execute(
+        "delete from remembered_logins where token_hash = any($1)", token_hashes)
+
+
+# --- follow-update emails -------------------------------------------------------
+
+async def users_for_update_emails():
+    """Opted-in users with follows: [{user_id, email, athletes, races}]."""
+    rows = await db.pool.fetch("""
+        select u.user_id, u.email,
+               coalesce(array_agg(f.ref_id) filter (where f.kind = 'athlete'), '{}') as athletes,
+               coalesce(array_agg(f.ref_id) filter (where f.kind = 'race'), '{}') as races
+        from users u join follows f using (user_id)
+        where u.email_updates and not u.is_banned
+        group by u.user_id
+    """)
+    return [dict(r) for r in rows]
+
+
+async def sent_items(user_id):
+    return {r["item"] for r in await db.pool.fetch(
+        "select item from email_sent where user_id = $1", user_id)}
+
+
+async def record_sent(user_id, items):
+    await db.pool.executemany("""
+        insert into email_sent (user_id, item) values ($1, $2) on conflict do nothing
+    """, [(user_id, i) for i in items])

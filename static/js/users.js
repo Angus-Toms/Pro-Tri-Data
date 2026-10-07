@@ -507,3 +507,70 @@ document.addEventListener('DOMContentLoaded', () => {
     initFollowButtons();
     initComments();
 });
+
+// --- Profile hover cards ------------------------------------------------------
+// Hovering a commenter's name, photo or tag shows a compact profile. Mouse only:
+// on touch screens a tap just follows the link to the full profile.
+(function () {
+    if (!window.matchMedia('(hover: hover)').matches) return;
+    const SELECTOR = 'a.comment-author, a.comment-avatar-link, a.mention-user';
+    const cache = new Map();  // user id -> Promise<html | null>
+    let card = null, current = null, showTimer = 0, hideTimer = 0;
+
+    function ensureCard() {
+        if (card) return;
+        card = document.createElement('div');
+        card.className = 'user-card';
+        card.hidden = true;
+        document.body.appendChild(card);
+        card.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+        card.addEventListener('mouseleave', scheduleHide);
+    }
+
+    function hide() {
+        card.hidden = true;
+        current = null;
+    }
+
+    function scheduleHide() {
+        clearTimeout(showTimer);
+        hideTimer = setTimeout(hide, 200);
+    }
+
+    function position(anchor) {
+        const r = anchor.getBoundingClientRect();
+        const w = card.offsetWidth, h = card.offsetHeight;
+        const left = Math.max(12, Math.min(r.left, innerWidth - w - 12));
+        // Below the link, or above it when there is no room underneath.
+        const top = r.bottom + 8 + h > innerHeight - 12 ? r.top - h - 8 : r.bottom + 8;
+        card.style.left = `${left}px`;
+        card.style.top = `${top}px`;
+    }
+
+    async function show(anchor) {
+        const id = anchor.getAttribute('href').match(/^\/user\/(\d+)/)[1];
+        if (!cache.has(id)) cache.set(id, fetch(`/user/${id}/card`).then(r => r.ok ? r.text() : null));
+        const html = await cache.get(id);
+        if (!html || current !== anchor) return;
+        card.innerHTML = html;
+        card.hidden = false;
+        position(anchor);
+    }
+
+    document.addEventListener('mouseover', (e) => {
+        const anchor = e.target.closest(SELECTOR);
+        if (!anchor) return;
+        ensureCard();
+        clearTimeout(hideTimer);
+        if (anchor === current) return;
+        clearTimeout(showTimer);
+        current = anchor;
+        showTimer = setTimeout(() => show(anchor), 350);
+    });
+    document.addEventListener('mouseout', (e) => {
+        const anchor = e.target.closest(SELECTOR);
+        if (!anchor || anchor.contains(e.relatedTarget)) return;
+        scheduleHide();
+    });
+    window.addEventListener('scroll', () => { if (card && !card.hidden) hide(); }, { passive: true });
+})();

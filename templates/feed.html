@@ -121,10 +121,10 @@
             {% for c in comments %}
             <div class="comment">
                 <div class="comment-row">
-                    {{ user_avatar(c.user_id, c.display_name, c.avatar_version) }}
+                    <a href="/user/{{ c.user_id }}" class="comment-avatar-link" tabindex="-1" aria-hidden="true">{{ user_avatar(c.user_id, c.display_name, c.avatar_version) }}</a>
                     <div class="comment-content">
                         <div class="comment-head">
-                            <span class="comment-author">{{ c.display_name }}</span>
+                            <a href="/user/{{ c.user_id }}" class="comment-author">{{ c.display_name }}</a>
                             {% if c.country %}{{ flag(c.country) }}{% endif %}
                             <span class="comment-date">{{ c.when }} on <a href="/race/{{ c.race_id }}#comment-{{ c.comment_id }}" class="comment-race-link">{{ c.race_title }}</a></span>
                         </div>

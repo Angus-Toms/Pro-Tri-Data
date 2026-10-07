@@ -53,7 +53,7 @@
                 <div class="account-grid">
                     <div class="account-field">
                         <label class="account-label" for="display_name">Display name</label>
-                        <input type="text" id="display_name" name="display_name" class="account-input" value="{{ user.display_name }}" minlength="2" maxlength="40" required>
+                        <input type="text" id="display_name" name="display_name" class="account-input" value="{{ form.display_name }}" minlength="2" maxlength="40" required>
                         <span class="account-help">Shown next to your comments.</span>
                     </div>
                     <div class="account-field">
@@ -61,15 +61,46 @@
                         <select id="country" name="country" class="account-select">
                             <option value="">None</option>
                             {% for name, a3 in countries %}
-                            <option value="{{ a3 }}"{% if user.country == a3 %} selected{% endif %}>{{ name }}</option>
+                            <option value="{{ a3 }}"{% if form.country == a3 %} selected{% endif %}>{{ name }}</option>
                             {% endfor %}
                         </select>
                         <span class="account-help">Optional. A flag next to your name.</span>
                     </div>
                 </div>
+                <div class="account-subhead">Public profile</div>
+                <div class="account-field">
+                    <label class="account-label" for="bio">Bio</label>
+                    <textarea id="bio" name="bio" class="account-input account-textarea" maxlength="280" rows="3" placeholder="Age-grouper, 70.3 addict, swims like a brick">{{ form.bio }}</textarea>
+                </div>
+                <div class="account-field">
+                    <label class="account-label" for="club">Club</label>
+                    <input type="text" id="club" name="club" class="account-input" maxlength="60" value="{{ form.club }}" placeholder="Your tri club">
+                </div>
+                <div class="account-grid">
+                    <div class="account-field">
+                        <label class="account-label" for="instagram">Instagram</label>
+                        <input type="text" id="instagram" name="instagram" class="account-input" value="{{ form.instagram }}" placeholder="@handle or profile link">
+                    </div>
+                    <div class="account-field">
+                        <label class="account-label" for="strava">Strava</label>
+                        <input type="text" id="strava" name="strava" class="account-input" value="{{ form.strava }}" placeholder="strava.com/athletes/12345">
+                    </div>
+                </div>
+                <div class="account-field">
+                    <span class="account-label">Personal bests</span>
+                    <div class="pb-grid">
+                        {% for col, label, _, _ in pb_fields %}
+                        <label class="pb-input">
+                            <span>{{ label }}</span>
+                            <input type="text" name="{{ col }}" class="account-input" inputmode="numeric" value="{{ form[col] }}" placeholder="h:mm:ss">
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <span class="account-help">Self-reported and shown on your profile. Leave blank to hide.</span>
+                </div>
                 <label class="account-check">
-                    <input type="checkbox" name="email_digest" value="true"{% if user.email_digest %} checked{% endif %}>
-                    <span>Weekly digest email with results and upcoming races for the athletes you follow</span>
+                    <input type="checkbox" name="email_updates" value="true"{% if form.email_updates %} checked{% endif %}>
+                    <span>Email me new results and start lists for the athletes and races I follow</span>
                 </label>
                 <div class="account-form-actions">
                     <button type="submit" class="btn-primary">Save changes</button>

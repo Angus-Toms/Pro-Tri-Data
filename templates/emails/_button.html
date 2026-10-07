@@ -1,0 +1,5 @@
+{#- Bulletproof button: a padded link inside a coloured cell. secondary=true
+    gives the white outlined variant. -#}
+<td style="{{ 'background:#ffffff;border:1px solid #e5e7eb;' if secondary else 'background:#e85d04;' }}border-radius:8px;">
+  <a href="{{ href }}" style="display:inline-block;padding:13px 24px;font-size:15px;font-weight:700;color:{{ '#111827' if secondary else '#ffffff' }};text-decoration:none;border-radius:8px;">{{ label }}</a>
+</td>

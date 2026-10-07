@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Log in | Pro Tri Data{% endblock %}
+
+{% block meta %}
+<meta name="robots" content="noindex">
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/users.css?v={{ ASSET_VERSION }}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-card">
+    <h1 class="auth-title">{{ 'Create your account' if is_new else 'Log in' }}</h1>
+    <p class="auth-text">{{ 'Finish signing up' if is_new else 'Continue' }} as <strong>{{ masked_email }}</strong>.</p>
+    <form method="post" action="/auth/verify" class="auth-form" onsubmit="window.ptdUser.invalidate()">
+        <input type="hidden" name="token" value="{{ token }}">
+        <input type="hidden" name="next" value="{{ next }}">
+        <button type="submit" class="btn-primary">{{ 'Create account' if is_new else 'Log in' }}</button>
+    </form>
+</div>
+{% endblock %}
