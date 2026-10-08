@@ -243,3 +243,7 @@
 <script id="bike-ratings-hist-data" type="application/json">{{ bike_rating_hist | tojson }}</script>
 <script id="run-ratings-hist-data" type="application/json">{{ run_rating_hist | tojson }}</script>
 <script id="transition-ratings-hist-data" type="application/json">{{ transition_rating_hist | tojson }}</script>
+
+<!-- Comments: empty host, partial fetched client-side so race HTML stays anonymous -->
+<div class="page-section-head">Comments</div>
+<section id="race-comments" class="comments-section" data-race-id="{{ race.race_id }}"></section>

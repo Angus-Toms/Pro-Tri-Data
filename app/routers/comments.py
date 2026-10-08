@@ -143,9 +143,10 @@ async def _render_comments(request, race_id, offset=0, error=None, status_code=2
     }, status_code=status_code, headers=NO_STORE)
 
 
-def _require_past_race(race_id):
-    # Comments live on completed races only; upcoming races have no race row.
-    if queries.get_race_info(race_id) is None:
+def _require_race(race_id):
+    # Past and upcoming races share one id space; a thread started on a
+    # start list carries over once the results land.
+    if race_id not in queries.get_races_brief_bulk([race_id]):
         raise HTTPException(status_code=404, detail=f"Race {race_id} not found")
 
 
@@ -159,7 +160,7 @@ async def _live_comment(comment_id):
 
 @router.get("/race/{race_id}/comments", response_class=HTMLResponse)
 async def comments_partial(request: Request, race_id: int, offset: int = Query(0, ge=0)):
-    _require_past_race(race_id)
+    _require_race(race_id)
     return await _render_comments(request, race_id, offset)
 
 
@@ -167,7 +168,7 @@ async def comments_partial(request: Request, race_id: int, offset: int = Query(0
 async def post_comment(request: Request, race_id: int, body: str = Form(""),
                        parent_id: int | None = Form(None)):
     user = await require_user(request)
-    _require_past_race(race_id)
+    _require_race(race_id)
     parent = None
     if parent_id is not None:
         parent = await _live_comment(parent_id)
