@@ -6355,21 +6355,25 @@ def get_rating_risers(gender, course='short', days=30, limit=4):
     """, [gender]))
 
 
-def get_recent_rating_points_bulk(athlete_ids, course='short', n=8):
-    """{athlete_id: [overall, ...]} for each athlete's last `n` elite races on
-    a course, oldest first. Feeds the sparklines beside the risers."""
+def get_recent_rating_points_bulk(athlete_ids, course='short', days=30):
+    """{athlete_id: [overall, ...]} for each athlete's elite races on a course
+    in the last `days`, oldest first, led by the rating they carried into the
+    window so the line covers the same span as the change beside it."""
     if not athlete_ids:
         return {}
     ids = list(athlete_ids)
     rows = _get_conn().execute(f"""
         SELECT athlete_id, overall FROM (
-            SELECT ra.athlete_id, ra.overall, r.race_date, ra.race_id
+            SELECT ra.athlete_id, ra.overall, r.race_date, ra.race_id,
+                   ROW_NUMBER() OVER (PARTITION BY ra.athlete_id
+                                      ORDER BY r.race_date DESC, ra.race_id DESC) AS rn,
+                   SUM(CASE WHEN r.race_date >= current_date - INTERVAL {int(days)} DAY THEN 1 ELSE 0 END)
+                       OVER (PARTITION BY ra.athlete_id) AS n_recent
             FROM ratings ra JOIN races r ON ra.race_id = r.race_id
             WHERE ra.athlete_id IN ({",".join("?" * len(ids))})
               AND ra.category = 'elite' AND r.distance IN {_course_in(course)}
-            QUALIFY ROW_NUMBER() OVER (PARTITION BY ra.athlete_id
-                                       ORDER BY r.race_date DESC, ra.race_id DESC) <= {int(n)}
-        ) ORDER BY athlete_id, race_date, race_id
+        ) WHERE rn <= n_recent + 1
+        ORDER BY athlete_id, race_date, race_id
     """, ids).fetchall()
     out = {}
     for athlete_id, overall in rows:

@@ -298,17 +298,15 @@
 .home-mine tbody td,
 .home-mine tbody tr:nth-child(even) td,
 .home-mine tr:hover td { background: var(--white) !important; }
-.home-mine .date { font-size: 0.8rem; font-weight: 600; white-space: nowrap; width: 6.5rem; }
+.home-mine .date { font-size: 0.75rem; color: var(--text-lighter); white-space: nowrap; width: 1%; }
+.home-mine .who-cell { width: 1%; white-space: nowrap; }
 .home-mine .race a { color: inherit; text-decoration: none; }
 .home-mine .race a:hover { color: var(--primary-color); }
 .home-mine .race b { font-weight: 600; display: block; }
 .home-mine .race .small { display: block; font-size: 0.78rem; color: var(--text-light); }
 .home-mine .num { text-align: right; white-space: nowrap; width: 1%; }
-.home-mine .t { font-weight: 600; font-variant-numeric: tabular-nums; }
-.home-mine .g { font-size: 0.8rem; color: var(--text-light); font-variant-numeric: tabular-nums; }
-/* Predicted table: the model's numbers in the prediction colour, not as fact */
-.home-mine--pred .t,
-.home-mine--pred .g { color: var(--primary-color); }
+.home-mine .t { display: block; font-weight: 600; font-variant-numeric: tabular-nums; }
+.home-mine .g { display: block; font-size: 0.75rem; color: var(--text-light); font-variant-numeric: tabular-nums; }
 .home-mine .pos-other { color: var(--text-color); font-weight: 700; font-size: 0.8rem; }
 .home-mine .pos-dnf { font-size: 0.75rem; font-style: italic; color: var(--text-lighter); }
 .home-mine-empty { padding: 1rem 1.25rem; font-size: 0.9rem; color: var(--text-light); }
@@ -346,6 +344,9 @@
     .home-mine .race { flex-basis: 100%; }
     .home-mine .who-cell { flex-basis: 100%; margin-top: 0.3rem; }
     /* Numbers run along one line under the athlete, each with its column label */
-    .home-mine .num { display: inline-flex; align-items: center; gap: 0.35rem; margin-right: 0.75rem; }
+    .home-mine .num { display: inline-flex; align-items: baseline; gap: 0.35rem; margin-right: 0.75rem; }
+    .home-mine .t, .home-mine .g { display: inline; }
+    .home-mine .g::before { content: '('; }
+    .home-mine .g::after { content: ')'; }
     .home-mine .num[data-label]::before { content: attr(data-label); font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-lighter); }
 }

@@ -17,7 +17,7 @@
 {% if coming %}
 <h4 class="home-mine-title">Coming up</h4>
 <table class="home-mine home-mine--pred">
-    <thead><tr><th>Date</th><th>Race</th><th>Athlete</th><th class="num">Predicted</th><th class="num">Pred. time</th><th class="num">Gap</th></tr></thead>
+    <thead><tr><th>Date</th><th>Race</th><th>Athlete</th><th class="num">Predicted</th><th class="num">Pred. time</th></tr></thead>
     <tbody>
         {% for s in coming %}
         <tr>
@@ -26,10 +26,9 @@
             <td class="who-cell">{{ who(s) }}</td>
             {% if s.pred_pos %}
             <td class="num pos" data-label="Predicted">{{ pos(s.pred_pos) }}</td>
-            <td class="num t" data-label="Pred. time">{{ s.time or '' }}</td>
-            <td class="num g" data-label="Gap">{{ s.gap or '' }}</td>
+            <td class="num" data-label="Pred. time"><span class="t">{{ s.time or '' }}</span>{% if s.gap %}<span class="g">{{ s.gap }}</span>{% endif %}</td>
             {% else %}
-            <td class="num" colspan="3"><span class="pos-dnf">No prediction yet</span></td>
+            <td class="num" colspan="2"><span class="pos-dnf">No prediction yet</span></td>
             {% endif %}
         </tr>
         {% endfor %}
@@ -39,7 +38,7 @@
 {% if results %}
 <h4 class="home-mine-title">{{ results_heading }}</h4>
 <table class="home-mine">
-    <thead><tr><th>Date</th><th>Race</th><th>Athlete</th><th class="num">Pos</th><th class="num">Time</th><th class="num">Gap</th><th class="num">Rating</th></tr></thead>
+    <thead><tr><th>Date</th><th>Race</th><th>Athlete</th><th class="num">Pos</th><th class="num">Time</th><th class="num">Rating</th></tr></thead>
     <tbody>
         {% for r in results %}
         <tr>
@@ -48,10 +47,9 @@
             <td class="who-cell">{{ who(r) }}</td>
             {% if r.position %}
             <td class="num pos" data-label="Pos">{{ pos(r.position) }}</td>
-            <td class="num t" data-label="Time">{{ r.time or '' }}</td>
-            <td class="num g" data-label="Gap">{{ r.gap or '' }}</td>
+            <td class="num" data-label="Time"><span class="t">{{ r.time or '' }}</span>{% if r.gap %}<span class="g">{{ r.gap }}</span>{% endif %}</td>
             {% else %}
-            <td class="num" colspan="3"><span class="pos-dnf">{{ r.status }}</span></td>
+            <td class="num" colspan="2"><span class="pos-dnf">{{ r.status }}</span></td>
             {% endif %}
             <td class="num" data-label="Rating"><span class="home-chg {{ r.change.css_class }}">{{ r.change.formatted_str | safe }}</span></td>
         </tr>
