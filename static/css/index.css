@@ -334,7 +334,7 @@
     /* Your athletes: short column names, narrower athlete column so the race name shows */
     .home-mine .th-long { display: none; }
     .home-mine .th-short { display: inline; }
-    .home-mine .c-who { width: 8.5rem; }
+    .home-mine .c-who { width: 10rem; }
     .home-mine .c-pos { width: 4.5rem; }
 }
 @media (max-width: 768px) {
@@ -349,21 +349,36 @@
     .page-section-head { flex-wrap: wrap; }
     .page-section-head .page-section-sub { display: block; margin: 0; }
 
-    /* Your athletes becomes stacked rows: race on line one, athlete on two,
-       the numbers with their labels on three. */
+    /* Your athletes: one row per start. The numbers sit on the race-name
+       line, the metadata and athlete underneath. */
     .home-mine { background: var(--white); }
     .home-mine thead, .home-mine colgroup { display: none; }
     .home-mine tbody { display: block; }
-    .home-mine tr { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.5rem; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); background: var(--white); }
+    .home-mine tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        grid-auto-columns: auto;
+        grid-auto-flow: column;
+        align-items: start;
+        column-gap: 1rem;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--border-color);
+        background: var(--white);
+    }
     .home-mine tr:last-child { border-bottom: 0; }
     .home-mine td, .home-mine td:first-child, .home-mine td:last-child { display: block; padding: 0; width: auto; background: none !important; }
-    .home-mine .race { flex-basis: 100%; }
+    .home-mine td.race { grid-column: 1; grid-row: 1; }
     .home-mine .race b, .home-mine .race .small { white-space: normal; }
-    .home-mine .who-cell { flex-basis: 100%; }
-    .home-mine .num { display: inline-flex; align-items: baseline; margin-right: 1rem; }
+    .home-mine td.who-cell { grid-column: 1; grid-row: 2; margin-top: 0.3rem; }
+    .home-mine td.num { grid-row: 1; display: inline-flex; align-items: baseline; gap: 0.4rem; padding-top: 0.15rem; }
     .home-mine .t, .home-mine .g { display: inline; }
-    .home-mine .g { margin-left: 0.3rem; }
     .home-mine .g::before { content: '('; }
     .home-mine .g::after { content: ')'; }
-    .home-mine .num[data-label]::before { content: attr(data-label); margin-right: 0.4rem; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-lighter); }
+    .home-mine td.num[data-label]::before { content: attr(data-label); font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-lighter); }
+}
+@media (max-width: 480px) {
+    /* Fully stacked: race, athlete, then the numbers along one line */
+    .home-mine tr { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.5rem; }
+    .home-mine td.race, .home-mine td.who-cell { flex-basis: 100%; }
+    .home-mine td.num { margin-right: 1rem; padding-top: 0; }
 }
