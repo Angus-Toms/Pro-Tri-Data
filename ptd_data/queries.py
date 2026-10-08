@@ -6327,21 +6327,21 @@ def get_race_podiums_bulk(race_ids):
 # Home page
 # ---------------------------------------------------------------------------
 
-def get_rating_risers(gender, days=14, limit=4):
-    """Biggest short-course elite rating gains in the last `days`, one row per
+def get_rating_risers(gender, course='short', days=30, limit=4):
+    """Biggest elite rating gains on a course in the last `days`, one row per
     athlete (their best single-race gain), for the home page's risers list."""
     cols = ["athlete_id", "name", "country_alpha3", "profile_img",
-            "race_title", "position", "overall_change", "overall"]
+            "race_id", "race_title", "position", "overall_change", "overall"]
     return _dicts(cols, _get_conn().execute(f"""
         SELECT a.athlete_id, a.name, n.alpha3, a.profile_img,
-               r.race_title, res.position, ra.overall_change, ra.overall
+               r.race_id, r.race_title, res.position, ra.overall_change, ra.overall
         FROM ratings ra
         JOIN races r         ON ra.race_id = r.race_id
         JOIN results res     ON res.race_id = ra.race_id AND res.athlete_id = ra.athlete_id
         JOIN athletes a      ON ra.athlete_id = a.athlete_id
         JOIN nationalities n ON a.country_full = n.country_full
         WHERE ra.category = 'elite'
-          AND r.distance IN {_course_in('short')}
+          AND r.distance IN {_course_in(course)}
           AND r.race_date >= current_date - INTERVAL {int(days)} DAY
           AND a.gender = ?
           AND ra.overall_change > 0
@@ -6355,9 +6355,9 @@ def get_rating_risers(gender, days=14, limit=4):
     """, [gender]))
 
 
-def get_recent_rating_points_bulk(athlete_ids, n=8):
-    """{athlete_id: [overall, ...]} for each athlete's last `n` short-course
-    elite races, oldest first. Feeds the sparklines beside the risers."""
+def get_recent_rating_points_bulk(athlete_ids, course='short', n=8):
+    """{athlete_id: [overall, ...]} for each athlete's last `n` elite races on
+    a course, oldest first. Feeds the sparklines beside the risers."""
     if not athlete_ids:
         return {}
     ids = list(athlete_ids)
@@ -6366,7 +6366,7 @@ def get_recent_rating_points_bulk(athlete_ids, n=8):
             SELECT ra.athlete_id, ra.overall, r.race_date, ra.race_id
             FROM ratings ra JOIN races r ON ra.race_id = r.race_id
             WHERE ra.athlete_id IN ({",".join("?" * len(ids))})
-              AND ra.category = 'elite' AND r.distance IN {_course_in('short')}
+              AND ra.category = 'elite' AND r.distance IN {_course_in(course)}
             QUALIFY ROW_NUMBER() OVER (PARTITION BY ra.athlete_id
                                        ORDER BY r.race_date DESC, ra.race_id DESC) <= {int(n)}
         ) ORDER BY athlete_id, race_date, race_id

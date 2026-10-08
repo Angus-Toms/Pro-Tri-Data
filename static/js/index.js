@@ -1,11 +1,14 @@
-// Home page: rankings tabs, and the personal layer for logged-in users.
-// The page itself is identical for everyone (cacheable); /home/mine is a
-// no-store partial injected above "This weekend" once /me says who you are.
+// Home page: tabbed cards (risers, rankings), and the personal layer for
+// logged-in users. The page itself is identical for everyone (cacheable);
+// /home/mine is a no-store partial injected above "This weekend" once /me
+// says who you are.
 
-document.querySelectorAll('[data-rank-tab]').forEach(tab => {
+// data-tab="group:key" buttons switch the data-pane="group:key" panes of the same group.
+document.querySelectorAll('[data-tab]').forEach(tab => {
     tab.addEventListener('click', () => {
-        document.querySelectorAll('[data-rank-tab]').forEach(t => t.classList.toggle('active', t === tab));
-        document.querySelectorAll('[data-rank-pane]').forEach(p => { p.hidden = p.dataset.rankPane !== tab.dataset.rankTab; });
+        const group = tab.dataset.tab.split(':')[0];
+        document.querySelectorAll(`[data-tab^="${group}:"]`).forEach(t => t.classList.toggle('active', t === tab));
+        document.querySelectorAll(`[data-pane^="${group}:"]`).forEach(p => { p.hidden = p.dataset.pane !== tab.dataset.tab; });
     });
 });
 

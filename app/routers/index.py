@@ -94,15 +94,18 @@ def index(request: Request):
                 + [strip_item(e, "Predictions" if e["event_id"] in predicted_ids else "Start list")
                    for e in all_upcoming[:6]])
 
-    # --- on the rise: biggest short-course gains, men then women ---
-    risers = {g: queries.get_rating_risers(g) for g in ("male", "female")}
-    points = queries.get_recent_rating_points_bulk(
-        [r["athlete_id"] for rows in risers.values() for r in rows])
-    for rows in risers.values():
-        for r in rows:
-            r["change"] = format_rating_change(r["overall_change"])
-            r["spark"]  = sparkline(points.get(r["athlete_id"], []))
-            r["race_short"] = re.sub(r"^\d{4}\s+", "", r["race_title"])
+    # --- on the rise: biggest gains per course over 30 days, men then women ---
+    risers = []
+    for course, label in (("short", "Short course"), ("long", "Long course")):
+        by_gender = {g: queries.get_rating_risers(g, course) for g in ("male", "female")}
+        points = queries.get_recent_rating_points_bulk(
+            [r["athlete_id"] for rows in by_gender.values() for r in rows], course)
+        for rows in by_gender.values():
+            for r in rows:
+                r["change"] = format_rating_change(r["overall_change"])
+                r["spark"]  = sparkline(points.get(r["athlete_id"], []))
+                r["race_short"] = re.sub(r"^\d{4}\s+", "", r["race_title"])
+        risers.append({"key": course, "label": label, "men": by_gender["male"], "women": by_gender["female"]})
 
     rankings = [{"key": key, "label": label,
                  "men":   queries.get_podium("male",   cat, course, limit=5),

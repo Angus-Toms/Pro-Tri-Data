@@ -75,25 +75,35 @@
 <aside class="home-side">
 
     <section class="home-section">
-        <div class="page-section-head page-section-head--sm">
-            <span>On the rise <span class="page-section-sub">last 14 days</span></span>
+        <div class="page-section-head page-section-head--sm page-section-head--stack">
+            <span>On the rise <span class="page-section-sub">biggest rating gains in the last 30 days</span></span>
         </div>
-        <div class="home-card">
-            {% for gender, label in [('male', 'Men'), ('female', 'Women')] %}
+        <div class="home-tabs" role="tablist">
+            {% for t in risers %}
+            <button type="button" class="home-tab{{ ' active' if loop.first else '' }}" role="tab" data-tab="risers:{{ t.key }}">{{ t.label }}</button>
+            {% endfor %}
+        </div>
+        {% for t in risers %}
+        <div class="home-card" data-pane="risers:{{ t.key }}"{% if not loop.first %} hidden{% endif %}>
+            {% for label, rows in [('Men', t.men), ('Women', t.women)] %}
             <h4 class="home-card-group">{{ label }}</h4>
             <ul class="home-risers">
-                {% for r in risers[gender] %}
+                {% for r in rows %}
                 <li>
-                    <a href="/athlete/{{ r.athlete_id }}" class="home-who">{{ athlete_img(r) }}<span class="home-who-name">{{ r.name }}{{ flag(r.country_alpha3) }}<small>{{ r.position }}{{ 'st' if r.position == 1 else 'nd' if r.position == 2 else 'rd' if r.position == 3 else 'th' }}, {{ r.race_short }}</small></span></a>
+                    <span class="home-who">
+                        <a href="/athlete/{{ r.athlete_id }}">{{ athlete_img(r) }}</a>
+                        <span class="home-who-name"><a href="/athlete/{{ r.athlete_id }}">{{ r.name }}{{ flag(r.country_alpha3) }}</a><small><a href="/race/{{ r.race_id }}">{{ r.position }}{{ 'st' if r.position == 1 else 'nd' if r.position == 2 else 'rd' if r.position == 3 else 'th' }}, {{ r.race_short }}</a></small></span>
+                    </span>
                     {% if r.spark %}<svg class="home-spark" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true"><polyline points="{{ r.spark }}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>{% else %}<span></span>{% endif %}
                     <span class="home-riser-chg"><span class="home-chg {{ r.change.css_class }}">{{ r.change.formatted_str | safe }}</span><small>{{ "%.0f"|format(r.overall) }}</small></span>
                 </li>
                 {% else %}
-                <li class="home-risers-empty">No rated races in the last two weeks.</li>
+                <li class="home-risers-empty">No rated races in the last 30 days.</li>
                 {% endfor %}
             </ul>
             {% endfor %}
         </div>
+        {% endfor %}
     </section>
 
     <section class="home-section">
@@ -103,11 +113,11 @@
         </div>
         <div class="home-tabs" role="tablist">
             {% for t in rankings %}
-            <button type="button" class="home-tab{{ ' active' if loop.first else '' }}" role="tab" data-rank-tab="{{ t.key }}">{{ t.label }}</button>
+            <button type="button" class="home-tab{{ ' active' if loop.first else '' }}" role="tab" data-tab="rankings:{{ t.key }}">{{ t.label }}</button>
             {% endfor %}
         </div>
         {% for t in rankings %}
-        <div class="home-rank-pane" data-rank-pane="{{ t.key }}"{% if not loop.first %} hidden{% endif %}>
+        <div class="home-rank-pane" data-pane="rankings:{{ t.key }}"{% if not loop.first %} hidden{% endif %}>
             {% for label, rows in [('Men', t.men), ('Women', t.women)] %}
             <table class="home-rank">
                 <colgroup><col class="home-rank-pos"><col><col class="home-rank-num"></colgroup>
