@@ -2,8 +2,9 @@
    Country pages - /countries (index) and /country/{alpha3} (detail)
 
    The detail page reuses .athlete-card / .rank-badge / .athlete-ratings from
-   leaderboard.css (loaded alongside this file), and the home-page .event-card
-   stack for the Recent Events section. Everything prefixed .country- is local.
+   leaderboard.css (loaded alongside this file), and the .event-card stack
+   from event_cards.css for the Recent Events section. Everything prefixed
+   .country- is local.
    ------------------------------------------------------------------------- */
 
 

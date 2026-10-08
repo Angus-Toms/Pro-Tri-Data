@@ -1,0 +1,258 @@
+/* ============================================
+   EVENT CARDS
+   Navy-header event card with two podiums side by side (men left, women
+   right). Used by /upcoming, /recent, /race-search and the country page.
+   ============================================ */
+
+.home-events-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.event-card {
+    position: relative;
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.event-card:hover {
+    border-color: var(--primary-color);
+    box-shadow: var(--box-shadow-hover);
+}
+
+.event-card-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+}
+
+.event-card-header {
+    background: var(--navy);
+    padding: 0.65rem 1.25rem;
+    position: relative;
+    z-index: 1;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+/* Date and venue in the header: shown only at <=768px, the info column carries them above that */
+.event-card-header-meta {
+    display: none;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: #9aa3ae;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.event-card-header-meta-sep {
+    margin: 0 0.4rem;
+    color: #6b7280;
+}
+
+.event-card-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.event-card-body {
+    display: flex;
+    position: relative;
+    z-index: 1;
+}
+
+.event-card-info {
+    width: 150px;
+    flex-shrink: 0;
+    padding: 0.9rem 0.9rem 0.9rem 1rem;
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    pointer-events: none;
+}
+
+.event-meta-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    color: var(--text-lighter);
+    line-height: 1.35;
+}
+
+.event-meta-icon {
+    flex-shrink: 0;
+    color: var(--text-lighter);
+    margin-top: 1px;
+}
+
+.event-races {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    pointer-events: none;
+}
+
+.event-race {
+    flex: 1;
+    min-width: 0;
+    padding: 0.45rem 1rem 0.75rem;
+}
+
+.event-race + .event-race {
+    position: relative;
+}
+
+.event-race + .event-race::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 6px;
+    bottom: 6px;
+    width: 1px;
+    background: var(--border-color);
+}
+
+/* Race title with a rule running out to the right */
+.event-race-header {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 0.5rem;
+}
+
+.event-race-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-color);
+    margin-right: 0.75rem;
+}
+
+.event-race-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-color);
+    text-decoration: none;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+    pointer-events: all;
+}
+
+.event-race-title:hover { color: var(--primary-color); }
+
+.event-race-podium {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.event-race-entry {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--text-color);
+}
+
+.event-race-entry-img {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.event-entry-name {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-decoration: none;
+    color: var(--text-color);
+    font-size: 0.9rem;
+    font-weight: 600;
+    position: relative;
+    z-index: 1;
+    pointer-events: all;
+}
+
+.event-entry-name:hover { color: var(--primary-color); }
+
+.event-entry-time {
+    font-size: 0.82rem;
+    color: var(--text-light);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+}
+
+.event-entry-time--winner {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.event-entry-time--diff { font-size: 0.75rem; }
+
+.event-podium-pos {
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    font-weight: 800;
+    flex-shrink: 0;
+    background: var(--border-color);
+    color: var(--text-light);
+}
+
+.event-podium-pos--1 { background: var(--gold);   color: var(--gold-text); }
+.event-podium-pos--2 { background: var(--silver); color: var(--silver-text); }
+.event-podium-pos--3 { background: var(--bronze); color: var(--bronze-text); }
+
+.event-race-pending {
+    font-size: 0.78rem;
+    color: var(--text-lighter);
+    font-style: italic;
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    /* Meta moves into the navy header; the left info column is dropped */
+    .event-card-header { padding: 0.55rem 1rem 0.6rem; }
+    .event-card-header-meta { display: block; }
+    .event-card-info { display: none; }
+    .event-race { padding: 0.4rem 0.85rem 0.7rem; }
+}
+
+@media (max-width: 480px) {
+    /* Podiums stack; the rule under each race title is divider enough */
+    .event-races { flex-direction: column; }
+    .event-race { padding: 0.35rem 0.85rem 0.65rem; }
+    .event-race + .event-race::before { display: none; }
+    .event-card-title { font-size: 0.82rem; white-space: normal; }
+    .event-race-entry-img { width: 22px; height: 22px; }
+    .event-entry-name { font-size: 0.85rem; }
+    .event-entry-time--winner { font-size: 0.82rem; }
+}
