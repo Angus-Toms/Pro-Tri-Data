@@ -1338,6 +1338,38 @@ table td a.link:hover   { color: var(--primary-color); }
     .hero-stat-lbl { text-align: left; }
 }
 
+/* Athlete row: photo, name, flag. Home page, profiles and user lists. */
+.home-who {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+    color: inherit;
+    text-decoration: none;
+}
+.home-who:hover .home-who-name { color: var(--primary-color); }
+.home-ath-img {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--border-color);
+}
+.home-who-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.home-who-name small {
+    display: block;
+    font-weight: 400;
+    font-size: 0.74rem;
+    color: var(--text-light);
+}
+
 /* ============================================
    SHARED TABLE CARD WRAPPER
    ============================================ */

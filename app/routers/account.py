@@ -51,9 +51,9 @@ async def _render_account(request, user, saved=False, error=None, status_code=20
     athletes_by_id = queries.get_athletes_brief_bulk(follows["athletes"])
     races_by_id    = queries.get_races_brief_bulk(follows["races"])
     users_by_id    = await uq.get_users_brief(follows["users"])
-    return templates.TemplateResponse("account.html", {
+    return templates.TemplateResponse("settings.html", {
         "request":     request,
-        "active_page": "account",
+        "active_page": None,
         "user":        user,
         "followed_athletes": [athletes_by_id[a] for a in follows["athletes"] if a in athletes_by_id],
         "followed_races":    [races_by_id[r] for r in follows["races"] if r in races_by_id],
@@ -67,12 +67,17 @@ async def _render_account(request, user, saved=False, error=None, status_code=20
     }, status_code=status_code, headers=NO_STORE)
 
 
-@router.get("/account", response_class=HTMLResponse)
-async def account_page(request: Request, saved: bool = False):
+@router.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request, saved: bool = False):
     user = await current_user(request)
     if user is None:
-        return RedirectResponse("/login?next=/account", status_code=303)
+        return RedirectResponse("/login?next=/settings", status_code=303)
     return await _render_account(request, user, saved=saved)
+
+
+@router.get("/account")
+async def account_redirect():
+    return RedirectResponse("/settings", status_code=301)
 
 
 # Self-reported PBs: (column, label, fastest, slowest) in seconds. The bounds
@@ -161,7 +166,7 @@ async def account_update(request: Request,
     fields["strava"] = int(m.group(1)) if m else None
 
     await uq.update_user(user["user_id"], fields)
-    return RedirectResponse("/account?saved=1", status_code=303)
+    return RedirectResponse("/settings?saved=1", status_code=303)
 
 
 @router.post("/account/unfollow")
@@ -173,7 +178,7 @@ async def account_unfollow(request: Request,
         raise HTTPException(status_code=400, detail="Invalid follow kind")
     # Toggle is safe here: the account page only lists existing follows.
     await uq.toggle_follow(user["user_id"], kind, ref_id)
-    return RedirectResponse("/account", status_code=303)
+    return RedirectResponse("/settings#following", status_code=303)
 
 
 @router.post("/account/delete")
@@ -203,14 +208,14 @@ async def account_avatar(request: Request, photo: UploadFile = File(...)):
     buf = io.BytesIO()
     img.save(buf, "WEBP", quality=85)
     await uq.set_avatar(user["user_id"], buf.getvalue())
-    return RedirectResponse("/account?saved=1", status_code=303)
+    return RedirectResponse("/settings?saved=1", status_code=303)
 
 
 @router.post("/account/avatar/remove")
 async def account_avatar_remove(request: Request):
     user = await require_user(request)
     await uq.set_avatar(user["user_id"], None)
-    return RedirectResponse("/account?saved=1", status_code=303)
+    return RedirectResponse("/settings?saved=1", status_code=303)
 
 
 @router.get("/avatar/{user_id}.webp")

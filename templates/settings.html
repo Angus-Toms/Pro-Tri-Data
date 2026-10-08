@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Account | Pro Tri Data{% endblock %}
+{% block title %}Settings | Pro Tri Data{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/users.css?v={{ ASSET_VERSION }}">
@@ -10,12 +10,15 @@
 <div class="page-hero page-hero--user">
     <div class="page-hero-inner">
         <div>
-            <h1>Account</h1>
+            <h1>Settings</h1>
             <p class="page-hero-subtitle page-hero-subtitle--left">{{ user.email }}</p>
         </div>
-        <form method="post" action="/auth/logout" onsubmit="window.ptdUser.invalidate()">
-            <button type="submit" class="btn-hero">Log out</button>
-        </form>
+        <div class="settings-hero-actions">
+            <a href="/user/{{ user.user_id }}" class="btn-hero">View profile</a>
+            <form method="post" action="/auth/logout" onsubmit="window.ptdUser.invalidate()">
+                <button type="submit" class="btn-hero">Log out</button>
+            </form>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -96,7 +99,7 @@
                         </label>
                         {% endfor %}
                     </div>
-                    <span class="account-help">Self-reported and shown on your profile. Leave blank to hide.</span>
+                    <span class="account-help">Shown on your profile. Leave blank to hide.</span>
                 </div>
                 <label class="account-check">
                     <input type="checkbox" name="email_updates" value="true"{% if form.email_updates %} checked{% endif %}>
@@ -112,7 +115,6 @@
     <section class="account-section" id="following">
         <div class="page-section-head">
             <span>Following <span class="page-section-sub">{{ followed_athletes | length }} athlete{{ '' if followed_athletes | length == 1 else 's' }}, {{ followed_races | length }} race{{ '' if followed_races | length == 1 else 's' }}, {{ followed_users | length }} {{ 'person' if followed_users | length == 1 else 'people' }}</span></span>
-            <a href="/feed" class="section-link">Open feed</a>
         </div>
         <div class="follow-grid">
             <div class="account-card">

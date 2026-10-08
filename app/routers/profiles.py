@@ -31,23 +31,41 @@ async def profile(request: Request, user_id: int, offset: int = Query(0, ge=0)):
         raise HTTPException(status_code=404, detail="User not found")
     comments, has_more = await uq.list_user_comments(user_id, offset, PAGE_SIZE)
     received = await uq.reactions_received(user_id)
-    races = queries.get_races_brief_bulk({c["race_id"] for c in comments})
-    for c in comments:
-        race = races.get(c["race_id"])
-        c["race_title"] = f"{race['race_title']} ({race['prog_name']})" if race else f"Race {c['race_id']}"
-        c["when"] = rel_time(c["created_at"])
     country = queries.get_country_by_alpha3(profile["country"]) if profile["country"] else None
+
+    # --- comments grouped by race, newest race first, replies with their parent ---
+    races = queries.get_races_brief_bulk({c["race_id"] for c in comments})
+    groups = {}
+    for c in comments:
+        c["when"] = rel_time(c["created_at"])
+        if c["race_id"] not in groups:
+            race = races.get(c["race_id"])
+            groups[c["race_id"]] = {
+                "race_id":   c["race_id"],
+                "title":     race["race_title"] if race else f"Race {c['race_id']}",
+                "prog_name": race["prog_name"] if race else None,
+                "race_date": race["race_date"] if race else None,
+                "comments":  [],
+            }
+        groups[c["race_id"]]["comments"].append(c)
+
+    # --- following: athlete follows are public, races and people are not ---
+    follows = await uq.get_follows(user_id)
+    athletes_by_id = queries.get_athletes_brief_bulk(follows["athletes"])
+    following = [athletes_by_id[a] for a in reversed(follows["athletes"]) if a in athletes_by_id]
+
     return templates.TemplateResponse("user_profile.html", {
         "request":      request,
         "active_page":  None,
         "profile":      profile,
         "country_name": country["country_full"] if country else None,
-        "comments":     comments,
+        "groups":       list(groups.values()),
+        "following":    following,
         "offset":       offset,
         "has_more":     has_more,
         "page_size":    PAGE_SIZE,
-        "mention_refs": await tag_refs([c["body"] for c in comments]),
-        "pbs":          [(label, profile[col]) for col, label, _, _ in PB_FIELDS],
+        "mention_refs": await tag_refs([c["body"] for c in comments] + [c["parent_body"] or "" for c in comments]),
+        "pbs":          [(label, profile[col]) for col, label, _, _ in PB_FIELDS if profile[col]],
         "received":     [(kind, label, n) for kind, label in RECEIVED_ORDER
                          if (n := received.get(kind))],
     })

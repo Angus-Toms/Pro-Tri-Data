@@ -442,20 +442,25 @@ async def get_public_profile(user_id):
                (select count(*) from comments c
                 where c.user_id = u.user_id and c.hidden_at is null and c.deleted_at is null) as comment_count,
                (select count(*) from follows f where f.kind = 'user' and f.ref_id = u.user_id) as follower_count,
-               (select count(*) from follows f where f.kind = 'user' and f.user_id = u.user_id) as following_count
+               (select count(*) from follows f where f.kind = 'athlete' and f.user_id = u.user_id) as following_count
         from users u where u.user_id = $1 and not u.is_banned
     """, user_id)
     return dict(row) if row else None
 
 
 async def list_user_comments(user_id, offset, limit=30):
-    """A user's visible comments, newest first, with positive reaction counts.
+    """A user's visible comments, newest first, with positive reaction counts
+    and, for replies, the comment answered (parent_body is '' once removed).
     Returns (comments, has_more)."""
     rows = await db.pool.fetch("""
         select c.comment_id, c.race_id, c.parent_id, c.body, c.created_at,
                (select count(*) from comment_reactions r
-                where r.comment_id = c.comment_id and r.kind <> 'down') as reactions
+                where r.comment_id = c.comment_id and r.kind <> 'down') as reactions,
+               case when p.hidden_at is null and p.deleted_at is null then p.body else '' end as parent_body,
+               pu.display_name as parent_name
         from comments c
+        left join comments p on p.comment_id = c.parent_id
+        left join users pu on pu.user_id = p.user_id
         where c.user_id = $1 and c.hidden_at is null and c.deleted_at is null
         order by c.created_at desc, c.comment_id desc
         limit $2 offset $3

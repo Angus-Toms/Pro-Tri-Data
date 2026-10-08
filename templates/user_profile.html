@@ -11,121 +11,126 @@
 {% endblock %}
 
 {% from "_reaction_icons.html" import reaction_icon %}
+{% from "partials/home_event.html" import athlete_img %}
 {% block hero %}
-<div class="page-hero page-hero--user">
-    <div class="page-hero-inner profile-hero">
-        <div class="profile-hero-id">
-            {{ user_avatar(profile.user_id, profile.display_name, profile.avatar_version, 'lg') }}
-            <div class="profile-hero-text">
-                <h1>{{ profile.display_name }} {% if profile.country %}{{ flag(profile.country, country_name, 'flag-lg') }}{% endif %}</h1>
-                <p class="page-hero-subtitle page-hero-subtitle--left">
-                    {% if country_name %}{{ country_name }} <span class="feed-dot">·</span> {% endif %}Member since {{ profile.created_at.strftime('%B %Y') }}
-                </p>
-                {% if received %}
-                <div class="received-badges" aria-label="Reactions received">
-                    {% for kind, label, n in received %}
-                    <span class="received-badge reaction--{{ kind }}" title="{{ n }} {{ label }}">{{ reaction_icon(kind) }}<span>{{ n }}</span></span>
-                    {% endfor %}
-                </div>
-                {% endif %}
-            </div>
-        </div>
-        <div class="profile-hero-side">
-                {% if profile.instagram or profile.strava %}
-            <span class="profile-socials profile-socials--hero">
+<div class="profile-hero">
+    <div class="profile-hero-inner">
+        {{ user_avatar(profile.user_id, profile.display_name, profile.avatar_version, 'hero') }}
+        <div class="profile-hero-info">
+            <h1 class="profile-hero-name">
+                {{ profile.display_name }}
+                {% if profile.country %}{{ flag(profile.country, country_name, 'flag-lg') }}{% endif %}
                 {% if profile.instagram %}
-                <a class="social-icon social-icon--instagram" href="https://www.instagram.com/{{ profile.instagram }}/" target="_blank" rel="nofollow noopener ugc" aria-label="Instagram" title="Instagram">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+                <a href="https://www.instagram.com/{{ profile.instagram }}/" class="profile-hero-social" target="_blank" rel="nofollow noopener ugc" aria-label="Instagram" title="@{{ profile.instagram }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
                 </a>
                 {% endif %}
                 {% if profile.strava %}
-                <a class="social-icon social-icon--strava" href="https://www.strava.com/athletes/{{ profile.strava }}" target="_blank" rel="nofollow noopener ugc" aria-label="Strava" title="Strava">
+                <a href="https://www.strava.com/athletes/{{ profile.strava }}" class="profile-hero-social" target="_blank" rel="nofollow noopener ugc" aria-label="Strava" title="Strava">
                     {# Strava mark from Simple Icons (CC0) #}
                     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
                 </a>
                 {% endif %}
-            </span>
-            {% endif %}
-            {% with follow_kind = 'user', follow_id = profile.user_id %}{% include "_follow_button.html" %}{% endwith %}
-            <div class="hero-stats">
-                <div class="hero-stat" data-follower-count="user:{{ profile.user_id }}">
-                    <span class="hero-stat-num" data-num>{{ profile.follower_count }}</span>
-                    <span class="hero-stat-lbl" data-label>follower{{ '' if profile.follower_count == 1 else 's' }}</span>
-                </div>
-                <div class="hero-stat-sep"></div>
-                <div class="hero-stat">
-                    <span class="hero-stat-num">{{ profile.following_count }}</span>
-                    <span class="hero-stat-lbl">following</span>
-                </div>
-                <div class="hero-stat-sep"></div>
-                <div class="hero-stat">
-                    <span class="hero-stat-num">{{ profile.comment_count }}</span>
-                    <span class="hero-stat-lbl">comment{{ '' if profile.comment_count == 1 else 's' }}</span>
-                </div>
+            </h1>
+            <div class="profile-hero-meta">
+                {% if country_name %}<a href="/country/{{ profile.country }}" class="profile-hero-country">{{ country_name }}</a><span class="hero-meta-dot">·</span>{% endif %}
+                {% if profile.club %}{{ profile.club }}<span class="hero-meta-dot">·</span>{% endif %}
+                Member since {{ profile.created_at.strftime('%B %Y') }}
             </div>
+            {% if profile.bio %}<p class="profile-hero-bio">{{ profile.bio }}</p>{% endif %}
+            <div class="profile-hero-stats">
+                <span data-follower-count="user:{{ profile.user_id }}"><span class="hero-stat-n" data-num>{{ profile.follower_count }}</span> <span data-label>follower{{ '' if profile.follower_count == 1 else 's' }}</span></span>
+                <span class="hero-meta-dot">·</span>
+                <span><span class="hero-stat-n">{{ profile.following_count }}</span> following</span>
+                <span class="hero-meta-dot">·</span>
+                <span><span class="hero-stat-n">{{ profile.comment_count }}</span> comment{{ '' if profile.comment_count == 1 else 's' }}</span>
+                {% for kind, label, n in received %}
+                <span class="hero-meta-dot">·</span>
+                <span class="profile-hero-reaction reaction--{{ kind }}" title="{{ n }} {{ label }}">{{ reaction_icon(kind) }}<span class="hero-stat-n">{{ n }}</span></span>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="profile-hero-actions">
+            {% with follow_kind = 'user', follow_id = profile.user_id %}{% include "_follow_button.html" %}{% endwith %}
+            <a href="/settings" class="btn-hero" data-own-profile="{{ profile.user_id }}" hidden>Edit profile</a>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
-<div class="feed-page">
-    {% set has_pbs = pbs | selectattr(1) | list | length > 0 %}
-    {% if profile.bio or profile.club or has_pbs %}
-    <section class="feed-section">
-        <div class="page-section-head"><span>About</span></div>
-        <div class="feed-card profile-about">
-            {% if profile.bio %}<p class="profile-bio">{{ profile.bio }}</p>{% endif %}
-            {% if profile.club %}
-            <div class="profile-links">
-                {% if profile.club %}
-                <span class="profile-link">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                    {{ profile.club }}
-                </span>
-                {% endif %}
+<div class="profile-page">
+    {% if pbs %}
+    <section class="profile-section">
+        <div class="page-section-head"><span>Personal bests</span></div>
+        <div class="pb-strip pb-strip--{{ pbs | length }}">
+            {% for label, secs in pbs %}
+            <div class="pb-cell">
+                <span class="pb-label">{{ label }}</span>
+                <span class="pb-time">{{ format_time(secs) }}</span>
             </div>
-            {% endif %}
-            {% if has_pbs %}
-            <div class="pb-strip">
-                {% for label, secs in pbs %}
-                <div class="pb-cell">
-                    <span class="pb-label">{{ label }}</span>
-                    <span class="pb-time">{{ format_time(secs) if secs else '-' }}</span>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
+            {% endfor %}
         </div>
     </section>
     {% endif %}
 
-    <section class="feed-section">
+    <section class="profile-section">
         <div class="page-section-head">
-            <span>Comments</span>
+            <span>Following <span class="page-section-sub">{{ following | length }} athlete{{ '' if following | length == 1 else 's' }}</span></span>
         </div>
-        {% if comments %}
-        <div class="feed-card feed-comments">
-            {% for c in comments %}
-            <div class="comment">
-                <div class="comment-head">
-                    <span class="comment-date">{{ 'Replied' if c.parent_id else 'Commented' }} on <a href="/race/{{ c.race_id }}#comment-{{ c.comment_id }}" class="comment-race-link">{{ c.race_title }}</a> <span class="feed-dot">·</span> {{ c.when }}</span>
-                </div>
+        {% if following %}
+        <ul class="profile-follow-grid">
+            {% for a in following %}
+            <li><a href="/athlete/{{ a.athlete_id }}" class="home-who">{{ athlete_img(a) }}<span class="home-who-name">{{ a.name }}{{ flag(a.country_alpha3, a.country_full) }}</span></a></li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="profile-empty">{{ profile.display_name }} doesn't follow any athletes yet.</p>
+        {% endif %}
+    </section>
+
+    <section class="profile-section">
+        <div class="page-section-head"><span>Comments</span></div>
+        {% if groups %}
+        {% for g in groups %}
+        <div class="profile-race">
+            <div class="profile-race-head">
+                <a href="/race/{{ g.race_id }}">{{ g.title }}</a>
+                {% if g.prog_name %}<span>{{ g.prog_name }}{% if g.race_date %} <span class="feed-dot">·</span> {{ g.race_date.strftime('%-d %b %Y') }}{% endif %}</span>{% endif %}
+            </div>
+            {% for c in g.comments %}
+            <div class="profile-comment">
+                {% if c.parent_id %}
+                <blockquote class="profile-quote">
+                    {% if c.parent_body %}<span class="profile-quote-who">{{ c.parent_name }}</span> {{ render_comment_body(c.parent_body, mention_refs) }}
+                    {% else %}<span class="profile-quote-who">Comment removed</span>{% endif %}
+                </blockquote>
+                {% endif %}
                 <p class="comment-body">{{ render_comment_body(c.body, mention_refs) }}</p>
-                {% if c.reactions %}<p class="profile-comment-meta">{{ c.reactions }} reaction{{ '' if c.reactions == 1 else 's' }}</p>{% endif %}
+                <div class="profile-comment-meta">
+                    <a href="/race/{{ g.race_id }}#comment-{{ c.comment_id }}">{{ c.when }}</a>
+                    {% if c.reactions %}<span class="feed-dot">·</span> {{ c.reactions }} reaction{{ '' if c.reactions == 1 else 's' }}{% endif %}
+                </div>
             </div>
             {% endfor %}
         </div>
+        {% endfor %}
         <div class="comments-more">
             {% if offset > 0 %}<a href="?offset={{ [offset - page_size, 0] | max }}" class="btn-secondary">Newer</a>{% endif %}
             {% if has_more %}<a href="?offset={{ offset + page_size }}" class="btn-secondary">Older</a>{% endif %}
         </div>
         {% else %}
-        <div class="feed-empty">
-            <p class="feed-empty-title">No comments yet</p>
-            <p class="feed-empty-sub">{{ profile.display_name }} hasn't commented on any races.</p>
-        </div>
+        <p class="profile-empty">{{ profile.display_name }} hasn't commented on any races.</p>
         {% endif %}
     </section>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+window.ptdUser.load().then(me => {
+    const edit = document.querySelector('[data-own-profile]');
+    if (me && me.user_id === Number(edit.dataset.ownProfile)) edit.hidden = false;
+});
+</script>
 {% endblock %}
