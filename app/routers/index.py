@@ -1,5 +1,4 @@
 import re
-from datetime import date, timedelta
 
 import anyio
 from fastapi import APIRouter, Request
@@ -51,7 +50,6 @@ async def _race_counts(race_ids):
 
 @router.get("/")
 def index(request: Request):
-    today = date.today()
 
     # --- latest results: three most recent events, two programmes each (men first) ---
     recent = queries.get_recent_events(0, 3)
@@ -72,9 +70,6 @@ def index(request: Request):
         for r in e["races"]:
             r["podium"] = _predicted_podium(entries.get(r["race_id"], []), r)
     upcoming = [e for e in candidates if any(r["podium"] for r in e["races"])][:3] or candidates[:3]
-    week = [e for e in all_upcoming if e["start_date"] <= today + timedelta(days=7)]
-    week_races = sum(len(e["races"]) for e in week)
-    week_countries = len({e["country"] for e in week})
 
     # Follower and comment counts live in Postgres; the handler is sync
     # (threadpool-limited, see main.py) so hop to the event loop for them.
@@ -119,8 +114,6 @@ def index(request: Request):
         "active_page":    "home",
         "schedule":       schedule,
         "upcoming":       upcoming,
-        "week_races":     week_races,
-        "week_countries": week_countries,
         "recent":         recent,
         "risers":         risers,
         "rankings":       rankings,

@@ -100,6 +100,11 @@ def format_1yr_rating_change(change: float) -> dict:
 _AVATAR_TONES = ["#1a1a2e", "#475569", "#0f766e", "#9a3412", "#4338ca", "#7c2d12"]
 
 
+def ordinal(n):
+    suffix = "th" if 10 <= n % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suffix}"
+
+
 def avatar_tone(user_id):
     return _AVATAR_TONES[user_id % len(_AVATAR_TONES)]
 

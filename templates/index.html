@@ -55,7 +55,7 @@
 
     <section class="home-section">
         <div class="page-section-head">
-            <span>This weekend <span class="page-section-sub">{{ week_races }} race{{ '' if week_races == 1 else 's' }} in {{ week_countries }} countr{{ 'y' if week_countries == 1 else 'ies' }}</span></span>
+            <span>Coming up</span>
             <a href="/upcoming" class="section-link">All upcoming</a>
         </div>
         {% for e in upcoming %}{{ event_block(e, predicted=True) }}{% else %}

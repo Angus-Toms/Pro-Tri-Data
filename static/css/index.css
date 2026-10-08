@@ -252,6 +252,10 @@
 .home-rank th { cursor: default; }
 .home-rank th:hover { background: var(--navy); color: rgba(255,255,255,0.6); }
 .home-rank td { padding: 0.5rem 0.75rem; }
+.home-rank tbody td,
+.home-rank tbody tr:nth-child(even) td,
+.home-rank tr:hover td { background: var(--white) !important; }
+.home-rank .num { font-weight: 700; font-size: 0.95rem; color: var(--text-color); }
 .home-rank .home-rank-pos { width: 3rem; }
 .home-rank .home-rank-num { width: 5rem; }
 .home-rank td:first-child { padding-left: 1rem; }
@@ -290,7 +294,11 @@
     color: var(--text-light);
 }
 .home-mine-title + .home-mine { margin-bottom: 1.25rem; }
-.home-mine { table-layout: auto; box-shadow: var(--box-shadow); border-radius: var(--border-radius); overflow: hidden; }
+.home-mine { table-layout: fixed; box-shadow: var(--box-shadow); border-radius: var(--border-radius); overflow: hidden; }
+.home-mine .c-date { width: 6rem; }
+.home-mine .c-who { width: 11.5rem; }
+.home-mine .c-res { width: 9rem; }
+.home-mine .c-chg { width: 4.5rem; }
 .home-mine th { cursor: default; white-space: nowrap; }
 .home-mine th:hover { background: var(--navy); color: rgba(255,255,255,0.6); }
 .home-mine td { padding: 0.8rem 1rem; }
@@ -298,16 +306,21 @@
 .home-mine tbody td,
 .home-mine tbody tr:nth-child(even) td,
 .home-mine tr:hover td { background: var(--white) !important; }
-.home-mine .date { font-size: 0.75rem; color: var(--text-lighter); white-space: nowrap; width: 1%; }
-.home-mine .who-cell { width: 1%; white-space: nowrap; }
+.home-mine .date { font-size: 0.75rem; color: var(--text-lighter); white-space: nowrap; }
+.home-mine .race b, .home-mine .race .small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .home-mine .race a { color: inherit; text-decoration: none; }
 .home-mine .race a:hover { color: var(--primary-color); }
 .home-mine .race b { font-weight: 600; display: block; }
 .home-mine .race .small { display: block; font-size: 0.78rem; color: var(--text-light); }
-.home-mine .num { text-align: right; white-space: nowrap; width: 1%; }
+.home-mine .num { text-align: right; white-space: nowrap; }
+/* Result: ordinal on the left, time over gap on the right */
+.home-mine .res { display: inline-grid; grid-template-columns: 3rem auto; align-items: center; gap: 0.6rem; text-align: right; }
+.home-mine .ord { font-weight: 700; font-size: 0.85rem; }
+.home-mine .ord.gold { color: var(--gold-text); }
+.home-mine .ord.silver { color: var(--silver-text); }
+.home-mine .ord.bronze { color: var(--bronze-text); }
 .home-mine .t { display: block; font-weight: 600; font-variant-numeric: tabular-nums; }
 .home-mine .g { display: block; font-size: 0.75rem; color: var(--text-light); font-variant-numeric: tabular-nums; }
-.home-mine .pos-other { color: var(--text-color); font-weight: 700; font-size: 0.8rem; }
 .home-mine .pos-dnf { font-size: 0.75rem; font-style: italic; color: var(--text-lighter); }
 .home-mine-empty { padding: 1rem 1.25rem; font-size: 0.9rem; color: var(--text-light); }
 .home-mine-empty p { margin: 0 0 0.4rem; }
@@ -340,12 +353,15 @@
        athlete on three, result on four. */
     .home-mine thead { display: none; }
     .home-mine tr { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; padding: 0.7rem 1rem; border-bottom: 1px solid var(--border-color); }
+    .home-mine colgroup { display: none; }
     .home-mine td, .home-mine td:first-child, .home-mine td:last-child { display: block; padding: 0; width: auto; }
     .home-mine .race { flex-basis: 100%; }
     .home-mine .who-cell { flex-basis: 100%; margin-top: 0.3rem; }
     /* Numbers run along one line under the athlete, each with its column label */
     .home-mine .num { display: inline-flex; align-items: baseline; gap: 0.35rem; margin-right: 0.75rem; }
+    .home-mine .res { display: inline-flex; gap: 0.4rem; }
     .home-mine .t, .home-mine .g { display: inline; }
+    .home-mine .g { margin-left: 0.3rem; }
     .home-mine .g::before { content: '('; }
     .home-mine .g::after { content: ')'; }
     .home-mine .num[data-label]::before { content: attr(data-label); font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-lighter); }

@@ -9,13 +9,14 @@ from app.display_helpers import flag
 from ptd_data import queries
 from ptd_users import queries as uq
 from ptd_users.auth import current_user
-from app.routers.router_utils import format_rating_change, format_time, format_time_behind
+from app.routers.router_utils import format_rating_change, format_time, format_time_behind, ordinal
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 templates.env.globals["STATIC_BASE_URL"] = STATIC_BASE_URL
 templates.env.globals["ASSET_VERSION"] = ASSET_VERSION
 templates.env.globals["flag"]          = flag
+templates.env.globals["ordinal"]       = ordinal
 
 
 @router.get("/feed")
