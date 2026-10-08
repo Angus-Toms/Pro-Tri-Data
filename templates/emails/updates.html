@@ -87,9 +87,9 @@
 {% if single_race %}
 {% with href = site ~ '/race/' ~ races[0].race_id, label = 'Full results', secondary = false %}{% include "_button.html" %}{% endwith %}
 <td width="10"></td>
-{% with href = site ~ '/feed', label = 'Your feed', secondary = true %}{% include "_button.html" %}{% endwith %}
+{% with href = site ~ '/', label = 'Your athletes', secondary = true %}{% include "_button.html" %}{% endwith %}
 {% else %}
-{% with href = site ~ '/feed', label = 'Your feed', secondary = false %}{% include "_button.html" %}{% endwith %}
+{% with href = site ~ '/', label = 'Your athletes', secondary = false %}{% include "_button.html" %}{% endwith %}
 {% endif %}
 </tr></table>
 {% endblock %}

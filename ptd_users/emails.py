@@ -112,7 +112,7 @@ def render_updates(user_id, results, starts, races):
         lines += [f"{race['race_title']} ({race['date']})"] + [
             f"{p['position']}. {p['name']} {p['time']}" for p in race["podium"]] + [
             f"Full results: {SITE_BASE_URL}/race/{race['race_id']}", ""]
-    lines += [f"Your feed: {SITE_BASE_URL}/feed", f"Unsubscribe: {unsub}"]
+    lines += [f"Your athletes: {SITE_BASE_URL}/", f"Unsubscribe: {unsub}"]
     return subject, html, "\n".join(lines), unsub
 
 
