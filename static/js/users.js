@@ -507,15 +507,36 @@ function initNotifications(me) {
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
 }
 
-// Nav account chip + feed link + follow buttons
+// --- Header avatar menu ------------------------------------------------------
+function initUserMenu(me) {
+    const wrap = document.querySelector('[data-nav-user]');
+    const btn = wrap.querySelector('[data-nav-user-toggle]');
+    const menu = wrap.querySelector('[data-nav-user-menu]');
+    btn.innerHTML = me.avatar_version
+        ? `<img src="/avatar/${me.user_id}.webp?v=${me.avatar_version}" alt="">`
+        : escHtml(me.display_name[0].toUpperCase());
+    if (!me.avatar_version) btn.style.background = me.avatar_tone;
+    wrap.querySelector('[data-nav-user-name]').textContent = me.display_name;
+    wrap.querySelector('[data-nav-user-profile]').href = `/user/${me.user_id}`;
+    document.querySelector('[data-nav-login]').hidden = true;
+    wrap.hidden = false;
+
+    const close = () => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const open = menu.hidden;
+        menu.hidden = !open;
+        btn.setAttribute('aria-expanded', String(open));
+    });
+    document.addEventListener('click', (e) => { if (!wrap.contains(e.target)) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+}
+
+// Header account state + follow buttons
 document.addEventListener('DOMContentLoaded', () => {
     window.ptdUser.load().then(me => {
         if (!me) return;
-        document.querySelectorAll('[data-account-chip]').forEach(chip => {
-            chip.textContent = me.display_name;
-            chip.href = '/account';
-        });
-        document.querySelectorAll('[data-feed-link]').forEach(l => { l.hidden = false; });
+        initUserMenu(me);
         initNotifications(me);
     });
     initFollowButtons();

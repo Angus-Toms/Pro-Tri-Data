@@ -13,7 +13,7 @@ from ptd_users.auth import (
     SESSION_COOKIE, clear_session_cookie, current_user, hash_token, new_token,
     remembered_tokens, set_remembered_cookie, set_session_cookie,
 )
-from app.routers.router_utils import user_avatar
+from app.routers.router_utils import avatar_tone, user_avatar
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -221,6 +221,8 @@ async def me(request: Request):
         "display_name": user["display_name"],
         "country":      user["country"],
         "is_admin":     user["is_admin"],
+        "avatar_version": user["avatar_version"],
+        "avatar_tone":  avatar_tone(user["user_id"]),
         "follows":      follows,
         "unread":       await uq.unread_notification_count(user["user_id"]),
     }, headers={"Cache-Control": "no-store"})

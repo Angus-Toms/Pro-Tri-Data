@@ -100,6 +100,10 @@ def format_1yr_rating_change(change: float) -> dict:
 _AVATAR_TONES = ["#1a1a2e", "#475569", "#0f766e", "#9a3412", "#4338ca", "#7c2d12"]
 
 
+def avatar_tone(user_id):
+    return _AVATAR_TONES[user_id % len(_AVATAR_TONES)]
+
+
 def user_avatar(user_id, name, version, size="md"):
     from markupsafe import Markup, escape
     if user_id is None:
@@ -108,8 +112,7 @@ def user_avatar(user_id, name, version, size="md"):
     if version:
         return Markup(f'<img class="avatar avatar-{size}" src="/avatar/{user_id}.webp?v={version}" '
                       f'alt="" loading="lazy">')
-    tone = _AVATAR_TONES[user_id % len(_AVATAR_TONES)]
-    return Markup(f'<span class="avatar avatar-{size}" style="background:{tone}" aria-hidden="true">'
+    return Markup(f'<span class="avatar avatar-{size}" style="background:{avatar_tone(user_id)}" aria-hidden="true">'
                   f'{escape(name[:1].upper())}</span>')
 
 

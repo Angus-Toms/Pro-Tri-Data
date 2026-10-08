@@ -75,8 +75,6 @@
                 </div>
 
                 <a href="/about" class="nav-link{{ ' active' if active_page == 'about' else '' }}">About</a>
-                <a href="/feed" class="nav-link{{ ' active' if active_page == 'feed' else '' }}" data-feed-link hidden>Feed</a>
-                <a href="/login" class="nav-link nav-account-chip{{ ' active' if active_page == 'account' else '' }}" data-account-chip>Log in</a>
             </nav>
 
             <div class="nav-notif" data-notif hidden>
@@ -96,6 +94,20 @@
                     <line x1="20" y1="20" x2="16.65" y2="16.65"/>
                 </svg>
             </button>
+
+            {# Account: a Log in link until /me says who you are, then the avatar menu (users.js) #}
+            <a href="/login" class="nav-login" data-nav-login>Log in</a>
+            <div class="nav-user" data-nav-user hidden>
+                <button type="button" class="nav-user-toggle" aria-label="Account menu" aria-haspopup="true" aria-expanded="false" data-nav-user-toggle></button>
+                <div class="nav-user-menu" data-nav-user-menu hidden>
+                    <span class="nav-user-name" data-nav-user-name></span>
+                    <a href="/" class="nav-user-item" data-nav-user-profile>Profile</a>
+                    <a href="/settings" class="nav-user-item">Settings</a>
+                    <form method="post" action="/auth/logout" onsubmit="window.ptdUser.invalidate()">
+                        <button type="submit" class="nav-user-item">Log out</button>
+                    </form>
+                </div>
+            </div>
 
             <button type="button" class="nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="main-nav">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
