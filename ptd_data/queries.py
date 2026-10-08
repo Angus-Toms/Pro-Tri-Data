@@ -360,7 +360,14 @@ def get_recent_events(offset, limit, country=None):
         SELECT event_id, race_id, race_title, prog_name, gender
         FROM races
         WHERE event_id IN ({placeholders})
-        ORDER BY race_date ASC,
+        -- One elite men's then one elite women's program lead, whatever day
+        -- they raced, so event cards pair them (men left). Ranking by
+        -- prog_name picks D1 over D2 where a league splits divisions.
+        ORDER BY CASE WHEN sub_category = 'elite' AND gender != 'mixed'
+                       AND ROW_NUMBER() OVER (PARTITION BY event_id, gender, sub_category = 'elite'
+                                              ORDER BY prog_name) = 1
+                      THEN (CASE WHEN gender = 'male' THEN 0 ELSE 1 END) ELSE 2 END,
+                 race_date ASC,
                  CASE WHEN gender = 'male' THEN 0 ELSE 1 END,
                  race_id ASC
     """, event_ids).fetchall()
@@ -4459,7 +4466,15 @@ def get_upcoming_events(country=None, course='short'):
         {where_sql}
         GROUP BY e.event_id, e.name, e.venue, e.country, e.start_date,
                  ur.race_id, ur.prog_name, ur.gender, ur.category, ur.event_spec_ids
+        -- One elite men's then one elite women's program lead, so event cards
+        -- pair them (men left). upcoming_races has no sub_category; this is
+        -- ingest's race_sub_category rule ('Elite ...' / long-course 'Pro ...').
         ORDER BY e.start_date, e.event_id,
+                 CASE WHEN LOWER(SPLIT_PART(ur.prog_name, ' ', 1)) IN ('elite', 'pro')
+                       AND ROW_NUMBER() OVER (PARTITION BY e.event_id, ur.gender,
+                                              LOWER(SPLIT_PART(ur.prog_name, ' ', 1)) IN ('elite', 'pro')
+                                              ORDER BY ur.prog_name) = 1
+                      THEN 0 ELSE 1 END,
                  CASE WHEN ur.gender = 'male' THEN 0 ELSE 1 END,
                  ur.race_id
     """, country_params).fetchall()
