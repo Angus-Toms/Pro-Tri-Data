@@ -1344,9 +1344,18 @@ def load_manual_startlists(conn):
                      longitude=0, latitude=0, brand=ev['brand'], prize_money_usd=int(ev.get('prize_usd') or 0))
         # insert_event is INSERT OR IGNORE: a corrected file must still reach an
         # event row written by an earlier build, since the name is what the
-        # series rules match to link the event to its past editions.
-        conn.execute("UPDATE events SET name = ?, venue = ?, start_date = ?, end_date = ? WHERE event_id = ?",
-                     [ev['name'], ev['venue'], ev['date'], ev['date'], event_id])
+        # series rules match to link the event to its past editions. DuckDB
+        # cannot update a row that foreign keys point at, so the dependents go
+        # first: the upcoming rows (re-created below) and the series/recurring
+        # links (re-made by the series step).
+        stored = conn.execute("SELECT name, venue, start_date FROM events WHERE event_id = ?", [event_id]).fetchone()
+        if stored != (ev['name'], ev['venue'], _dt.date.fromisoformat(ev['date'])):
+            conn.execute("DELETE FROM start_list_entries WHERE race_id IN (SELECT race_id FROM upcoming_races WHERE event_id = ?)", [event_id])
+            conn.execute("DELETE FROM upcoming_races WHERE event_id = ?", [event_id])
+            conn.execute("DELETE FROM event_recurring WHERE event_id = ?", [event_id])
+            conn.execute("DELETE FROM event_series WHERE event_id = ?", [event_id])
+            conn.execute("UPDATE events SET name = ?, venue = ?, start_date = ?, end_date = ? WHERE event_id = ?",
+                         [ev['name'], ev['venue'], ev['date'], ev['date'], event_id])
         for gender, entries in data['races'].items():
             if not entries:
                 continue
