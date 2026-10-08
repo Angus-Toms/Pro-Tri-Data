@@ -101,10 +101,12 @@
                 <th class="num">Leg {{ i }}</th>
                 {% endfor %}
                 {% else %}
+                {# Transitions are real data on a result; the model has no
+                   transition prediction, so an upcoming race shows the legs only. #}
                 <th class="num">{{ pred }}Swim</th>
-                <th class="num w1-num--t">T1</th>
+                {% if not race.is_upcoming %}<th class="num w1-num--t">T1</th>{% endif %}
                 <th class="num">{{ pred }}Bike</th>
-                <th class="num w1-num--t">T2</th>
+                {% if not race.is_upcoming %}<th class="num w1-num--t">T2</th>{% endif %}
                 <th class="num">{{ pred }}Run</th>
                 {% endif %}
                 <th class="num w1-num--total">{{ 'Predicted' if race.is_upcoming else 'Total' }}</th>
@@ -133,9 +135,9 @@
                 {% endfor %}
                 {% else %}
                 {{ cell(p.swim, 'Swim') }}
-                {{ cell(p.t1,   'T1', transition=True) }}
+                {% if not race.is_upcoming %}{{ cell(p.t1, 'T1', transition=True) }}{% endif %}
                 {{ cell(p.bike, 'Bike') }}
-                {{ cell(p.t2,   'T2', transition=True) }}
+                {% if not race.is_upcoming %}{{ cell(p.t2, 'T2', transition=True) }}{% endif %}
                 {{ cell(p.run,  'Run') }}
                 {% endif %}
                 {# Total cell: format depends on past vs upcoming. Past races

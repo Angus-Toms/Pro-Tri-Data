@@ -119,20 +119,37 @@ def _anchor_time(field_ratings, leader_rating, distance, disc, model,
             + model['intercept'])
 
 
-def _apply_form_overrides(preds, form_map, c_map, field, discs):
+# Form is measured in one 'long' bucket where most observations are 70.3s, and
+# over a full distance the field spreads further apart than it does over a
+# 70.3: within-race slope of actual on predicted log times was 1.2 on the run
+# and 1.06 on the swim (fast athletes predicted too slow, slow ones too fast).
+# These widen each athlete's form deviation on full distance only. Fitted on
+# 2023-24 replays, held-out 2025-26 slopes land at 0.97-1.05 and the men's
+# top-5 bias goes from -1.5% to -0.3% with ordering unchanged. The swim is
+# left alone: it was already calibrated at the top of the field.
+# analysis/long_course_expand.py, Oct 2026.
+FORM_SPREAD = {
+    ('male',   'long'): {'bike': 1.07, 'run': 1.22, 'overall': 1.21},
+    ('female', 'long'): {'bike': 1.15, 'run': 1.09, 'overall': 1.13},
+}
+
+
+def _apply_form_overrides(preds, form_map, c_map, field, discs, spread=None):
     """Replace anchor-based predicted times with form-based ones on long
-    course: exp(pre-race form + event course constant) per discipline.
+    course: exp(spread * pre-race form + event course constant) per discipline.
 
     Athletes without enough form history (debuts, <3 prior splits) keep the
     anchor prediction, but rescaled onto the form level - the two models'
     absolute levels aren't mutually calibrated, and mixing them raw scrambles
     the cross-group ordering (full-field Spearman drops ~0.07).
     """
+    spread = spread or {}
     for disc in discs:
         c = c_map.get(disc)
         if c is None:
             continue
-        form_t = {aid: math.exp(f[disc] + c)
+        k = spread.get(disc, 1.0)
+        form_t = {aid: math.exp(k * f[disc] + c)
                   for aid, f in form_map.items() if disc in f}
         if not form_t:
             continue
@@ -197,7 +214,7 @@ def _completed_race_preds(race, results, models):
         form_map = queries.get_field_form(field, 'long', before_date=target_date)
         c_map = queries.get_form_course_constants(
             race.get('event_id'), gender, distance, target_date)
-        _apply_form_overrides(preds, form_map, c_map, field, DISCS)
+        _apply_form_overrides(preds, form_map, c_map, field, DISCS, FORM_SPREAD.get((gender, distance)))
 
     return anchor_preds, preds, distance, pre_ratings
 
@@ -290,7 +307,7 @@ def _upcoming_race_preds(race, entries, models):
         form_map = queries.get_field_form(field, 'long')
         c_map = queries.get_form_course_constants(
             race.get('event_id'), gender, distance, race['race_date'])
-        _apply_form_overrides(preds, form_map, c_map, field, DISCS)
+        _apply_form_overrides(preds, form_map, c_map, field, DISCS, FORM_SPREAD.get((gender, distance)))
     return preds, distance
 
 

@@ -83,10 +83,11 @@ def _predicted_podium(entries, race):
         return []
     emap = {e['athlete_id']: e for e in entries}
 
-    # Field-fastest per leg, within the displayed top-3, for the "fastest" tag
-    # and gap-to-fastest annotations the wide podium widget renders.
+    # Field-fastest per leg across every entrant with a prediction (not just
+    # the displayed top-3), matching the completed-race widget: the "fastest"
+    # tag means fastest in the field, and gaps are to that athlete.
     def _ff(disc):
-        vals = [preds[a].get(disc) for a in ranked if preds[a].get(disc)]
+        vals = [p.get(disc) for p in preds.values() if p.get(disc)]
         return min(vals) if vals else None
 
     ff = {'swim': _ff('swim'), 'bike': _ff('bike'), 'run': _ff('run')}
