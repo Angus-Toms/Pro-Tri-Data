@@ -370,11 +370,9 @@ def get_recent_events(offset, limit, country=None):
             "prog_name": prog_name, "gender": gender, "podium": [],
         })
 
-    # Fetch podiums for the first 2 races of every event in one batch
-    podium_race_ids = []
-    for event_id in event_ids:
-        for race in event_map[event_id]["races"][:2]:
-            podium_race_ids.append(race["race_id"])
+    # Podiums for every race in one batch; callers pick which programmes to show
+    podium_race_ids = [race["race_id"] for event_id in event_ids
+                       for race in event_map[event_id]["races"]]
 
     if podium_race_ids:
         ph = ",".join("?" * len(podium_race_ids))

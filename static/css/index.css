@@ -277,9 +277,11 @@
 .home-rank th { cursor: default; }
 .home-rank th:hover { background: var(--navy); color: rgba(255,255,255,0.6); }
 .home-rank td { padding: 0.5rem 0.75rem; }
-.home-rank td:first-child { padding-left: 1rem; width: 2rem; }
+.home-rank .home-rank-pos { width: 3rem; }
+.home-rank .home-rank-num { width: 5rem; }
+.home-rank td:first-child { padding-left: 1rem; }
 .home-rank th:first-child { padding-left: 1rem; }
-.home-rank .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; width: 5rem; }
+.home-rank .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .home-rank .home-who-name { font-size: 0.85rem; }
 
 .home-why {

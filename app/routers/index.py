@@ -37,6 +37,14 @@ def sparkline(vals, w=100.0, h=28.0, pad=3.0):
                     for i, v in enumerate(vals))
 
 
+def _pair(races):
+    """The first men's and first women's programme, men left. Falls back to
+    the first two when an event only has one gender."""
+    men   = next((r for r in races if r["gender"] == "male"), None)
+    women = next((r for r in races if r["gender"] == "female"), None)
+    return [r for r in (men, women) if r] if men and women else races[:2]
+
+
 async def _race_counts(race_ids):
     return await uq.follower_counts("race", race_ids), await uq.comment_counts(race_ids)
 
@@ -48,7 +56,7 @@ def index(request: Request):
     # --- latest results: three most recent events, two programmes each (men first) ---
     recent = queries.get_recent_events(0, 3)
     for e in recent:
-        e["races"] = e["races"][:2]
+        e["races"] = _pair(e["races"])
 
     # --- this weekend: the next three events with their predicted podiums ---
     all_upcoming = queries.get_upcoming_events()
@@ -57,10 +65,10 @@ def index(request: Request):
     # with a predicted podium and fall back to the next three if none have one.
     candidates = all_upcoming[:8]
     entries = queries.get_upcoming_race_entries_bulk(
-        [r["race_id"] for e in candidates for r in e["races"][:2]])
+        [r["race_id"] for e in candidates for r in _pair(e["races"])])
     for e in candidates:
         e["entries"] = sum(r["entry_count"] or 0 for r in e["races"])
-        e["races"] = e["races"][:2]
+        e["races"] = _pair(e["races"])
         for r in e["races"]:
             r["podium"] = _predicted_podium(entries.get(r["race_id"], []), r)
     upcoming = [e for e in candidates if any(r["podium"] for r in e["races"])][:3] or candidates[:3]

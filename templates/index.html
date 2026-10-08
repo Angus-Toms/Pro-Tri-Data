@@ -110,6 +110,7 @@
         <div class="home-rank-pane" data-rank-pane="{{ t.key }}"{% if not loop.first %} hidden{% endif %}>
             {% for label, rows in [('Men', t.men), ('Women', t.women)] %}
             <table class="home-rank">
+                <colgroup><col class="home-rank-pos"><col><col class="home-rank-num"></colgroup>
                 <thead><tr><th colspan="2">{{ label }}</th><th class="num">Rating</th></tr></thead>
                 <tbody>
                     {% for a in rows %}
