@@ -163,13 +163,15 @@ principle it enforced stays: HTML pages render identically for everyone, which k
 them CDN-cacheable and keeps user state out of every existing router. The logged-in
 experience is hydrated client-side:
 
-- `GET /me` returns `{display_name, follows: {athletes: [...], races: [...]}}` or 401.
+- `GET /me` returns `{user_id, display_name, avatar_version, avatar_tone, follows: {athletes, races, users}, unread}` or 401.
   Fetched once per page load, cached in sessionStorage for a few minutes. Follow
-  buttons and the nav account chip render in a neutral state and correct themselves
-  from this payload (same pattern as the asset-versioned static JS already in use).
+  buttons and the header render in a neutral state (a Log in link) and correct
+  themselves from this payload: the link becomes the avatar menu (Profile,
+  Settings, Log out) and the bell appears. On phones the avatar sits in the bar
+  outside the hamburger.
 - Comments are loaded as a separate partial (`/race/{id}/comments`), so race HTML
   never contains user state.
-- `/account` and `/feed` are session-gated and sent with Cache-Control: no-store.
+- `/settings` and `/home/mine` are session-gated and sent with Cache-Control: no-store.
 
 ## 5. Routes and pages
 
@@ -190,9 +192,11 @@ Auth (`app/routers/auth.py`)
   logging out no longer locks the account, so the page tells shared-computer
   users to remove it. SameSite=Lax keeps cross-site posts from using the cookie.
 
-Account (`app/routers/account.py`)
-- `GET /account` - display name, email, country, digest toggle, followed athletes and
-  races with unfollow controls, danger zone
+Settings (`app/routers/account.py`)
+- `GET /settings` - photo, display name, country, bio, club, socials, PBs, digest
+  toggle, followed athletes, races and people with unfollow controls, danger zone.
+  Reached from the avatar menu or Edit profile on your own profile. `/account`
+  redirects here.
 - `POST /account/update`
 - `POST /account/delete` - hard delete: user row, sessions, follows, comments and
   reports all go (cascades). Re-confirmation via typed phrase. No soft-delete state
@@ -203,12 +207,11 @@ Follows (`app/routers/follows.py`)
 - Buttons: athlete hero, race hero, leaderboard cards. Logged-out click routes to /login
   with a `next` redirect.
 
-Feed (`app/routers/feed.py`)
-- `GET /feed` - server-rendered, session-gated. Sections in order: upcoming races
-  (followed races plus races with followed athletes on the startlist, with predicted
-  podiums), recent results from followed athletes (last 90 days, position, time,
-  rating change), recent comments on followed races. Reuses existing queries.py
-  functions; one bulk query per section.
+Home personal layer (`app/routers/feed.py`)
+- `GET /home/mine` - partial injected above "This weekend" on the home page by
+  index.js for logged-in users: followed athletes' next starts with the model's
+  predicted finish, their results since the user was last here, and suggestions
+  from the user's country while they have few follows. `/feed` redirects to `/`.
 
 Comments (`app/routers/comments.py`)
 - `GET /race/{id}/comments` - partial, newest first, paginated 50 at a time
@@ -226,7 +229,7 @@ Comments (`app/routers/comments.py`)
   posting keeps the thread open. The partial loads a race's whole comment set and
   groups it in Python; pagination is by top-level thread.
 - Every comment shows the author's photo, or their initial on a colour picked
-  from their user id. Photos are uploaded on the account page, centre-cropped to
+  from their user id. Photos are uploaded on the settings page, centre-cropped to
   128px webp with Pillow and stored in `users.avatar` (bytea), so they survive
   deploys and are backed up with the database. Served from `/avatar/{id}.webp?v=`,
   where the version bumps on every upload so the URL can be cached forever.
@@ -259,11 +262,14 @@ Profiles (`app/routers/profiles.py`)
   already public on race pages; email and follows stay private. Banned users 404.
 - Comment author names, avatars and person tags link here.
 - People can follow people (`follows.kind = 'user'`, not yourself). A followed
-  person's comments appear in the feed's comments section. Profiles show
-  follower, following and comment counts; athlete pages show a follower count
+  person's comments appear on their profile, grouped by race with the parent
+  quoted above each reply. Profiles use the athlete-page hero and show
+  follower, athletes-followed and comment counts plus reactions received, and
+  list the athletes they follow (athlete follows are public; races and people
+  are not); athlete pages show a follower count
   beside the follow button. `POST /follow` returns the new count so every figure
   for that target on the page updates in place.
-- Optional public fields, edited on the account page: bio (280 chars), club, an
+- Optional public fields, edited on the settings page: bio (280 chars), club, an
   Instagram handle and a Strava athlete id (pasted links are reduced to these),
   and self-reported PBs for sprint, Olympic, 70.3 and 140.6, stored as seconds.
   PBs outside a loose plausible range per distance are rejected; the profile
@@ -316,7 +322,7 @@ Emails (`ptd_users/emails.py`, templates in `templates/emails/`)
 1. Infra: Postgres instance, ptd_users package, pool, migrations, session middleware,
    /me endpoint, login/verify flow, email sending. The auth core.
 2. Account page and deletion.
-3. Follows, buttons, /feed.
+3. Follows, buttons, the home page's personal layer.
 4. Comments, rate limiting, reports, moderation queue.
 5. Digest email after the rest has settled.
 
