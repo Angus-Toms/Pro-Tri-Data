@@ -21,14 +21,14 @@
 <h4 class="home-mine-title">Coming up</h4>
 <table class="home-mine">
     {{ cols() }}
-    <thead><tr><th>Race</th><th>Athlete</th><th class="num"><span class="th-long">Predicted position</span><span class="th-short">Pred.</span></th><th class="num" colspan="2"><span class="th-long">Predicted time</span><span class="th-short">Pred. time</span></th></tr></thead>
+    <thead><tr><th>Race</th><th>Athlete</th><th class="num"><span class="th-long">Predicted position</span><span class="th-short">Pred. pos</span></th><th class="num" colspan="2"><span class="th-long">Predicted time</span><span class="th-short">Pred. time</span></th></tr></thead>
     <tbody>
         {% for s in coming %}
         <tr>
             <td class="race"><a href="/race/{{ s.race_id }}"><b>{{ s.race_title }}</b></a><span class="small">{{ s.race_date.strftime('%a %-d %b') }} &middot; {{ s.prog_name }}{% if s.entries %} &middot; {{ s.entries }} entries{% endif %}</span></td>
             <td class="who-cell">{{ who(s) }}</td>
             {% if s.pred_pos %}
-            <td class="num" data-label="Predicted">{{ pos(s.pred_pos) }}</td>
+            <td class="num" data-label="Pred. pos">{{ pos(s.pred_pos) }}</td>
             <td class="num" colspan="2" data-label="Time">{{ times(s.time, s.gap) }}</td>
             {% else %}
             <td class="num" colspan="3"><span class="pos-dnf">No prediction yet</span></td>

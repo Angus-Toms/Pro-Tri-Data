@@ -300,10 +300,6 @@
 /* Full column names where there is room (wrapping to two lines), short ones on narrower screens */
 .home-mine .th-short { display: none; }
 .home-mine .th-long { display: inline-block; white-space: normal; line-height: 1.2; }
-@media (max-width: 1100px) {
-    .home-mine .th-long { display: none; }
-    .home-mine .th-short { display: inline; }
-}
 .home-mine .c-time { width: 5.5rem; }
 .home-mine .c-chg { width: 4.5rem; }
 .home-mine th { cursor: default; white-space: nowrap; }
@@ -329,17 +325,20 @@
 .home-also { margin: 0.75rem 0 0; font-size: 0.82rem; color: var(--text-light); }
 .home-also a { color: var(--primary-color); font-weight: 600; text-decoration: none; }
 
-/* ── Responsive ── */
+/* ── Responsive: the site's three breakpoints, 1024 / 768 / 480 ── */
 @media (max-width: 1024px) {
     .home-layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
     .home-side { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 2rem; }
     .home-side > .home-why, .home-side > .home-section:last-child { grid-column: 1 / -1; }
     .home-rank-pane { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    /* Your athletes: short column names, narrower athlete column so the race name shows */
+    .home-mine .th-long { display: none; }
+    .home-mine .th-short { display: inline; }
+    .home-mine .c-who { width: 8.5rem; }
+    .home-mine .c-pos { width: 4.5rem; }
 }
 @media (max-width: 768px) {
     .home-side { grid-template-columns: minmax(0, 1fr); }
-}
-@media (max-width: 600px) {
     .home-strip-inner { width: auto; padding-left: 1rem; }
     .home-strip-label span { display: none; }
     .home-rank-pane { grid-template-columns: minmax(0, 1fr); }
@@ -350,19 +349,21 @@
     .page-section-head { flex-wrap: wrap; }
     .page-section-head .page-section-sub { display: block; margin: 0; }
 
-    /* Your athletes becomes stacked rows: date on line one, race on two,
-       athlete on three, result on four. */
-    .home-mine thead { display: none; }
-    .home-mine tr { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; padding: 0.7rem 1rem; border-bottom: 1px solid var(--border-color); }
-    .home-mine colgroup { display: none; }
-    .home-mine td, .home-mine td:first-child, .home-mine td:last-child { display: block; padding: 0; width: auto; }
+    /* Your athletes becomes stacked rows: race on line one, athlete on two,
+       the numbers with their labels on three. */
+    .home-mine { background: var(--white); }
+    .home-mine thead, .home-mine colgroup { display: none; }
+    .home-mine tbody { display: block; }
+    .home-mine tr { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.5rem; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); background: var(--white); }
+    .home-mine tr:last-child { border-bottom: 0; }
+    .home-mine td, .home-mine td:first-child, .home-mine td:last-child { display: block; padding: 0; width: auto; background: none !important; }
     .home-mine .race { flex-basis: 100%; }
-    .home-mine .who-cell { flex-basis: 100%; margin-top: 0.3rem; }
-    /* Numbers run along one line under the athlete, each with its column label */
-    .home-mine .num { display: inline-flex; align-items: baseline; gap: 0.35rem; margin-right: 0.75rem; }
+    .home-mine .race b, .home-mine .race .small { white-space: normal; }
+    .home-mine .who-cell { flex-basis: 100%; }
+    .home-mine .num { display: inline-flex; align-items: baseline; margin-right: 1rem; }
     .home-mine .t, .home-mine .g { display: inline; }
     .home-mine .g { margin-left: 0.3rem; }
     .home-mine .g::before { content: '('; }
     .home-mine .g::after { content: ')'; }
-    .home-mine .num[data-label]::before { content: attr(data-label); font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-lighter); }
+    .home-mine .num[data-label]::before { content: attr(data-label); margin-right: 0.4rem; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-lighter); }
 }
