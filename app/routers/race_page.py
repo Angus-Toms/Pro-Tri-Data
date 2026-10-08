@@ -603,16 +603,18 @@ def _get_relay_race(request: Request, race, race_id: int):
 def _get_upcoming_race(request: Request, race, partial: bool):
     from datetime import date
     race_id    = race['race_id']
-    entries    = queries.get_upcoming_race_entries(race_id)
     upcoming_distance = queries.get_upcoming_race_distance_type(race_id)
     # Two distinct notions of "course" here:
-    #  - rating_course ('short'|'long') scopes which ratings feed the standards,
-    #    keyed off the actual distance. Passed to the rating/standard queries,
-    #    which map it to distance enums (short/long only - not 'ag').
+    #  - rating_course ('short'|'long') scopes which ratings feed the entries
+    #    and standards, keyed off the actual distance. Passed to the
+    #    rating/standard queries, which map it to distance enums (short/long
+    #    only - not 'ag'). Entries fetched under the wrong course have no
+    #    rating and would all read as debuts.
     #  - rank_bucket adds 'ag' on top: race_rankings buckets AG races separately
     #    so the rank reflects peer competition, not the elite short-course field.
     rating_course = queries.course_for_distance(upcoming_distance) or 'short'
     rank_bucket   = 'ag' if race.get('category') == 'ag' else rating_course
+    entries    = queries.get_upcoming_race_entries(race_id, course=rating_course)
     standards  = queries.get_upcoming_race_standards(race_id, course=rating_course)
     is_elite   = race.get('category') == 'elite'
 

@@ -26,7 +26,15 @@ then ELO-scale the rest of the field down from there.
 **Form model (`ptd_data/form.py`)** — tracks each athlete's current form per
 discipline: their split vs the field median (log space), with field strength
 removed by alternating least squares, smoothed by a Kalman filter. Predicted
-split = exp(form + event course constant). Weak, poorly-connected tiers
+split = exp(form + event course constant). The constant is the mean of the
+event's last three editions, each carried to the target year by the era drift
+(OLS slope of the constant on year per gender, distance and discipline), since
+a plain three-edition mean sat a year or two behind and ran ~2% slow on long
+course (analysis/long_course_variants.py). On full distance the form deviation is
+also widened per discipline (`FORM_SPREAD` in predictions.py, men's run 1.22,
+swim untouched): form is measured mostly at 70.3, where the field spreads less
+than it does over eight hours, so the fastest were predicted too slow and the
+slowest too fast (analysis/long_course_expand.py). Weak, poorly-connected tiers
 (Development Regional Cups) get their course constant anchored to the neutral
 baseline, since ALS can't gauge their field strength. The form model is used for
 **long-course predictions** and the **athlete-page form display** (short-course

@@ -1342,6 +1342,11 @@ def load_manual_startlists(conn):
         insert_event(conn, event_id=event_id, name=ev['name'], venue=ev['venue'], country=ev['country'],
                      continent=_country_to_continent(ev['country']), start_date=ev['date'], end_date=ev['date'],
                      longitude=0, latitude=0, brand=ev['brand'], prize_money_usd=int(ev.get('prize_usd') or 0))
+        # insert_event is INSERT OR IGNORE: a corrected file must still reach an
+        # event row written by an earlier build, since the name is what the
+        # series rules match to link the event to its past editions.
+        conn.execute("UPDATE events SET name = ?, venue = ?, start_date = ?, end_date = ? WHERE event_id = ?",
+                     [ev['name'], ev['venue'], ev['date'], ev['date'], event_id])
         for gender, entries in data['races'].items():
             if not entries:
                 continue

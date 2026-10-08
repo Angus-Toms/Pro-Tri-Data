@@ -3943,21 +3943,49 @@ def get_field_rating_trends(athlete_ids, course, before_date=None, n=5):
     return trends
 
 
+@lru_cache(maxsize=256)
+def get_course_drift(gender, distance, year):
+    """Era drift of the course constant, C per year, per discipline: the OLS
+    slope of C on race year over every (gender, distance) race from 2016 up
+    to but excluding `year`. Negative means courses are getting faster.
+    Long-course finishers were running ~2% faster than predicted at every
+    rank because a three-edition mean sits a year or two in the past; this
+    carries each edition forward to the target year before averaging.
+    Validated in analysis/long_course_variants.py (Oct 2026) on full and
+    middle distance; T100 has too few seasons for a stable slope and keeps
+    the plain mean."""
+    if distance not in ('long', 'middle'):
+        return {}
+    rows = _get_conn().execute("""
+        SELECT fc.discipline, regr_slope(fc.c, year(r.race_date))
+        FROM form_race_constants fc
+        JOIN races r ON fc.race_id = r.race_id
+        WHERE r.gender = ? AND r.distance = ?
+          AND r.race_date >= DATE '2016-01-01' AND year(r.race_date) < ?
+        GROUP BY fc.discipline
+        HAVING COUNT(*) >= 30 AND COUNT(DISTINCT year(r.race_date)) >= 4
+    """, [gender, distance, year]).fetchall()
+    return {disc: slope for disc, slope in rows if slope is not None}
+
+
 @lru_cache(maxsize=2048)
 def get_form_course_constants(event_id, gender, distance, before_date):
     """Pre-race course constants {discipline: C} for predicting outright
     times as exp(form_rel + C).
 
     Mean C of the event's last 3 editions (same recurring event, gender and
-    distance, strictly before the race date); disciplines without event
-    history fall back to the all-time mean for the (gender, distance).
-    Validated in analysis/model_compare.py.
+    distance, strictly before the race date), each carried to the target year
+    by get_course_drift; disciplines without event history fall back to the
+    drift-adjusted all-time mean for the (gender, distance).
+    Validated in analysis/model_compare.py and analysis/long_course_variants.py.
     """
     conn = _get_conn()
+    target_year = before_date.year
+    drift = get_course_drift(gender, distance, target_year)
     out = {}
     if event_id is not None:
         rows = conn.execute("""
-            SELECT fc.discipline, fc.c
+            SELECT fc.discipline, fc.c, year(r.race_date)
             FROM form_race_constants fc
             JOIN races r ON fc.race_id = r.race_id
             JOIN event_recurring er ON er.event_id = r.event_id
@@ -3967,19 +3995,20 @@ def get_form_course_constants(event_id, gender, distance, before_date):
             ORDER BY fc.discipline, r.race_date DESC
         """, [event_id, gender, distance, before_date]).fetchall()
         by_disc = {}
-        for disc, c in rows:
+        for disc, c, year in rows:
             if len(by_disc.setdefault(disc, [])) < 3:
-                by_disc[disc].append(c)
+                by_disc[disc].append(c + drift.get(disc, 0.0) * (target_year - year))
         out = {disc: sum(cs) / len(cs) for disc, cs in by_disc.items()}
+    # The drift is linear, so adjusting the mean by the mean year is exact.
     rows = conn.execute("""
-        SELECT fc.discipline, AVG(fc.c)
+        SELECT fc.discipline, AVG(fc.c), AVG(year(r.race_date))
         FROM form_race_constants fc
         JOIN races r ON fc.race_id = r.race_id
         WHERE r.gender = ? AND r.distance = ? AND r.race_date < ?
         GROUP BY fc.discipline
     """, [gender, distance, before_date]).fetchall()
-    for disc, c in rows:
-        out.setdefault(disc, c)
+    for disc, c, mean_year in rows:
+        out.setdefault(disc, c + drift.get(disc, 0.0) * (target_year - mean_year))
     return out
 
 
