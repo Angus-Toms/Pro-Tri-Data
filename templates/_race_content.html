@@ -254,6 +254,8 @@
                     <th class="sortable time-col" data-sort="time">Bike</th>
                     <th class="sortable time-col" data-sort="time">Run</th>
                     <th class="sortable time-col overall-col" data-sort="time">Overall</th>
+                    <th class="sortable pct-col" data-sort="number">Win</th>
+                    <th class="sortable pct-col" data-sort="number">Podium</th>
                 </tr>
             </thead>
             <tbody>
@@ -291,6 +293,14 @@
                     <td class="time-col overall-col" data-value="{{ row.overall_s }}">
                         <span class="overall-time">{{ row.overall_s }}</span>
                         {% if row.overall_behind_s %}<span class="time-cell-gap">{{ row.overall_behind_s }}</span>{% endif %}
+                    </td>
+                    <td class="split-col pct-col" data-value="{{ row.win_pct }}">
+                        <span class="time-disc-label">Win</span>
+                        <span class="time-cell-main">{{ row.win_pct_label }}</span>
+                    </td>
+                    <td class="split-col pct-col" data-value="{{ row.podium_pct }}">
+                        <span class="time-disc-label">Podium</span>
+                        <span class="time-cell-main">{{ row.podium_pct_label }}</span>
                     </td>
                     <td class="splits-toggle-col" aria-hidden="true">
                         <button type="button" class="splits-toggle" aria-label="Show splits" aria-expanded="false">

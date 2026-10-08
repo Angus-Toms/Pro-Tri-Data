@@ -119,7 +119,11 @@ def _prediction_rows(stored, people, extra=()):
             'year_of_birth':      p.get('year_of_birth'),
             'is_low_confidence':  r['is_low_confidence'],
             'predicted_position': r['predicted_position'],
+            'win_pct':            r['win_pct'],
+            'podium_pct':         r['podium_pct'],
         }
+        for k in ('win_pct', 'podium_pct'):
+            row[f'{k}_label'] = '<1%' if r[k] < 0.005 else f'{r[k]:.0%}'
         for k in extra:
             row[k] = p.get(k, '')
         for disc in DISCS:

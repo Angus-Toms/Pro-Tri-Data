@@ -407,6 +407,7 @@
 .results-table .athlete-col  { width: 190px; }
 .results-table .yob-col      { width: 90px; }
 .results-table .time-col     { width: calc((100% - 360px) / 6); }
+.results-table .pct-col      { width: 70px; font-variant-numeric: tabular-nums; }
 
 .rating-table .athlete-col   { width: 190px; }
 .rating-table .yob-col       { width: 90px; }
@@ -656,6 +657,8 @@
     .time-col, .rating-col {
         font-size: 0.75rem;
     }
+    /* Win / Podium have no gap line, so centring would drop them below the splits' labels */
+    .results-table tr.expanded td.pct-col { align-self: flex-start; }
     /* .race-stat-cards responsive layout lives in base.css */
 }
 
