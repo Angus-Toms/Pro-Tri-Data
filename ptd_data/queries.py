@@ -6328,29 +6328,40 @@ def get_race_podiums_bulk(race_ids):
 # ---------------------------------------------------------------------------
 
 def get_rating_risers(gender, course='short', days=30, limit=4):
-    """Biggest elite rating gains on a course in the last `days`, one row per
-    athlete (their best single-race gain), for the home page's risers list."""
+    """Biggest net elite rating gains on a course over the last `days` (the
+    rating now against the rating carried into the window), headlined by the
+    athlete's best single-race gain inside it. For the home page's risers."""
     cols = ["athlete_id", "name", "country_alpha3", "profile_img",
             "race_id", "race_title", "position", "overall_change", "overall"]
     return _dicts(cols, _get_conn().execute(f"""
+        WITH w AS (
+            SELECT ra.athlete_id, ra.race_id, ra.overall, ra.overall_change,
+                   r.race_title, res.position,
+                   ROW_NUMBER() OVER (PARTITION BY ra.athlete_id ORDER BY r.race_date, ra.race_id) AS rn_first,
+                   ROW_NUMBER() OVER (PARTITION BY ra.athlete_id ORDER BY r.race_date DESC, ra.race_id DESC) AS rn_last,
+                   ROW_NUMBER() OVER (PARTITION BY ra.athlete_id ORDER BY ra.overall_change DESC) AS rn_best
+            FROM ratings ra
+            JOIN races r     ON ra.race_id = r.race_id
+            JOIN results res ON res.race_id = ra.race_id AND res.athlete_id = ra.athlete_id
+            WHERE ra.category = 'elite'
+              AND r.distance IN {_course_in(course)}
+              AND r.race_date >= current_date - INTERVAL {int(days)} DAY
+              AND NOT EXISTS (SELECT 1 FROM ignored_races ig WHERE ig.race_id = r.race_id)
+        )
         SELECT a.athlete_id, a.name, n.alpha3, a.profile_img,
-               r.race_id, r.race_title, res.position, ra.overall_change, ra.overall
-        FROM ratings ra
-        JOIN races r         ON ra.race_id = r.race_id
-        JOIN results res     ON res.race_id = ra.race_id AND res.athlete_id = ra.athlete_id
-        JOIN athletes a      ON ra.athlete_id = a.athlete_id
+               best.race_id, best.race_title, best.position,
+               last.overall - (first.overall - first.overall_change) AS net, last.overall
+        FROM (SELECT * FROM w WHERE rn_last = 1) last
+        JOIN (SELECT * FROM w WHERE rn_first = 1) first USING (athlete_id)
+        JOIN (SELECT * FROM w WHERE rn_best = 1) best USING (athlete_id)
+        JOIN athletes a      ON a.athlete_id = last.athlete_id
         JOIN nationalities n ON a.country_full = n.country_full
-        WHERE ra.category = 'elite'
-          AND r.distance IN {_course_in(course)}
-          AND r.race_date >= current_date - INTERVAL {int(days)} DAY
-          AND a.gender = ?
-          AND ra.overall_change > 0
-          AND ra.overall >= 2000
+        WHERE a.gender = ?
+          AND net > 0
+          AND last.overall >= 2000
           -- Debutantes leap off the start rating; a riser needs a record to rise from.
           AND (SELECT COUNT(*) FROM ratings x WHERE x.athlete_id = a.athlete_id AND x.category = 'elite') >= 5
-          AND NOT EXISTS (SELECT 1 FROM ignored_races ig WHERE ig.race_id = r.race_id)
-        QUALIFY ROW_NUMBER() OVER (PARTITION BY a.athlete_id ORDER BY ra.overall_change DESC) = 1
-        ORDER BY ra.overall_change DESC
+        ORDER BY net DESC
         LIMIT {int(limit)}
     """, [gender]))
 

@@ -296,7 +296,14 @@
 .home-mine-title + .home-mine { margin-bottom: 1.25rem; }
 .home-mine { table-layout: fixed; box-shadow: var(--box-shadow); border-radius: var(--border-radius); overflow: hidden; }
 .home-mine .c-who { width: 11.5rem; }
-.home-mine .c-pos { width: 3.5rem; }
+.home-mine .c-pos { width: 5rem; }
+/* Full column names where there is room (wrapping to two lines), short ones on narrower screens */
+.home-mine .th-short { display: none; }
+.home-mine .th-long { display: inline-block; white-space: normal; line-height: 1.2; }
+@media (max-width: 1100px) {
+    .home-mine .th-long { display: none; }
+    .home-mine .th-short { display: inline; }
+}
 .home-mine .c-time { width: 5.5rem; }
 .home-mine .c-chg { width: 4.5rem; }
 .home-mine th { cursor: default; white-space: nowrap; }

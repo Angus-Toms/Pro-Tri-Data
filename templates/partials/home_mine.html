@@ -21,7 +21,7 @@
 <h4 class="home-mine-title">Coming up</h4>
 <table class="home-mine">
     {{ cols() }}
-    <thead><tr><th>Race</th><th>Athlete</th><th class="num">Pred.</th><th class="num" colspan="2">Pred. time</th></tr></thead>
+    <thead><tr><th>Race</th><th>Athlete</th><th class="num"><span class="th-long">Predicted position</span><span class="th-short">Pred.</span></th><th class="num" colspan="2"><span class="th-long">Predicted time</span><span class="th-short">Pred. time</span></th></tr></thead>
     <tbody>
         {% for s in coming %}
         <tr>
@@ -42,7 +42,7 @@
 <h4 class="home-mine-title">{{ results_heading }}</h4>
 <table class="home-mine">
     {{ cols() }}
-    <thead><tr><th>Race</th><th>Athlete</th><th class="num">Pos</th><th class="num">Time</th><th class="num">Rating</th></tr></thead>
+    <thead><tr><th>Race</th><th>Athlete</th><th class="num"><span class="th-long">Position</span><span class="th-short">Pos</span></th><th class="num">Time</th><th class="num">Rating</th></tr></thead>
     <tbody>
         {% for r in results %}
         <tr>
