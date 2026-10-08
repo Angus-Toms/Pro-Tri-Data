@@ -1,11 +1,17 @@
+import re
+from datetime import date, timedelta
+
+import anyio
 from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
+
 from config import ASSET_VERSION, STATIC_BASE_URL
 from app.display_helpers import flag
-
 from ptd_data import queries
+from ptd_users import queries as uq
 from app.routers.about import load_blogs
 from app.routers.event_page import _predicted_podium
+from app.routers.router_utils import format_rating_change
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -13,53 +19,103 @@ templates.env.globals["STATIC_BASE_URL"] = STATIC_BASE_URL
 templates.env.globals["ASSET_VERSION"] = ASSET_VERSION
 templates.env.globals["flag"]          = flag
 
-MEN_CHAMP_ID      = 86042
-WOMEN_CHAMP_ID    = 63163
-MEN_IM_CHAMP_ID   = 76434     # Casper Stornes - 2025 Ironman World Champion (Nice)
-WOMEN_IM_CHAMP_ID = 94515     # Solveig Løvseth - 2025 Ironman World Champion (Kona)
+RANKING_TABS = [
+    ("short", "Short course", "elite", "short"),
+    ("long",  "Long course",  "elite", "long"),
+    ("ag",    "Age group",    "ag",    "short"),
+]
+
+
+def sparkline(vals, w=100.0, h=28.0, pad=3.0):
+    """Polyline points for a list of ratings, oldest first, in a w x h viewBox."""
+    if len(vals) < 2:
+        return ""
+    lo, hi = min(vals), max(vals)
+    span = (hi - lo) or 1.0
+    n = len(vals)
+    return " ".join(f"{(i / (n - 1)) * w:.1f},{pad + (1 - (v - lo) / span) * (h - 2 * pad):.1f}"
+                    for i, v in enumerate(vals))
+
+
+async def _race_counts(race_ids):
+    return await uq.follower_counts("race", race_ids), await uq.comment_counts(race_ids)
 
 
 @router.get("/")
 def index(request: Request):
+    today = date.today()
+
+    # --- latest results: three most recent events, two programmes each (men first) ---
+    recent = queries.get_recent_events(0, 3)
+    for e in recent:
+        e["races"] = e["races"][:2]
+
+    # --- this weekend: the next three events with their predicted podiums ---
+    all_upcoming = queries.get_upcoming_events()
+    # Only elite races carry predictions; an event whose first two programmes
+    # are age-group start lists would show two empty columns, so prefer events
+    # with a predicted podium and fall back to the next three if none have one.
+    candidates = all_upcoming[:8]
+    entries = queries.get_upcoming_race_entries_bulk(
+        [r["race_id"] for e in candidates for r in e["races"][:2]])
+    for e in candidates:
+        e["entries"] = sum(r["entry_count"] or 0 for r in e["races"])
+        e["races"] = e["races"][:2]
+        for r in e["races"]:
+            r["podium"] = _predicted_podium(entries.get(r["race_id"], []), r)
+    upcoming = [e for e in candidates if any(r["podium"] for r in e["races"])][:3] or candidates[:3]
+    week = [e for e in all_upcoming if e["start_date"] <= today + timedelta(days=7)]
+    week_races = sum(len(e["races"]) for e in week)
+    week_countries = len({e["country"] for e in week})
+
+    # Follower and comment counts live in Postgres; the handler is sync
+    # (threadpool-limited, see main.py) so hop to the event loop for them.
+    race_ids = [r["race_id"] for e in recent + upcoming for r in e["races"]]
+    followers, comments = anyio.from_thread.run(_race_counts, race_ids)
+    for e in recent + upcoming:
+        for r in e["races"]:
+            r["followers"] = followers.get(r["race_id"], 0)
+            r["comments"]  = comments.get(r["race_id"], 0)
+
+    # --- schedule strip: last four events raced, next six to come ---
+    def strip_item(e, status):
+        return {"href": f"/event/{e['event_id']}", "date": e["start_date"],
+                "name": re.sub(r"^\d{4}\s+", "", e["name"]), "status": status}
+    predicted_ids = {e["event_id"] for e in upcoming if any(r["podium"] for r in e["races"])}
+    schedule = ([strip_item(e, "Results") for e in reversed(queries.get_recent_events(0, 4))]
+                + [strip_item(e, "Predictions" if e["event_id"] in predicted_ids else "Start list")
+                   for e in all_upcoming[:6]])
+
+    # --- on the rise: biggest short-course gains, men then women ---
+    risers = {g: queries.get_rating_risers(g) for g in ("male", "female")}
+    points = queries.get_recent_rating_points_bulk(
+        [r["athlete_id"] for rows in risers.values() for r in rows])
+    for rows in risers.values():
+        for r in rows:
+            r["change"] = format_rating_change(r["overall_change"])
+            r["spark"]  = sparkline(points.get(r["athlete_id"], []))
+            r["race_short"] = re.sub(r"^\d{4}\s+", "", r["race_title"])
+
+    rankings = [{"key": key, "label": label,
+                 "men":   queries.get_podium("male",   cat, course, limit=5),
+                 "women": queries.get_podium("female", cat, course, limit=5)}
+                for key, label, cat, course in RANKING_TABS]
+
     counts = queries.get_counts()
-
-    def champ_card(athlete_id, course='short'):
-        info         = queries.get_athlete_info(athlete_id)
-        ratings      = queries.get_athlete_current_ratings(athlete_id, course=course)
-        stats        = queries.get_athlete_stats(athlete_id, course=course)
-        active_ranks = queries.get_athlete_active_rankings(athlete_id, course=course)
-        # active_ranks overrides the stored world_overall from ratings so the
-        # card shows rank among currently racing athletes, not all-time
-        return {**info, **(ratings or {}), **stats, **(active_ranks or {})}
-
-    upcoming_events = queries.get_upcoming_events()[:3]
-    entries_by_race = queries.get_upcoming_race_entries_bulk(
-        [r["race_id"] for e in upcoming_events for r in e["races"]])
-    for event in upcoming_events:
-        for race in event["races"]:
-            race["podium"] = _predicted_podium(
-                entries_by_race.get(race["race_id"], []),
-                {"race_id": race["race_id"], "category": race["category"]},
-            )
-
     blogs = load_blogs()
     return templates.TemplateResponse("index.html", {
-        "request":       request,
-        "active_page":   "home",
+        "request":        request,
+        "active_page":    "home",
+        "schedule":       schedule,
+        "upcoming":       upcoming,
+        "week_races":     week_races,
+        "week_countries": week_countries,
+        "recent":         recent,
+        "risers":         risers,
+        "rankings":       rankings,
+        "latest_blog":    blogs[0] if blogs else None,
         "total_athletes": counts["athletes"],
         "total_races":    counts["races"],
         "total_results":  counts["results"],
-        "men_champ":         champ_card(MEN_CHAMP_ID),
-        "women_champ":       champ_card(WOMEN_CHAMP_ID),
-        "men_im_champ":      champ_card(MEN_IM_CHAMP_ID,   course='long'),
-        "women_im_champ":    champ_card(WOMEN_IM_CHAMP_ID, course='long'),
-        "recent_events":  queries.get_recent_events(0, 3),
-        "upcoming_events": upcoming_events,
-        "men_podium":     queries.get_podium("male"),
-        "women_podium":   queries.get_podium("female"),
-        "men_ag_podium":  queries.get_podium("male",   "ag"),
-        "women_ag_podium": queries.get_podium("female", "ag"),
-        "men_long_podium":   queries.get_podium("male",   "elite", course='long'),
-        "women_long_podium": queries.get_podium("female", "elite", course='long'),
-        "latest_blog":    blogs[0] if blogs else None,
+        "updated":        queries.get_latest_race_date(),
     })

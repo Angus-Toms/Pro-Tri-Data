@@ -123,7 +123,9 @@ async def get_session_user(token_hash):
     if row is None:
         return None
     user = dict(row)
-    if user.pop("last_seen_at") < datetime.now(timezone.utc) - timedelta(days=1):
+    # The pre-bump value stays on the dict: it is what "since you were last
+    # here" on the home page means.
+    if user["last_seen_at"] < datetime.now(timezone.utc) - timedelta(days=1):
         await db.pool.execute("""
             update sessions set last_seen_at = now(), expires_at = now() + $2
             where token_hash = $1
@@ -152,6 +154,24 @@ async def get_follows(user_id):
 async def follower_count(kind, ref_id):
     return await db.pool.fetchval(
         "select count(*) from follows where kind = $1 and ref_id = $2", kind, ref_id)
+
+
+async def follower_counts(kind, ref_ids):
+    """{ref_id: followers} for many targets of one kind; missing ids have none."""
+    rows = await db.pool.fetch(
+        "select ref_id, count(*) as n from follows where kind = $1 and ref_id = any($2::bigint[]) group by ref_id",
+        kind, list(ref_ids))
+    return {r["ref_id"]: r["n"] for r in rows}
+
+
+async def comment_counts(race_ids):
+    """{race_id: visible comments} for many races; missing ids have none."""
+    rows = await db.pool.fetch("""
+        select race_id, count(*) as n from comments
+        where race_id = any($1::bigint[]) and hidden_at is null and deleted_at is null
+        group by race_id
+    """, list(race_ids))
+    return {r["race_id"]: r["n"] for r in rows}
 
 
 async def toggle_follow(user_id, kind, ref_id):

@@ -274,9 +274,9 @@ def search_athletes_full(query, disc="overall", order="top", country=None,
 
 
 @lru_cache(maxsize=32)
-def get_podium(gender, category='elite', course='short'):
+def get_podium(gender, category='elite', course='short', limit=3):
     """
-    Top 3 athletes by current overall rating for a given gender, category, and course.
+    Top N athletes by current overall rating for a given gender, category, and course.
     Returns list of dicts.
     """
     conn = _get_conn()
@@ -313,7 +313,7 @@ def get_podium(gender, category='elite', course='short'):
         ) cur ON a.athlete_id = cur.athlete_id
         WHERE a.gender = ?
         ORDER BY cur.overall DESC
-        LIMIT 3
+        LIMIT {int(limit)}
     """, [category, category, gender]))
 
 
@@ -6241,7 +6241,9 @@ def get_recent_results_for_athletes(athlete_ids, days=90):
     rows = _get_conn().execute(f"""
         SELECT a.athlete_id, a.name, n.alpha3 AS country_alpha3,
                r.race_id, r.race_title, r.prog_name, r.race_date,
-               res.position, res.status, res.overall_s, ra.overall_change
+               res.position, res.status, res.overall_s, ra.overall_change,
+               (SELECT MIN(w.overall_s) FROM results w
+                 WHERE w.race_id = res.race_id AND w.position = 1) AS winner_s
         FROM results res
         JOIN races r         ON res.race_id = r.race_id
         JOIN athletes a      ON res.athlete_id = a.athlete_id
@@ -6254,7 +6256,7 @@ def get_recent_results_for_athletes(athlete_ids, days=90):
     """, list(athlete_ids)).fetchall()
     cols = ["athlete_id", "name", "country_alpha3", "race_id", "race_title",
             "prog_name", "race_date", "position", "status", "overall_s",
-            "overall_change"]
+            "overall_change", "winner_s"]
     return [dict(zip(cols, r)) for r in rows]
 
 
@@ -6292,3 +6294,92 @@ def get_race_podiums_bulk(race_ids):
         out.setdefault(race_id, []).append({"position": position, "athlete_id": athlete_id,
                                             "name": name, "overall_s": overall_s})
     return out
+
+
+# ---------------------------------------------------------------------------
+# Home page
+# ---------------------------------------------------------------------------
+
+def get_rating_risers(gender, days=14, limit=4):
+    """Biggest short-course elite rating gains in the last `days`, one row per
+    athlete (their best single-race gain), for the home page's risers list."""
+    cols = ["athlete_id", "name", "country_alpha3", "profile_img",
+            "race_title", "position", "overall_change", "overall"]
+    return _dicts(cols, _get_conn().execute(f"""
+        SELECT a.athlete_id, a.name, n.alpha3, a.profile_img,
+               r.race_title, res.position, ra.overall_change, ra.overall
+        FROM ratings ra
+        JOIN races r         ON ra.race_id = r.race_id
+        JOIN results res     ON res.race_id = ra.race_id AND res.athlete_id = ra.athlete_id
+        JOIN athletes a      ON ra.athlete_id = a.athlete_id
+        JOIN nationalities n ON a.country_full = n.country_full
+        WHERE ra.category = 'elite'
+          AND r.distance IN {_course_in('short')}
+          AND r.race_date >= current_date - INTERVAL {int(days)} DAY
+          AND a.gender = ?
+          AND ra.overall_change > 0
+          AND ra.overall >= 2000
+          -- Debutantes leap off the start rating; a riser needs a record to rise from.
+          AND (SELECT COUNT(*) FROM ratings x WHERE x.athlete_id = a.athlete_id AND x.category = 'elite') >= 5
+          AND NOT EXISTS (SELECT 1 FROM ignored_races ig WHERE ig.race_id = r.race_id)
+        QUALIFY ROW_NUMBER() OVER (PARTITION BY a.athlete_id ORDER BY ra.overall_change DESC) = 1
+        ORDER BY ra.overall_change DESC
+        LIMIT {int(limit)}
+    """, [gender]))
+
+
+def get_recent_rating_points_bulk(athlete_ids, n=8):
+    """{athlete_id: [overall, ...]} for each athlete's last `n` short-course
+    elite races, oldest first. Feeds the sparklines beside the risers."""
+    if not athlete_ids:
+        return {}
+    ids = list(athlete_ids)
+    rows = _get_conn().execute(f"""
+        SELECT athlete_id, overall FROM (
+            SELECT ra.athlete_id, ra.overall, r.race_date, ra.race_id
+            FROM ratings ra JOIN races r ON ra.race_id = r.race_id
+            WHERE ra.athlete_id IN ({",".join("?" * len(ids))})
+              AND ra.category = 'elite' AND r.distance IN {_course_in('short')}
+            QUALIFY ROW_NUMBER() OVER (PARTITION BY ra.athlete_id
+                                       ORDER BY r.race_date DESC, ra.race_id DESC) <= {int(n)}
+        ) ORDER BY athlete_id, race_date, race_id
+    """, ids).fetchall()
+    out = {}
+    for athlete_id, overall in rows:
+        out.setdefault(athlete_id, []).append(overall)
+    return out
+
+
+def get_latest_race_date():
+    """Date of the newest race with results: what "ratings updated" means."""
+    return _get_conn().execute(
+        "SELECT MAX(r.race_date) FROM races r WHERE EXISTS (SELECT 1 FROM results res WHERE res.race_id = r.race_id)"
+    ).fetchone()[0]
+
+
+def get_upcoming_starters_by_country(alpha3, days=10, limit=3, exclude=()):
+    """Athletes from one country on start lists in the next `days`, best
+    rated first: the home page's follow suggestions."""
+    exclude = list(exclude)
+    ex_sql = f"AND a.athlete_id NOT IN ({','.join('?' * len(exclude))})" if exclude else ""
+    cols = ["athlete_id", "name", "country_alpha3", "race_title", "race_date"]
+    return _dicts(cols, _get_conn().execute(f"""
+        SELECT a.athlete_id, a.name, n.alpha3, ur.race_title, ur.race_date
+        FROM start_list_entries sle
+        JOIN upcoming_races ur ON sle.race_id = ur.race_id
+        JOIN athletes a        ON sle.athlete_id = a.athlete_id
+        JOIN nationalities n   ON a.country_full = n.country_full
+        LEFT JOIN (
+            SELECT ra.athlete_id, ra.overall
+            FROM ratings ra JOIN races r ON ra.race_id = r.race_id
+            WHERE ra.category = 'elite'
+            QUALIFY ROW_NUMBER() OVER (PARTITION BY ra.athlete_id
+                                       ORDER BY r.race_date DESC, ra.race_id DESC) = 1
+        ) latest ON latest.athlete_id = a.athlete_id
+        WHERE n.alpha3 = ?
+          AND ur.race_date BETWEEN current_date AND current_date + INTERVAL {int(days)} DAY
+          {ex_sql}
+        QUALIFY ROW_NUMBER() OVER (PARTITION BY a.athlete_id ORDER BY ur.race_date) = 1
+        ORDER BY latest.overall DESC NULLS LAST
+        LIMIT {int(limit)}
+    """, [alpha3] + exclude))

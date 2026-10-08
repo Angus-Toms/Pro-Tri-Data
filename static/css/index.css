@@ -1,637 +1,375 @@
 /* ============================================
    HOME PAGE
+   The page is built from the week: a schedule strip in the navy band, then a
+   main column (your athletes, this weekend, latest results) and a side rail
+   (risers, rankings, blog). Rules, type and the site's tables do the work.
    ============================================ */
-.home-page {
+
+/* ── Schedule strip (in the hero slot) ── */
+.home-strip-inner {
+    width: 90%;
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: stretch;
+}
+
+.home-strip-label {
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
+    justify-content: center;
+    padding: 0.9rem 1.25rem 0.9rem 0;
+    margin-right: 1.25rem;
+    border-right: 1px solid rgba(255,255,255,0.12);
+}
+.home-strip-label b {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--primary-color);
+    white-space: nowrap;
+}
+.home-strip-label span {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.45);
+    white-space: nowrap;
 }
 
-/* ── HERO ── */
-/* Full-bleed navy band, cancels the page-container's top padding */
-.home-hero {
-    width: 100vw;
-    margin-left: calc(50% - 50vw);
-    background: var(--navy);
-    border-bottom: 3px solid var(--primary-color);
-    padding: 3.5rem 0;
-    margin-top: -20px;
-    margin-bottom: 0;
-}
-
-.home-hero-inner {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 var(--spacing-xl);
+.home-schedule {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 3rem;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
+            mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
 }
-
-.home-hero-copy h1 {
-    font-size: 2.5rem;
-    font-weight: 800;
+.home-schedule::-webkit-scrollbar { display: none; }
+.home-schedule a {
+    flex: 0 0 auto;
+    padding: 0.8rem 1.25rem 0.85rem 0;
+    margin-right: 1.25rem;
+    border-right: 1px solid rgba(255,255,255,0.1);
     color: #fff;
-    margin: 0;
-    letter-spacing: -0.02em;
-    line-height: 1.15;
+    text-decoration: none;
+    font-size: 0.8rem;
+    line-height: 1.35;
 }
-
-/* Odometer digits (built by index.js). The window is padded past 1em with a faded
-   mask so neighbouring digits roll in and out of view rather than being hard-clipped. */
-.stat-counter { display: inline-flex; }
-
-.odo-cell {
-    display: inline-block;
-    height: 1.24em;
-    padding: 0.12em 0;
-    margin: -0.12em 0;
-    overflow: hidden;
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22%, #000 78%, transparent 100%);
-            mask-image: linear-gradient(to bottom, transparent 0, #000 22%, #000 78%, transparent 100%);
+.home-schedule a:last-child { border-right: 0; }
+.home-schedule a:hover .n { color: var(--primary-color); }
+.home-schedule .d {
+    display: block;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
 }
+.home-schedule a.next .d { color: var(--primary-color); }
+.home-schedule .n { display: block; font-weight: 600; white-space: nowrap; }
+.home-schedule .s { display: block; font-size: 0.72rem; font-weight: 600; color: var(--primary-color); }
+.home-schedule .s.done { font-weight: 500; color: rgba(255,255,255,0.5); }
 
-.odo-strip { display: flex; flex-direction: column; }
-.odo-strip span { height: 1em; line-height: 1; }
-
-.home-intro {
-    margin: 2rem auto 0;
-    max-width: 72ch;
-    color: var(--text-light);
-    font-size: 1.02rem;
-    line-height: 1.6;
-    text-align: center;
-    padding: 0 var(--spacing-md);
-}
-
-
-/* ── SECTIONS ── */
-.home-section {
-    padding: 2.75rem 0;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.home-section--last {
-    border-bottom: none;
-    padding-bottom: 1rem;
-}
-
-/* Orange left-border section heading */
-.home-section-head {
+/* ── Layout ── */
+.home-layout {
     display: grid;
-    grid-template-columns: 1fr auto;
-    column-gap: 1rem;
-    align-items: center;     /* vertically centre title and more-link on row 1 */
-    margin-bottom: 1.75rem;
-    padding-left: 1rem;
-    border-left: 4px solid var(--primary-color);
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 3rem;
+    align-items: start;
+    padding-top: 1rem;
 }
-
-/* The title + sub are wrapped in a <div> in the markup; flatten that wrapper
-   into the grid so the sub can span both columns (full width, under the
-   more-link) while the title stays in column 1 next to the more-link. */
-.home-section-head > div { display: contents; }
-.home-section-title { grid-column: 1; grid-row: 1; }
-.home-more-link     { grid-column: 2; grid-row: 1; }
-.home-section-sub   { grid-column: 1 / -1; grid-row: 2; }
-
-.home-section-title {
-    font-size: 1.3rem;
-    font-weight: 800;
-    color: var(--text-color);
-    margin: 0 0 0.15rem;
-    letter-spacing: -0.01em;
-}
-
-.home-section-sub {
-    font-size: 0.85rem;
-    color: var(--text-lighter);
-    margin: 0;
-}
-
-.home-subsection-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 1rem;
-    margin: 0 0 1rem;
-}
-
-.home-section-head:has(+ .home-subsection-head) {
-    margin-bottom: 0.75rem;
-}
-
-.home-subsection-title {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--text-color);
-    margin: 0 0 0.1rem;
-    letter-spacing: -0.01em;
-}
-
-.home-subsection-sub {
-    font-size: 0.75rem;
-    color: var(--text-lighter);
-    margin: 0;
-}
-
-.home-section .home-events-grid + .home-subsection-head {
-    margin-top: 1.75rem;
-}
-
-.event-race-predicted-label {
-    font-size: 0.65rem;
-    font-weight: 400;
-    text-transform: none;
-    letter-spacing: 0;
-    color: var(--text-lighter);
-}
-.event-race-dot-sep { color: var(--text-lighter); margin: 0 0.1rem; }
-
-.home-more-link {
-    font-size: 0.85rem;
+.home-section { margin-bottom: 3rem; }
+.home-section[hidden] { display: none; }
+.page-section-head--sm { font-size: 1.1rem; }
+.section-link {
+    font-size: 0.82rem;
     font-weight: 600;
     color: var(--primary-color);
     text-decoration: none;
     white-space: nowrap;
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
 }
+.section-link:hover { color: var(--primary-hover); }
+.home-empty { color: var(--text-light); font-size: 0.9rem; }
 
-.home-more-link::after {
-    content: '';
-    display: inline-block;
-    width: 0.45em;
-    height: 0.45em;
-    border-right: 2px solid currentColor;
-    border-top: 2px solid currentColor;
-    transform: rotate(45deg);
-    flex-shrink: 0;
-}
-
-.home-more-link:hover { color: var(--primary-hover); }
-
-
-/* ── SECTION 1: CHAMPION CARDS ── */
-/* Card + grid styles are shared via .champ-* / .champs-grid in base.css. */
-
-
-/* ── SECTION 2: RECENT EVENTS ── */
-.home-events-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.event-card {
-    position: relative;
-    background: var(--white);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-lg);
-    overflow: hidden;
-    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.event-card:hover {
-    border-color: var(--primary-color);
-    box-shadow: var(--box-shadow-hover);
-}
-
-.event-card-overlay {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-}
-
-/* Navy header: event name (+ optional date on the right) */
-.event-card-header {
-    background: var(--navy);
-    padding: 0.65rem 1.25rem;
-    position: relative;
-    z-index: 1;
-    pointer-events: none;
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-}
-
-/* Header-inline meta (date · venue): shown only at <=768px (info column carries them on desktop) */
-.event-card-header-meta {
-    display: none;
-    font-size: 0.72rem;
-    font-weight: 500;
-    color: #9aa3ae;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.event-card-header-meta-sep {
-    margin: 0 0.4rem;
-    color: #6b7280;
-}
-
-.event-card-title {
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: #fff;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0;
-}
-
-.event-card-date {
-    font-size: 0.72rem;
-    font-weight: 500;
-    color: #9aa3ae;
-    white-space: nowrap;
-    flex-shrink: 0;
-    font-variant-numeric: tabular-nums;
-}
-
-/* Title stays white on hover - border + shadow signal the card is clickable. */
-
-/* Body: info panel left, races right */
-.event-card-body {
-    display: flex;
-    position: relative;
-    z-index: 1;
-}
-
-.event-card-info {
-    width: 150px;
-    flex-shrink: 0;
-    padding: 0.9rem 0.9rem 0.9rem 1rem;
-    border-right: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    pointer-events: none;
-}
-
-.event-meta-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.35rem;
-    font-size: 0.75rem;
-    color: var(--text-lighter);
-    line-height: 1.35;
-}
-
-.event-meta-icon {
-    flex-shrink: 0;
-    color: var(--text-lighter);
-    margin-top: 1px;
-}
-
-/* Races column - two podiums side by side */
-.event-races {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: row;
-    pointer-events: none;
-}
-
-.event-race {
-    flex: 1;
-    min-width: 0;
-    padding: 0.45rem 1rem 0.75rem;
-}
-
-.event-race + .event-race {
-    position: relative;
-}
-
-.event-race + .event-race::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 6px;
-    bottom: 6px;
-    width: 1px;
-    background: var(--border-color);
-}
-
-/* Race title row with partial separator line */
-.event-race-header {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    margin-bottom: 0.5rem;
-}
-
-.event-race-header::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border-color);
-    margin-right: 0.75rem;
-}
-
-.event-race-title {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-color);
-    text-decoration: none;
-    flex-shrink: 0;
-    position: relative;
-    z-index: 1;
-    pointer-events: all;
-}
-
-.event-race-title:hover {
-    color: var(--primary-color);
-}
-
-.event-race-podium {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-}
-
-.event-race-entry {
+/* ── Athlete: photo, name, flag. One treatment everywhere on the page. ── */
+.home-who {
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    color: var(--text-color);
+    min-width: 0;
+    color: inherit;
+    text-decoration: none;
 }
-
-.event-race-entry-img {
-    width: 24px;
-    height: 24px;
+.home-who:hover .home-who-name { color: var(--primary-color); }
+.home-ath-img {
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
+    background: var(--border-color);
 }
-
-.event-entry-name {
-    flex: 1;
-    min-width: 0;
+.home-who-name {
+    font-weight: 600;
+    font-size: 0.9rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    text-decoration: none;
-    color: var(--text-color);
-    font-size: 0.9rem;
-    font-weight: 600;
-    position: relative;
-    z-index: 1;
-    pointer-events: all;
 }
-
-.event-entry-name:hover { color: var(--primary-color); }
-
-.event-entry-time {
-    font-size: 0.82rem;
-    color: var(--text-light);
-    font-variant-numeric: tabular-nums;
+.home-who-name small {
+    display: block;
     font-weight: 400;
-    flex-shrink: 0;
-}
-
-.event-entry-time--winner {
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: var(--text-color);
-}
-
-.event-entry-time--diff {
-    font-size: 0.75rem;
-    font-weight: 400;
-}
-
-.event-podium-pos {
-    width: 1.1rem;
-    height: 1.1rem;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.6rem;
-    font-weight: 800;
-    flex-shrink: 0;
-    background: var(--border-color);
+    font-size: 0.74rem;
     color: var(--text-light);
 }
 
-.event-podium-pos--1 { background: var(--gold);   color: var(--gold-text); }
-.event-podium-pos--2 { background: var(--silver); color: var(--silver-text); }
-.event-podium-pos--3 { background: var(--bronze); color: var(--bronze-text); }
+/* Rating change: the site's chevron arrows, green up and red down only. */
+.home-chg { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.home-chg.rating-increase { color: var(--success-color); }
+.home-chg.rating-decrease { color: var(--error-color); }
+.home-chg .chg-arrow { width: 0.6em; height: 0.5em; margin-right: 0.15em; vertical-align: 0.05em; }
 
-.event-race-pending {
-    font-size: 0.78rem;
-    color: var(--text-lighter);
-    font-style: italic;
-    margin: 0;
-}
-
-
-/* ── SECTION 3: LEADERBOARD ── */
-/* Card styling is shared via .lb-widget* in base.css; this grid is the only
-   page-specific bit (6 cards in a 2-up layout on desktop). */
-.home-lb-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.25rem;
-}
-
-
-/* ── SECTION 4: COMPARE ── */
-.compare-widget {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 3rem;
-    align-items: center;
+/* ── Event blocks (this weekend + latest results) ── */
+.home-event {
     background: var(--white);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-lg);
-    padding: 2rem 2.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    margin-bottom: 1rem;
 }
-
-.compare-widget-lead {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: var(--text-color);
-    margin: 0 0 0.5rem;
-}
-
-.compare-widget-desc {
-    font-size: 0.9rem;
-    color: var(--text-light);
-    margin: 0;
-    max-width: 520px;
-    line-height: 1.6;
-}
-
-.compare-widget-visual {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1.25rem;
-    flex-shrink: 0;
-}
-
-.compare-vs-block {
+.home-event-head {
     display: flex;
     align-items: center;
     gap: 1rem;
-    background: var(--bg-color);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    padding: 0.6rem 1.25rem;
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid var(--border-color);
 }
-
-.compare-vs-name {
-    font-size: 1rem;
-    font-weight: 800;
-    color: var(--text-color);
-    letter-spacing: -0.01em;
+.home-event-head h3 { margin: 0; font-size: 1rem; font-weight: 700; flex: 0 1 auto; min-width: 0; }
+.home-event-head h3 a { color: inherit; text-decoration: none; }
+.home-event-head h3 a:hover { color: var(--primary-color); }
+.home-event-meta {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.78rem;
+    color: var(--text-light);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
+.home-event-meta span + span::before { content: "·"; margin: 0 0.4rem; color: var(--text-lighter); }
 
-.compare-vs-divider {
-    font-size: 0.7rem;
-    font-weight: 700;
+.home-podiums {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.home-podium { padding: 0.65rem 1.25rem 0.9rem; min-width: 0; }
+.home-podium + .home-podium { border-left: 1px solid var(--border-color); }
+.home-podium-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.4rem;
+}
+.home-podium-head h4 {
+    margin: 0;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--primary-color);
-    padding: 0.15rem 0.5rem;
-    background: rgba(232, 93, 4, 0.08);
-    border-radius: 99px;
+    color: var(--text-light);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
-
-.compare-cta-btn {
-    display: inline-block;
-    padding: 0.65rem 1.5rem;
-    background: var(--primary-color);
-    color: #fff;
-    font-size: 0.9rem;
-    font-weight: 700;
-    text-decoration: none;
-    border-radius: var(--border-radius);
-    transition: background var(--transition-fast);
+.home-podium-head h4 a { color: inherit; text-decoration: none; }
+.home-podium-head h4 a:hover { color: var(--primary-color); }
+.home-podium-pred { color: var(--text-lighter); font-weight: 500; letter-spacing: 0.04em; }
+.home-podium-list { list-style: none; margin: 0; padding: 0; }
+.home-podium-list li { display: flex; align-items: center; gap: 0.6rem; padding: 0.3rem 0; }
+.home-podium-list .home-who { flex: 1 1 auto; }
+.home-t {
+    margin-left: auto;
+    font-size: 0.82rem;
+    color: var(--text-light);
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
+.home-t--win { color: var(--text-color); font-weight: 700; }
+.home-podium-empty { margin: 0.2rem 0 0; font-size: 0.8rem; color: var(--text-lighter); }
 
-.compare-cta-btn:hover {
-    background: var(--primary-hover);
+/* Follow heart with its follower count, and the comment count. The heart
+   is the follow toggle (users.js); only the number shows beside it. */
+.race-stats { display: inline-flex; align-items: center; gap: 0.9rem; flex-shrink: 0; }
+.race-stats .btn-follow--count {
+    padding: 0;
+    border: 0;
+    background: none;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+    color: var(--text-light);
 }
+.race-stats .btn-follow--count:hover,
+.race-stats .btn-follow--count.following { color: var(--primary-color); background: none; }
+.race-stats .btn-follow--count .follow-ic { width: 16px; height: 16px; }
+.race-stats .follower-count strong { font-weight: 600; }
+.race-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-light);
+    text-decoration: none;
+    font-variant-numeric: tabular-nums;
+}
+.race-stat svg { width: 16px; height: 16px; }
+.race-stat:hover { color: var(--primary-color); }
 
-
-/* ── SECTION 5: ABOUT ── */
-.about-preview {
+/* ── Side rail cards ── */
+.home-card {
+    background: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+}
+.home-card-group {
+    margin: 0;
+    padding: 0.45rem 1.25rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    background: #f2f4f6;
+}
+.home-risers { list-style: none; margin: 0; padding: 0; }
+.home-risers li {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 1.25rem;
+    grid-template-columns: minmax(0, 1fr) 44px auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 1.25rem;
+    border-bottom: 1px solid var(--border-color);
 }
+.home-risers li:last-child { border-bottom: 0; }
+.home-risers-empty { display: block; font-size: 0.82rem; color: var(--text-light); }
+.home-spark { width: 44px; height: 16px; color: var(--success-color); }
+.home-riser-chg { text-align: right; }
+.home-riser-chg small { display: block; font-size: 0.7rem; color: var(--text-lighter); }
 
+/* Rankings: text tabs, then men above women in the rail. */
+.home-tabs { display: flex; gap: 1.25rem; border-bottom: 1px solid var(--border-color); margin-bottom: 0.75rem; }
+.home-tab {
+    background: none;
+    border: 0;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-light);
+    padding: 0.3rem 0 0.45rem;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+}
+.home-tab.active { color: var(--text-color); border-color: var(--primary-color); }
+.home-rank-pane[hidden] { display: none; }
+.home-rank-pane { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.75rem; }
+.home-rank { table-layout: fixed; box-shadow: var(--box-shadow); border-radius: var(--border-radius); overflow: hidden; }
+.home-rank th { cursor: default; }
+.home-rank th:hover { background: var(--navy); color: rgba(255,255,255,0.6); }
+.home-rank td { padding: 0.5rem 0.75rem; }
+.home-rank td:first-child { padding-left: 1rem; width: 2rem; }
+.home-rank th:first-child { padding-left: 1rem; }
+.home-rank .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; width: 5rem; }
+.home-rank .home-who-name { font-size: 0.85rem; }
 
-/* ── RESPONSIVE ── */
+.home-why {
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 0;
+    font-size: 0.9rem;
+    color: var(--text-light);
+}
+.home-why b { color: var(--text-color); }
+.home-why a { color: var(--primary-color); font-weight: 600; text-decoration: none; }
+.home-why[hidden] { display: none; }
+
+.home-blog { padding: 1rem 1.25rem; }
+.home-blog h3 { margin: 0 0 0.3rem; font-size: 0.95rem; }
+.home-blog h3 a { color: inherit; text-decoration: none; }
+.home-blog h3 a:hover { color: var(--primary-color); }
+.home-blog p { margin: 0 0 0.5rem; font-size: 0.85rem; color: var(--text-light); }
+
+.home-counts { text-align: center; font-size: 0.75rem; color: var(--text-lighter); margin: 0.5rem 0 1rem; }
+.home-counts b { color: var(--text-light); font-weight: 600; }
+.home-counts span + span::before { content: "·"; margin: 0 0.5rem; }
+
+/* ── Your athletes (injected partial) ── */
+.home-mine { table-layout: auto; box-shadow: var(--box-shadow); border-radius: var(--border-radius); overflow: hidden; }
+.home-mine th { cursor: default; }
+.home-mine th:hover { background: var(--navy); color: rgba(255,255,255,0.6); }
+.home-mine td { padding: 0.8rem 1rem; }
+.home-mine .group td {
+    background: #f2f4f6;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    padding: 0.4rem 1.25rem;
+}
+.home-mine .date { font-size: 0.8rem; font-weight: 600; white-space: nowrap; width: 6.5rem; }
+.home-mine .race a { color: inherit; text-decoration: none; }
+.home-mine .race a:hover { color: var(--primary-color); }
+.home-mine .race b { font-weight: 600; display: block; }
+.home-mine .race .small { display: block; font-size: 0.78rem; color: var(--text-light); }
+.home-mine .num { text-align: right; white-space: nowrap; }
+.home-mine .result { display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; }
+.home-mine .lbl {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-lighter);
+    margin-right: 0.25rem;
+}
+.home-mine .t { font-weight: 600; font-variant-numeric: tabular-nums; }
+.home-mine .pos-other { color: var(--text-color); font-weight: 700; font-size: 0.8rem; }
+.home-mine .pos-dnf { font-size: 0.75rem; font-style: italic; color: var(--text-lighter); }
+.home-mine-empty { padding: 1rem 1.25rem; font-size: 0.9rem; color: var(--text-light); }
+.home-mine-empty p { margin: 0 0 0.4rem; }
+.home-mine-empty b { color: var(--text-color); }
+.home-also { margin: 0.75rem 0 0; font-size: 0.82rem; color: var(--text-light); }
+.home-also a { color: var(--primary-color); font-weight: 600; text-decoration: none; }
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+    .home-layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .home-side { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 2rem; }
+    .home-side > .home-why, .home-side > .home-section:last-child { grid-column: 1 / -1; }
+    .home-rank-pane { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
 @media (max-width: 768px) {
-    .compare-widget {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-    }
-
-    .compare-widget-visual {
-        flex-direction: row;
-        justify-content: flex-start;
-    }
-
-    .home-hero-inner {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 2rem;
-    }
-
-    .hero-stats {
-        width: 100%;
-    }
-
-    .home-lb-grid {
-        grid-template-columns: 1fr;
-        gap: 0.85rem;
-    }
-
-    .about-preview {
-        grid-template-columns: 1fr;
-    }
-
-    /* Event card: meta moves into the navy header; left info column is dropped */
-    .event-card-header {
-        padding: 0.55rem 1rem 0.6rem;
-    }
-
-    .event-card-header-meta {
-        display: block;
-    }
-
-    .event-card-info {
-        display: none;
-    }
-
-    .event-race {
-        padding: 0.4rem 0.85rem 0.7rem;
-    }
+    .home-side { grid-template-columns: minmax(0, 1fr); }
 }
+@media (max-width: 600px) {
+    .home-strip-inner { width: auto; padding-left: 1rem; }
+    .home-strip-label span { display: none; }
+    .home-rank-pane { grid-template-columns: minmax(0, 1fr); }
+    .home-podiums { grid-template-columns: minmax(0, 1fr); }
+    .home-podium + .home-podium { border-left: 0; border-top: 1px solid var(--border-color); }
+    .home-event-head { flex-wrap: wrap; gap: 0.3rem 1rem; }
+    .home-event-head h3 { flex-basis: 100%; }
+    .page-section-head { flex-wrap: wrap; }
+    .page-section-head .page-section-sub { display: block; margin: 0; }
 
-@media (max-width: 480px) {
-    .home-hero-copy h1 {
-        font-size: 1.9rem;
-    }
-
-    .hero-stats {
-        display: none;
-    }
-
-    .home-intro { font-size: 0.94rem; margin-top: 1.4rem; }
-
-    .compare-widget {
-        padding: 1.25rem;
-    }
-
-    .compare-widget-visual {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    /* Event card: stack races into single column; drop the inter-podium divider
-       (the .event-race-header::after rule under each PRO MEN/WOMEN label is enough). */
-    .event-races {
-        flex-direction: column;
-    }
-
-    .event-race {
-        padding: 0.35rem 0.85rem 0.65rem;
-    }
-
-    .event-race + .event-race::before {
-        display: none;
-    }
-
-    .event-card-title {
-        font-size: 0.82rem;
-        white-space: normal;
-    }
-
-    .event-race-entry-img {
-        width: 22px;
-        height: 22px;
-    }
-
-    .event-entry-name {
-        font-size: 0.85rem;
-    }
-
-    .event-entry-time--winner {
-        font-size: 0.82rem;
-    }
+    /* Your athletes becomes stacked rows: date on line one, race on two,
+       athlete on three, result on four. */
+    .home-mine thead { display: none; }
+    .home-mine tr { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; padding: 0.7rem 1rem; }
+    .home-mine td, .home-mine td:first-child, .home-mine td:last-child { display: block; padding: 0; width: auto; }
+    .home-mine .group { padding: 0.35rem 1rem; }
+    .home-mine .group td { padding: 0; }
+    .home-mine .race { flex-basis: 100%; }
+    .home-mine .who-cell { flex-basis: 100%; margin-top: 0.3rem; }
+    .home-mine .result { margin-left: auto; }
 }

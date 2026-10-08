@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "partials/home_event.html" import event_block, athlete_img %}
 
 {# Brand alone told a searcher nothing: the homepage ranked 5.9 for "triathlon data"
    and 8.5 for "protri" and took zero clicks on both. Each word after the dash is a
@@ -24,332 +25,129 @@
 {% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/users.css?v={{ ASSET_VERSION }}">
 <link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/index.css?v={{ ASSET_VERSION }}">
 {% endblock %}
 
-{% block content %}
-<div class="home-page">
-
-    <!-- ── HERO ── -->
-    <section class="home-hero">
-        <div class="home-hero-inner">
-            <div class="home-hero-copy">
-                <h1>Triathlon performance,<br>made explorable.</h1>
-            </div>
-            <div class="hero-stats">
-                <div class="hero-stat">
-                    <span class="hero-stat-num stat-counter" data-target="{{ total_athletes }}">0</span>
-                    <span class="hero-stat-lbl">athletes tracked</span>
-                </div>
-                <div class="hero-stat-sep"></div>
-                <div class="hero-stat">
-                    <span class="hero-stat-num stat-counter" data-target="{{ total_races }}">0</span>
-                    <span class="hero-stat-lbl">races recorded</span>
-                </div>
-                <div class="hero-stat-sep"></div>
-                <div class="hero-stat">
-                    <span class="hero-stat-num stat-counter" data-target="{{ total_results }}">0</span>
-                    <span class="hero-stat-lbl">results analysed</span>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <p class="home-intro">Pro Tri Data is the home of independent triathlon analytics. Explore ratings, race results and career stats across short and long course: for pros, age-groupers and the chasers in between.</p>
-
-    <!-- ── SECTION 1: ATHLETES ── -->
-    <section class="home-section">
-        <div class="home-section-head">
-            <div>
-                <h2 class="home-section-title">Athletes</h2>
-                <p class="home-section-sub">Ratings, results &amp; career stats for all World Triathlon athletes. View rankings, progressions &amp; best performances.</p>
-            </div>
-            <a href="/athletes" class="home-more-link">Browse All Athletes</a>
-        </div>
-
-        {% set champ_cards = [
-            ('WT',  men_champ,    'short'),
-            ('WT',  women_champ,  'short'),
-            ('IM',  men_im_champ, 'long'),
-            ('IM',  women_im_champ, 'long'),
-        ] %}
-        <div class="champs-grid">
-            {% for label, champ, course in champ_cards %}
-            <a href="/athlete/{{ champ.athlete_id }}" class="champ-card">
-                <div class="champ-card-header">
-                    <span class="champ-badge">{{ "2026" if label == "WT" else "2025"}} {{ "Men" if champ.gender == "male" else "Women" }}'s {{ label }} World Champion</span>
-                </div>
-                <div class="champ-card-body">
-                    <img
-                        src="{{ STATIC_BASE_URL ~ 'athlete_imgs/128/' ~ champ.athlete_id ~ '.webp' if champ.profile_img else STATIC_BASE_URL ~ 'imgs/default_user_64.webp' }}"
-                        alt="{{ champ.name }}"
-                        class="champ-img">
-                    <div class="champ-namerow">
-                        <h3 class="champ-name">{{ champ.name }}</h3>
-                        <span class="champ-flag">{{ flag(champ.country_alpha3, champ.country_full) }}</span>
-                    </div>
-                    <div class="champ-stats-row">
-                        <div class="champ-stat">
-                            <span class="champ-stat-num">{{ "%.0f"|format(champ.overall_rating) }}</span>
-                            <span class="champ-stat-lbl">Rating</span>
-                        </div>
-                        <div class="champ-stat-divider"></div>
-                        <div class="champ-stat">
-                            <span class="champ-stat-num">#{{ champ.world_overall }}</span>
-                            <span class="champ-stat-lbl">Rank</span>
-                        </div>
-                        <div class="champ-stat-divider"></div>
-                        <div class="champ-stat">
-                            <span class="champ-stat-num">{{ champ.wins }}</span>
-                            <span class="champ-stat-lbl">Wins</span>
-                        </div>
-                    </div>
-                </div>
+{% block hero %}
+<div class="page-hero home-strip">
+    <div class="home-strip-inner">
+        <div class="home-strip-label"><b>This week</b><span>Results to {{ updated.strftime('%-d %b') }}</span></div>
+        <div class="home-schedule">
+            {% for s in schedule %}
+            <a href="{{ s.href }}"{% if s.status != 'Results' and loop.previtem is defined and loop.previtem.status == 'Results' %} class="next"{% endif %}>
+                <span class="d">{{ s.date.strftime('%a %-d %b') }}</span>
+                <span class="n">{{ s.name }}</span>
+                <span class="s{{ ' done' if s.status == 'Results' else '' }}">{{ s.status }}</span>
             </a>
             {% endfor %}
         </div>
-    </section>
+    </div>
+</div>
+{% endblock %}
 
-    <!-- ── SECTION 2: RACES ── -->
+{% block content %}
+<div class="home-layout">
+<div class="home-main">
+
+    {# Personal layer, filled from /home/mine for logged-in users #}
+    <section class="home-section" data-home-mine hidden></section>
+
     <section class="home-section">
-        <div class="home-section-head">
-            <div>
-                <h2 class="home-section-title">Races</h2>
-            </div>
-            <a href="/races" class="home-more-link">View All Events</a>
+        <div class="page-section-head">
+            <span>This weekend <span class="page-section-sub">{{ week_races }} race{{ '' if week_races == 1 else 's' }} in {{ week_countries }} countr{{ 'y' if week_countries == 1 else 'ies' }}</span></span>
+            <a href="/upcoming" class="section-link">All upcoming</a>
         </div>
-
-        <div class="home-subsection-head">
-            <div>
-                <h3 class="home-subsection-title">Recent Results</h3>
-                <p class="home-subsection-sub">Results, splits, and analysis of the latest races</p>
-            </div>
-        </div>
-
-        <div class="home-events-grid">
-            {% for event in recent_events %}
-            <div class="event-card">
-                <a href="/event/{{ event.event_id }}" class="event-card-overlay" aria-label="{{ event.name }}"></a>
-
-                <div class="event-card-header">
-                    <div class="event-card-title">{{ event.name }}</div>
-                    <div class="event-card-header-meta">
-                        <span>{{ event.start_date.strftime('%-d %b %Y') }}</span>
-                        <span class="event-card-header-meta-sep">·</span>
-                        <span>{% if event.venue %}{{ event.venue }}, {% endif %}{{ event.country }}</span>
-                    </div>
-                </div>
-
-                <div class="event-card-body">
-                    <div class="event-card-info">
-                        <div class="event-meta-item">
-                            <svg class="event-meta-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                            <span class="event-meta-text">{{ event.start_date.strftime('%-d %b %Y') }}</span>
-                        </div>
-                        <div class="event-meta-item">
-                            <svg class="event-meta-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                            <span class="event-meta-text">{% if event.venue %}{{ event.venue }}, {% endif %}{{ event.country }}</span>
-                        </div>
-                    </div>
-
-                    <div class="event-races">
-                        {% for race in event.races[:2] %}
-                        <div class="event-race">
-                            <div class="event-race-header">
-                                <a href="/race/{{ race.race_id }}" class="event-race-title">{{ race.prog_name }}</a>
-                            </div>
-                            {% if race.podium %}
-                            <ol class="event-race-podium">
-                                {% for p in race.podium[:3] %}
-                                <li class="event-race-entry">
-                                    <span class="event-podium-pos event-podium-pos--{{ p.position }}">{{ p.position }}</span>
-                                    <img src="{{ STATIC_BASE_URL }}{{ 'athlete_imgs/128/' ~ p.athlete_id ~ '.webp' if p.profile_img else 'imgs/default_user_64.webp' }}" alt="{{ p.name }}" class="event-race-entry-img">
-                                    <a href="/athlete/{{ p.athlete_id }}" class="event-entry-name">{{ p.name }} {{ flag(p.country_alpha3) }}</a>
-                                    {% if p.position == 1 and p.time %}
-                                        <span class="event-entry-time event-entry-time--winner">{{ p.time }}</span>
-                                    {% elif p.position > 1 and p.gap %}
-                                        <span class="event-entry-time event-entry-time--diff">{{ p.gap }}</span>
-                                    {% elif p.time %}
-                                        <span class="event-entry-time event-entry-time--diff">{{ p.time }}</span>
-                                    {% endif %}
-                                </li>
-                                {% endfor %}
-                            </ol>
-                            {% else %}
-                            <p class="event-race-pending">Results pending</p>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-
-        <div class="home-subsection-head">
-            <div>
-                <h3 class="home-subsection-title">Upcoming Events</h3>
-                <p class="home-subsection-sub">Startlists, predictions, and analysis of upcoming races</p>
-            </div>
-            <a href="/upcoming" class="home-more-link">View All Upcoming</a>
-        </div>
-
-        <div class="home-events-grid">
-            {% for event in upcoming_events %}
-            <div class="event-card">
-                <a href="/event/{{ event.event_id }}" class="event-card-overlay" aria-label="{{ event.name }}"></a>
-
-                <div class="event-card-header">
-                    <div class="event-card-title">{{ event.name }}</div>
-                    <div class="event-card-header-meta">
-                        <span>{{ event.start_date.strftime('%-d %b %Y') }}</span>
-                        <span class="event-card-header-meta-sep">·</span>
-                        <span>{% if event.venue %}{{ event.venue }}, {% endif %}{{ event.country }}</span>
-                    </div>
-                </div>
-
-                <div class="event-card-body">
-                    <div class="event-card-info">
-                        <div class="event-meta-item">
-                            <svg class="event-meta-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                            <span class="event-meta-text">{{ event.start_date.strftime('%-d %b %Y') }}</span>
-                        </div>
-                        <div class="event-meta-item">
-                            <svg class="event-meta-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                            <span class="event-meta-text">{% if event.venue %}{{ event.venue }}, {% endif %}{{ event.country }}</span>
-                        </div>
-                    </div>
-
-                    <div class="event-races">
-                        {% for race in event.races[:2] %}
-                        <div class="event-race">
-                            <div class="event-race-header">
-                                <a href="/race/{{ race.race_id }}" class="event-race-title">
-                                    {{ race.prog_name }}{% if race.podium %} <span class="event-race-dot-sep">·</span> <span class="event-race-predicted-label">Predicted Podium</span>{% endif %}
-                                </a>
-                            </div>
-                            {% if race.podium %}
-                            <ol class="event-race-podium">
-                                {% for p in race.podium %}
-                                <li class="event-race-entry">
-                                    <span class="event-podium-pos event-podium-pos--{{ p.position }}">{{ p.position }}</span>
-                                    <img src="{{ STATIC_BASE_URL }}{{ 'athlete_imgs/128/' ~ p.athlete_id ~ '.webp' if p.profile_img else 'imgs/default_user_64.webp' }}" alt="{{ p.name }}" class="event-race-entry-img">
-                                    <a href="/athlete/{{ p.athlete_id }}" class="event-entry-name">{{ p.name }} {{ flag(p.country_alpha3) }}</a>
-                                    {% if p.position == 1 and p.time %}
-                                        <span class="event-entry-time event-entry-time--winner">{{ p.time }}</span>
-                                    {% elif p.gap %}
-                                        <span class="event-entry-time event-entry-time--diff">{{ p.gap }}</span>
-                                    {% elif p.time %}
-                                        <span class="event-entry-time event-entry-time--diff">{{ p.time }}</span>
-                                    {% endif %}
-                                </li>
-                                {% endfor %}
-                            </ol>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
+        {% for e in upcoming %}{{ event_block(e, predicted=True) }}{% else %}
+        <p class="home-empty">No start lists published yet.</p>
+        {% endfor %}
     </section>
 
-    <!-- ── SECTION 3: LEADERBOARD ── -->
     <section class="home-section">
-        <div class="home-section-head">
-            <div>
-                <h2 class="home-section-title">Leaderboard</h2>
-                <p class="home-section-sub">See who leads overall, in different disciplines and nations &amp; who's climbing the rankings fastest this year.</p>
-            </div>
-            <a href="/athlete-leaderboard" class="home-more-link">View More Leaderboards</a>
+        <div class="page-section-head">
+            <span>Latest results</span>
+            <a href="/recent" class="section-link">All results</a>
         </div>
-
-        <div class="home-lb-grid">
-            {% for label, podium, gender_slug, cat, crs in [
-                ("Men · Short Course",   men_podium,         "male",   "elite", "short"),
-                ("Women · Short Course", women_podium,       "female", "elite", "short"),
-                ("Men · Long Course",    men_long_podium,    "male",   "elite", "long"),
-                ("Women · Long Course",  women_long_podium,  "female", "elite", "long"),
-                ("Men · Age Group",      men_ag_podium,      "male",   "ag",    "short"),
-                ("Women · Age Group",    women_ag_podium,    "female", "ag",    "short"),
-            ] %}
-            <div class="lb-widget">
-                <a href="/athlete-leaderboard?gender={{ gender_slug }}&category={{ cat }}&course={{ crs }}&active_only=false" rel="nofollow" class="lb-widget-header">
-                    <span>{{ label }}</span>
-                    <span class="lb-widget-more">See more<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
-                </a>
-                <ol class="lb-widget-list">
-                    {% for a in podium %}
-                    {% set pos = loop.index %}
-                    <li class="lb-widget-item">
-                        {% if pos == 1 %}<span class="pos-circle gold">1</span>
-                        {% elif pos == 2 %}<span class="pos-circle silver">2</span>
-                        {% elif pos == 3 %}<span class="pos-circle bronze">3</span>
-                        {% else %}<span class="pos-other">{{ pos }}</span>{% endif %}
-                        <img src="{{ STATIC_BASE_URL }}{{ 'athlete_imgs/128/' ~ a.athlete_id ~ '.webp' if a.profile_img else 'imgs/default_user_64.webp' }}"
-                             alt="{{ a.name }}" class="lb-widget-img" loading="lazy" width="32" height="32">
-                        <a href="/athlete/{{ a.athlete_id }}" class="lb-widget-name">{{ a.name }} {{ flag(a.country_alpha3) }}</a>
-                        <span class="lb-widget-rating">{{ "%.0f"|format(a.overall) }}</span>
-                    </li>
-                    {% endfor %}
-                </ol>
-            </div>
-            {% endfor %}
-        </div>
-    </section>
-
-    <!-- ── SECTION 4: COMPARE ── -->
-    <section class="home-section">
-        <div class="home-section-head">
-            <div>
-                <h2 class="home-section-title">Compare</h2>
-                <p class="home-section-sub">Head-to-head career analysis</p>
-            </div>
-        </div>
-
-        <div class="compare-widget">
-            <div class="compare-widget-copy">
-                <p class="compare-widget-lead">Stack any two athletes side by side.</p>
-                <p class="compare-widget-desc">Compare career rating trajectories, split-by-split times, and head-to-head results across every race they've shared.</p>
-            </div>
-            <div class="compare-widget-visual">
-                <div class="compare-vs-block">
-                    <span class="compare-vs-name">Brownlee</span>
-                    <span class="compare-vs-divider">vs</span>
-                    <span class="compare-vs-name">Gomez Noya</span>
-                </div>
-                <a href="/athlete-compare/7788/5695" class="compare-cta-btn">See Comparison</a>
-            </div>
-        </div>
-    </section>
-
-    <!-- ── SECTION 5: ABOUT ── -->
-    <section class="home-section home-section--last">
-        <div class="home-section-head">
-            <div>
-                <h2 class="home-section-title">About</h2>
-                <p class="home-section-sub">Methodology, FAQ, blogs &amp; site updates</p>
-            </div>
-            <a href="/about" class="home-more-link">About PTD</a>
-        </div>
-
-        <div class="about-preview">
-            {% if latest_blog %}
-            <article class="blog-card">
-                <div class="blog-card-header">
-                    <h3 class="blog-title">{{ latest_blog.title }}</h3>
-                </div>
-                <div class="blog-card-body">
-                    <p class="blog-body">{{ latest_blog.teaser }}</p>
-                    <a class="blog-link" href="/about/blog/{{ latest_blog.slug }}" aria-label="Read more: {{ latest_blog.title }}">Read more<svg viewBox="0 0 8 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="height:0.7em;width:auto;vertical-align:middle;margin-left:0.3em"><polyline points="2,1 7,6 2,11"/></svg></a>
-                </div>
-            </article>
-            {% endif %}
-        </div>
+        {% for e in recent %}{{ event_block(e) }}{% endfor %}
     </section>
 
 </div>
+<aside class="home-side">
+
+    <section class="home-section">
+        <div class="page-section-head page-section-head--sm">
+            <span>On the rise <span class="page-section-sub">last 14 days</span></span>
+        </div>
+        <div class="home-card">
+            {% for gender, label in [('male', 'Men'), ('female', 'Women')] %}
+            <h4 class="home-card-group">{{ label }}</h4>
+            <ul class="home-risers">
+                {% for r in risers[gender] %}
+                <li>
+                    <a href="/athlete/{{ r.athlete_id }}" class="home-who">{{ athlete_img(r) }}<span class="home-who-name">{{ r.name }}{{ flag(r.country_alpha3) }}<small>{{ r.position }}{{ 'st' if r.position == 1 else 'nd' if r.position == 2 else 'rd' if r.position == 3 else 'th' }}, {{ r.race_short }}</small></span></a>
+                    {% if r.spark %}<svg class="home-spark" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true"><polyline points="{{ r.spark }}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>{% else %}<span></span>{% endif %}
+                    <span class="home-riser-chg"><span class="home-chg {{ r.change.css_class }}">{{ r.change.formatted_str | safe }}</span><small>{{ "%.0f"|format(r.overall) }}</small></span>
+                </li>
+                {% else %}
+                <li class="home-risers-empty">No rated races in the last two weeks.</li>
+                {% endfor %}
+            </ul>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="home-section">
+        <div class="page-section-head page-section-head--sm">
+            <span>Rankings</span>
+            <a href="/athlete-leaderboard" class="section-link">Full leaderboard</a>
+        </div>
+        <div class="home-tabs" role="tablist">
+            {% for t in rankings %}
+            <button type="button" class="home-tab{{ ' active' if loop.first else '' }}" role="tab" data-rank-tab="{{ t.key }}">{{ t.label }}</button>
+            {% endfor %}
+        </div>
+        {% for t in rankings %}
+        <div class="home-rank-pane" data-rank-pane="{{ t.key }}"{% if not loop.first %} hidden{% endif %}>
+            {% for label, rows in [('Men', t.men), ('Women', t.women)] %}
+            <table class="home-rank">
+                <thead><tr><th colspan="2">{{ label }}</th><th class="num">Rating</th></tr></thead>
+                <tbody>
+                    {% for a in rows %}
+                    <tr>
+                        <td>{% if loop.index <= 3 %}<span class="pos-circle {{ ['gold', 'silver', 'bronze'][loop.index0] }}">{{ loop.index }}</span>{% else %}<span class="pos-other">{{ loop.index }}</span>{% endif %}</td>
+                        <td><a href="/athlete/{{ a.athlete_id }}" class="home-who">{{ athlete_img(a) }}<span class="home-who-name">{{ a.name }}{{ flag(a.country_alpha3) }}</span></a></td>
+                        <td class="num">{{ "%.0f"|format(a.overall) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </section>
+
+    <section class="home-section home-why" data-home-anon>
+        <b>Make this page yours.</b> Follow athletes and races and they appear first, with predicted finishes and results as they land. One email on race weekends, nothing else. <a href="/login?next=/">Log in with your email</a>
+    </section>
+
+    {% if latest_blog %}
+    <section class="home-section">
+        <div class="page-section-head page-section-head--sm">
+            <span>From the blog</span>
+            <a href="/about" class="section-link">About PTD</a>
+        </div>
+        <div class="home-card home-blog">
+            <h3><a href="/about/blog/{{ latest_blog.slug }}">{{ latest_blog.title }}</a></h3>
+            <p>{{ latest_blog.teaser }}</p>
+            <a href="/about/blog/{{ latest_blog.slug }}" class="section-link">Read more</a>
+        </div>
+    </section>
+    {% endif %}
+
+</aside>
+</div>
+
+<p class="home-counts"><span><b>{{ "{:,}".format(total_athletes) }}</b> athletes</span><span><b>{{ "{:,}".format(total_races) }}</b> races</span><span><b>{{ "{:,}".format(total_results) }}</b> results</span><span>short and long course, pro and age group</span></p>
 {% endblock %}
 
 {% block extra_js %}

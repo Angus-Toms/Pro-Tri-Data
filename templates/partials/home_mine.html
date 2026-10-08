@@ -1,0 +1,55 @@
+{# Logged-in layer of the home page, fetched by index.js and injected above
+   "This weekend". Followed athletes' next starts with the model's predicted
+   finish, then their results since the user was last here. #}
+{% from "partials/home_event.html" import athlete_img %}
+<div class="page-section-head">
+    <span>Your athletes</span>
+    <a href="/account#following" class="section-link">Manage</a>
+</div>
+{% if not coming and not results %}
+<div class="home-card home-mine-empty">
+    <p><b>Nothing to show yet.</b> Follow athletes with the heart on their pages and their starts and results collect here.</p>
+    <a href="/athlete-leaderboard" class="section-link">Find athletes</a>
+</div>
+{% else %}
+<table class="home-mine">
+    <thead><tr><th>Date</th><th>Race</th><th>Athlete</th><th class="num">Result</th></tr></thead>
+    <tbody>
+        {% if coming %}
+        <tr class="group"><td colspan="4">Coming up</td></tr>
+        {% for s in coming %}
+        <tr>
+            <td class="date">{{ s.race_date.strftime('%a %-d %b') }}</td>
+            <td class="race"><a href="/race/{{ s.race_id }}"><b>{{ s.race_title }}</b></a><span class="small">{{ s.prog_name }}{% if s.entries %} &middot; {{ s.entries }} on the start list{% endif %}</span></td>
+            <td class="who-cell"><a href="/athlete/{{ s.athlete_id }}" class="home-who">{{ athlete_img(s) }}<span class="home-who-name">{{ s.name }}{{ flag(s.country_alpha3) }}</span></a></td>
+            <td class="num result">
+                {% if s.pred_pos %}<span class="lbl">Predicted</span>{% if s.pred_pos <= 3 %}<span class="pos-circle {{ ['gold', 'silver', 'bronze'][s.pred_pos - 1] }}">{{ s.pred_pos }}</span>{% else %}<span class="pos-other">{{ s.pred_pos }}</span>{% endif %}{% if s.pred_gap %}<span class="t">{{ s.pred_gap }}</span>{% endif %}
+                {% else %}<span class="lbl">Start list</span>{% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        {% endif %}
+        {% if results %}
+        <tr class="group"><td colspan="4">{{ results_heading }}</td></tr>
+        {% for r in results %}
+        <tr>
+            <td class="date">{{ r.race_date.strftime('%a %-d %b') }}</td>
+            <td class="race"><a href="/race/{{ r.race_id }}"><b>{{ r.race_title }}</b></a><span class="small">{{ r.prog_name }}</span></td>
+            <td class="who-cell"><a href="/athlete/{{ r.athlete_id }}" class="home-who">{{ athlete_img(r) }}<span class="home-who-name">{{ r.name }}{{ flag(r.country_alpha3) }}</span></a></td>
+            <td class="num result">
+                <span class="lbl">Result</span>
+                {% if r.position in (1, 2, 3) %}<span class="pos-circle {{ ['gold', 'silver', 'bronze'][r.position - 1] }}">{{ r.position }}</span>
+                {% elif r.position %}<span class="pos-other">{{ r.position }}</span>
+                {% else %}<span class="pos-dnf">{{ r.status }}</span>{% endif %}
+                {% if r.time %}<span class="t">{{ r.time }}</span>{% endif %}
+                {% if r.change.formatted_str %}<span class="home-chg {{ r.change.css_class }}">{{ r.change.formatted_str | safe }}</span>{% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        {% endif %}
+    </tbody>
+</table>
+{% endif %}
+{% if suggestions %}
+<p class="home-also">Also on this week's start lists from {{ country_name }}: {% for a in suggestions %}<a href="/athlete/{{ a.athlete_id }}">{{ a.name }}</a>{{ ', ' if not loop.last }}{% endfor %}</p>
+{% endif %}

@@ -1,0 +1,58 @@
+{# One event on the home page: header row, then a podium column per programme
+   (men left, women right). `predicted` switches the podium to the model's
+   forecast. Each programme carries its follow heart (with follower count)
+   and a comment count linking to the race's thread. #}
+{% macro athlete_img(p) -%}
+<img class="home-ath-img" src="{{ STATIC_BASE_URL }}{{ 'athlete_imgs/128/' ~ p.athlete_id ~ '.webp' if p.profile_img else 'imgs/default_user_64.webp' }}" alt="" loading="lazy" width="28" height="28">
+{%- endmacro %}
+
+{% macro event_block(e, predicted=False) %}
+<article class="home-event">
+    <div class="home-event-head">
+        <h3><a href="/event/{{ e.event_id }}">{{ e.name }}</a></h3>
+        <div class="home-event-meta">
+            <span>{{ e.start_date.strftime('%a %-d %b') }}</span>
+            <span>{% if e.venue %}{{ e.venue }}, {% endif %}{{ e.country }}</span>
+            {% if predicted and e.entries %}<span>{{ e.entries }} entries</span>{% endif %}
+        </div>
+    </div>
+    <div class="home-podiums">
+        {% for r in e.races %}
+        <div class="home-podium">
+            <div class="home-podium-head">
+                <h4><a href="/race/{{ r.race_id }}">{{ r.prog_name }}</a>{% if predicted %} <span class="home-podium-pred">&middot; predicted</span>{% endif %}</h4>
+                <span class="race-stats">
+                    <button type="button" class="btn-follow btn-follow--count" data-follow-kind="race" data-follow-id="{{ r.race_id }}" aria-pressed="false" aria-label="Follow race">
+                        <svg class="follow-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                        <span class="follower-count" data-follower-count="race:{{ r.race_id }}"><strong data-num>{{ r.followers }}</strong><span data-label hidden>followers</span></span>
+                    </button>
+                    <a href="/race/{{ r.race_id }}#race-comments" class="race-stat" aria-label="Comments">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+                        <span>{{ r.comments }}</span>
+                    </a>
+                </span>
+            </div>
+            {% if r.podium %}
+            <ol class="home-podium-list">
+                {% for p in r.podium[:3] %}
+                <li>
+                    <span class="pos-circle {{ ['gold', 'silver', 'bronze'][p.position - 1] }}">{{ p.position }}</span>
+                    {% if p.athlete_id %}
+                    <a href="/athlete/{{ p.athlete_id }}" class="home-who">{{ athlete_img(p) }}<span class="home-who-name">{{ p.name }}{{ flag(p.country_alpha3) }}</span></a>
+                    {% else %}
+                    <span class="home-who"><span class="home-who-name">{{ p.name }}{{ flag(p.country_alpha3) }}</span></span>
+                    {% endif %}
+                    {% if p.position == 1 and p.time %}<span class="home-t home-t--win">{{ p.time }}</span>
+                    {% elif p.gap %}<span class="home-t">{{ p.gap }}</span>
+                    {% elif p.time %}<span class="home-t">{{ p.time }}</span>{% endif %}
+                </li>
+                {% endfor %}
+            </ol>
+            {% else %}
+            <p class="home-podium-empty">{{ 'Start list only' if predicted else 'Results pending' }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</article>
+{% endmacro %}
