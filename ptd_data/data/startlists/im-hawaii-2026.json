@@ -1,0 +1,515 @@
+{
+ "event": {
+  "brand": "ironman",
+  "country": "United States",
+  "date": "2026-10-10",
+  "date_female": "",
+  "distance": "long",
+  "name": "Ironman Hawaii",
+  "prize_usd": 0,
+  "slug": "im-hawaii",
+  "venue": "Kona, HI"
+ },
+ "races": {
+  "male": [
+   {
+    "start_num": 2,
+    "name": "Gustav Iden",
+    "athlete_id": 47630
+   },
+   {
+    "start_num": 3,
+    "name": "Kristian Blummenfelt",
+    "athlete_id": 41322
+   },
+   {
+    "start_num": 4,
+    "name": "Marten Van Riel",
+    "athlete_id": 40311
+   },
+   {
+    "start_num": 5,
+    "name": "Sam Laidlow",
+    "athlete_id": 96694
+   },
+   {
+    "start_num": 6,
+    "name": "Patrick Lange",
+    "athlete_id": 9801
+   },
+   {
+    "start_num": 7,
+    "name": "Jonas Schomburg",
+    "athlete_id": 67535
+   },
+   {
+    "start_num": 8,
+    "name": "Nick Thompson",
+    "athlete_id": 548500102
+   },
+   {
+    "start_num": 9,
+    "name": "Matthew Marquardt",
+    "athlete_id": 1879426764
+   },
+   {
+    "start_num": 10,
+    "name": "Jamie Riddle",
+    "athlete_id": 103943
+   },
+   {
+    "start_num": 12,
+    "name": "Cameron Main",
+    "athlete_id": 115570
+   },
+   {
+    "start_num": 14,
+    "name": "Trevor Foley",
+    "athlete_id": 159411
+   },
+   {
+    "start_num": 17,
+    "name": "Menno Koolhaas",
+    "athlete_id": 49022
+   },
+   {
+    "start_num": 18,
+    "name": "Wilhelm Hirsch",
+    "athlete_id": 107663
+   },
+   {
+    "start_num": 19,
+    "name": "Mattia Ceccarelli",
+    "athlete_id": 16376
+   },
+   {
+    "start_num": 20,
+    "name": "Matthew Hanson",
+    "athlete_id": 1611263670
+   },
+   {
+    "start_num": 21,
+    "name": "Andrea Salvisberg",
+    "athlete_id": 11315
+   },
+   {
+    "start_num": 22,
+    "name": "Rudy von Berg",
+    "athlete_id": 47901
+   },
+   {
+    "start_num": 23,
+    "name": "Ben Kanute",
+    "athlete_id": 17043
+   },
+   {
+    "start_num": 24,
+    "name": "Vincent Luis",
+    "athlete_id": 11143
+   },
+   {
+    "start_num": 25,
+    "name": "Kieran Lindars",
+    "athlete_id": 74420
+   },
+   {
+    "start_num": 26,
+    "name": "Sam Long",
+    "athlete_id": 2111082254
+   },
+   {
+    "start_num": 27,
+    "name": "Brock Hoel",
+    "athlete_id": 115502
+   },
+   {
+    "start_num": 28,
+    "name": "Kacper Stepniak",
+    "athlete_id": 64282
+   },
+   {
+    "start_num": 29,
+    "name": "Jan Stratmann",
+    "athlete_id": 90934
+   },
+   {
+    "start_num": 30,
+    "name": "Kristian Høgenhaug",
+    "athlete_id": 662983468
+   },
+   {
+    "start_num": 31,
+    "name": "Antonio Benito Lopez",
+    "athlete_id": 49108
+   },
+   {
+    "start_num": 32,
+    "name": "Jason West",
+    "athlete_id": 80630
+   },
+   {
+    "start_num": 33,
+    "name": "Gregory Barnaby",
+    "athlete_id": 30633
+   },
+   {
+    "start_num": 34,
+    "name": "Pierre Le Corre",
+    "athlete_id": 30249
+   },
+   {
+    "start_num": 35,
+    "name": "Nathan Guerbeur",
+    "athlete_id": 102419
+   },
+   {
+    "start_num": 36,
+    "name": "Cameron Wurf",
+    "athlete_id": 140594
+   },
+   {
+    "start_num": 37,
+    "name": "Jack Sosinski",
+    "athlete_id": 111854
+   },
+   {
+    "start_num": 38,
+    "name": "Jack Moody",
+    "athlete_id": 1804893960
+   },
+   {
+    "start_num": 39,
+    "name": "Michele Sarzilla",
+    "athlete_id": 106513
+   },
+   {
+    "start_num": 40,
+    "name": "Magnus Ditlev",
+    "athlete_id": 1752691345
+   },
+   {
+    "start_num": 41,
+    "name": "Daniel Bækkegård",
+    "athlete_id": 85218
+   },
+   {
+    "start_num": 42,
+    "name": "Sebastian Norberg",
+    "athlete_id": 91921
+   },
+   {
+    "start_num": 43,
+    "name": "Frederic Funk",
+    "athlete_id": 75629
+   },
+   {
+    "start_num": 44,
+    "name": "Dominik Sowieja",
+    "athlete_id": 1756112444
+   },
+   {
+    "start_num": 45,
+    "name": "Benjamin Hill",
+    "athlete_id": 887263671
+   },
+   {
+    "start_num": 46,
+    "name": "Caleb Noble",
+    "athlete_id": 80307
+   },
+   {
+    "start_num": 47,
+    "name": "Arnaud Guilloux",
+    "athlete_id": 1838678313
+   },
+   {
+    "start_num": 48,
+    "name": "Almog Elazary",
+    "athlete_id": 1798945381
+   },
+   {
+    "start_num": 49,
+    "name": "Marius Bjerkeset",
+    "athlete_id": 319656146
+   },
+   {
+    "start_num": 50,
+    "name": "Jon Saeveras Breivold",
+    "athlete_id": 164435
+   },
+   {
+    "start_num": 51,
+    "name": "Youri Keulen",
+    "athlete_id": 84497
+   },
+   {
+    "start_num": 52,
+    "name": "Florian Angert",
+    "athlete_id": 98268
+   },
+   {
+    "start_num": 53,
+    "name": "Jumpei Furuya",
+    "athlete_id": 31810
+   },
+   {
+    "start_num": 54,
+    "name": "Jordi Montraveta Moya",
+    "athlete_id": 110763
+   },
+   {
+    "start_num": 55,
+    "name": "Tristan Olij",
+    "athlete_id": 112869
+   },
+   {
+    "start_num": 56,
+    "name": "Damien Le Mesnager",
+    "athlete_id": 1314926813
+   },
+   {
+    "start_num": 57,
+    "name": "Mikel Ugarte Ramos",
+    "athlete_id": 104666
+   }
+  ],
+  "female": [
+   {
+    "start_num": 1,
+    "name": "Solveig Løvseth",
+    "athlete_id": 94515
+   },
+   {
+    "start_num": 2,
+    "name": "Kat Matthews",
+    "athlete_id": 177434
+   },
+   {
+    "start_num": 3,
+    "name": "Laura Philipp",
+    "athlete_id": 692696266
+   },
+   {
+    "start_num": 4,
+    "name": "Hannah Berry",
+    "athlete_id": 116867676
+   },
+   {
+    "start_num": 5,
+    "name": "Lisa Perterer",
+    "athlete_id": 11879
+   },
+   {
+    "start_num": 6,
+    "name": "Lucy Charles-Barclay",
+    "athlete_id": 114712
+   },
+   {
+    "start_num": 7,
+    "name": "Chelsea Sodaro",
+    "athlete_id": 112892
+   },
+   {
+    "start_num": 8,
+    "name": "Taylor Knibb",
+    "athlete_id": 80643
+   },
+   {
+    "start_num": 9,
+    "name": "Sara Svensk",
+    "athlete_id": 94975
+   },
+   {
+    "start_num": 10,
+    "name": "Leonie Konczalla",
+    "athlete_id": 105570
+   },
+   {
+    "start_num": 11,
+    "name": "Lotte Wilms",
+    "athlete_id": 123898
+   },
+   {
+    "start_num": 12,
+    "name": "Daisy Davies",
+    "athlete_id": 125326
+   },
+   {
+    "start_num": 14,
+    "name": "Paula Findlay",
+    "athlete_id": 12674
+   },
+   {
+    "start_num": 15,
+    "name": "Franziska Hofmann",
+    "athlete_id": 200983
+   },
+   {
+    "start_num": 16,
+    "name": "Anna Pabinger",
+    "athlete_id": 105277
+   },
+   {
+    "start_num": 18,
+    "name": "Penny Slater",
+    "athlete_id": 527563720
+   },
+   {
+    "start_num": 19,
+    "name": "Julie Derron",
+    "athlete_id": 84816
+   },
+   {
+    "start_num": 20,
+    "name": "Katrine Christensen",
+    "athlete_id": 975589552
+   },
+   {
+    "start_num": 21,
+    "name": "Grace Thek",
+    "athlete_id": 15750
+   },
+   {
+    "start_num": 23,
+    "name": "Tamara Jewett",
+    "athlete_id": 1403493268
+   },
+   {
+    "start_num": 24,
+    "name": "Jackie Hering",
+    "athlete_id": 894585663
+   },
+   {
+    "start_num": 25,
+    "name": "Jenny Jendryschik",
+    "athlete_id": 181906
+   },
+   {
+    "start_num": 27,
+    "name": "Kate Curran",
+    "athlete_id": 63723
+   },
+   {
+    "start_num": 28,
+    "name": "Marta Lagownik",
+    "athlete_id": 102332
+   },
+   {
+    "start_num": 29,
+    "name": "Rachel Zilinskas",
+    "athlete_id": 1548510533
+   },
+   {
+    "start_num": 30,
+    "name": "Marjolaine Pierré",
+    "athlete_id": 128064
+   },
+   {
+    "start_num": 31,
+    "name": "Danielle Lewis",
+    "athlete_id": 1770193823
+   },
+   {
+    "start_num": 32,
+    "name": "Gabrielle Lumkes",
+    "athlete_id": 143774
+   },
+   {
+    "start_num": 33,
+    "name": "India Lee",
+    "athlete_id": 70613
+   },
+   {
+    "start_num": 34,
+    "name": "Charlotte McShane",
+    "athlete_id": 10077
+   },
+   {
+    "start_num": 35,
+    "name": "Rhianne Hughes",
+    "athlete_id": 589531333
+   },
+   {
+    "start_num": 36,
+    "name": "Antonia Milowsky",
+    "athlete_id": 400917192
+   },
+   {
+    "start_num": 37,
+    "name": "Anne-Sophie Pierre",
+    "athlete_id": 212897738
+   },
+   {
+    "start_num": 38,
+    "name": "Regan Hollioake",
+    "athlete_id": 1374833791
+   },
+   {
+    "start_num": 39,
+    "name": "Lara Hernandez-Tome",
+    "athlete_id": 304836400
+   },
+   {
+    "start_num": 40,
+    "name": "Kaidi Kivioja",
+    "athlete_id": 42267
+   },
+   {
+    "start_num": 42,
+    "name": "Samantha Skold",
+    "athlete_id": 1453482971
+   },
+   {
+    "start_num": 43,
+    "name": "Jana Uderstadt",
+    "athlete_id": 109438
+   },
+   {
+    "start_num": 44,
+    "name": "Imogen Simmonds",
+    "athlete_id": 810217695
+   },
+   {
+    "start_num": 45,
+    "name": "Rebecca Anderbury",
+    "athlete_id": 1121650271
+   },
+   {
+    "start_num": 46,
+    "name": "Nikita Paskiewiez",
+    "athlete_id": 1413868891
+   },
+   {
+    "start_num": 47,
+    "name": "Skye Wallace",
+    "athlete_id": 165633
+   },
+   {
+    "start_num": 48,
+    "name": "Henrike Güber",
+    "athlete_id": 444781601
+   },
+   {
+    "start_num": 49,
+    "name": "Pâmella Nascimento de Oliveira",
+    "athlete_id": 21486
+   },
+   {
+    "start_num": 50,
+    "name": "Rosie Wild",
+    "athlete_id": 134897
+   },
+   {
+    "start_num": 52,
+    "name": "Elisabetta Curridori",
+    "athlete_id": 1562797087
+   },
+   {
+    "start_num": 54,
+    "name": "Danielle Fauteux",
+    "athlete_id": 1567020566
+   }
+  ]
+ },
+ "saved_at": "2026-10-07T18:09:49.465392+00:00"
+}
