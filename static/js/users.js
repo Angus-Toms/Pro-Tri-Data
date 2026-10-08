@@ -111,7 +111,12 @@ function initComments() {
     host.dataset.commentsInit = '1';
     // Top-level comment ids whose replies are expanded; reapplied after every render.
     host.openThreads = new Set();
-    loadComments(host, 0).then(flashLinkedComment);
+    loadComments(host, 0).then(() => {
+        // The section is empty until the partial lands, so a #race-comments
+        // link scrolls once there is something to scroll to.
+        if (location.hash === '#race-comments') host.scrollIntoView();
+        flashLinkedComment();
+    });
     // A notification for the race already open only changes the hash.
     window.addEventListener('hashchange', flashLinkedComment);
     document.addEventListener('click', (e) => { if (!e.target.closest('[data-popover]')) closeCommentMenus(host); });
