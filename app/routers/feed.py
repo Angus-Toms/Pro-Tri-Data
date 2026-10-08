@@ -45,10 +45,10 @@ async def home_mine(request: Request):
         mine = next((p for p in rows if p["athlete_id"] == s["athlete_id"]), None)
         s["entries"]  = len(entries.get(s["race_id"], []))
         s["pred_pos"] = mine["predicted_position"] if mine else None
-        s["pred_gap"] = None
-        if mine and mine["overall_s"] and rows[0]["overall_s"]:
-            s["pred_gap"] = (format_time(mine["overall_s"]) if mine["predicted_position"] == 1
-                             else format_time_behind(mine["overall_s"] - rows[0]["overall_s"]))
+        s["time"] = format_time(mine["overall_s"]) if mine and mine["overall_s"] else None
+        s["gap"] = None
+        if mine and mine["overall_s"] and rows[0]["overall_s"] and mine["predicted_position"] != 1:
+            s["gap"] = format_time_behind(mine["overall_s"] - rows[0]["overall_s"])
 
     # --- since you were last here: floored at two weeks so a weekly visitor
     # always sees last weekend, capped at the query's 90 days ---
@@ -60,12 +60,9 @@ async def home_mine(request: Request):
         results, results_heading = all_results[:3], "Latest results"
     for r in results:
         r["change"] = format_rating_change(r["overall_change"])
-        if r["position"] == 1:
-            r["time"] = format_time(r["overall_s"] or 0)
-        elif r["position"] and r["overall_s"] and r["winner_s"]:
-            r["time"] = format_time_behind(r["overall_s"] - r["winner_s"])
-        else:
-            r["time"] = None
+        r["time"] = format_time(r["overall_s"]) if r["position"] and r["overall_s"] else None
+        r["gap"] = (format_time_behind(r["overall_s"] - r["winner_s"])
+                    if r["position"] and r["position"] != 1 and r["overall_s"] and r["winner_s"] else None)
 
     photos = queries.get_athletes_brief_bulk(
         {s["athlete_id"] for s in coming} | {r["athlete_id"] for r in results})

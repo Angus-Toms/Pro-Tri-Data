@@ -1362,6 +1362,7 @@ table td a.link:hover   { color: var(--primary-color); }
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    padding-right: 2px;   /* room for the flag's 1px outline, else overflow clips it */
 }
 .home-who-name small {
     display: block;
