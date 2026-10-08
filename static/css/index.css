@@ -281,50 +281,34 @@
 .home-counts span + span::before { content: "·"; margin: 0 0.5rem; }
 
 /* ── Your athletes (injected partial) ── */
+.home-mine-title {
+    margin: 0 0 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-light);
+}
+.home-mine-title + .home-mine { margin-bottom: 1.25rem; }
 .home-mine { table-layout: auto; box-shadow: var(--box-shadow); border-radius: var(--border-radius); overflow: hidden; }
-.home-mine th { cursor: default; }
+.home-mine th { cursor: default; white-space: nowrap; }
 .home-mine th:hover { background: var(--navy); color: rgba(255,255,255,0.6); }
 .home-mine td { padding: 0.8rem 1rem; }
 /* Plain white rows: no site-wide zebra stripe or hover tint here */
 .home-mine tbody td,
 .home-mine tbody tr:nth-child(even) td,
 .home-mine tr:hover td { background: var(--white) !important; }
-.home-mine .group td,
-.home-mine tr:hover.group td {
-    background: #f2f4f6 !important;
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text-light);
-    padding: 0.4rem 1.25rem;   /* right edge matches the last cell's site-wide padding */
-}
-.home-mine .group-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-/* Column labels sit over the result grid so predicted and actual read differently */
-.home-mine .result--head { font-size: 0.65rem; color: var(--text-lighter); }
-.home-mine .result--head span { justify-self: end; }
 .home-mine .date { font-size: 0.8rem; font-weight: 600; white-space: nowrap; width: 6.5rem; }
 .home-mine .race a { color: inherit; text-decoration: none; }
 .home-mine .race a:hover { color: var(--primary-color); }
 .home-mine .race b { font-weight: 600; display: block; }
 .home-mine .race .small { display: block; font-size: 0.78rem; color: var(--text-light); }
-.home-mine .num { text-align: right; white-space: nowrap; }
-/* Result: three fixed columns (position, time, rating change) so rows line up */
-/* Result: fixed columns (position, time, gap, rating change) so rows line up */
-.home-mine .result {
-    display: inline-grid;
-    grid-template-columns: 2rem 4.75rem 3.75rem 3.25rem;
-    align-items: center;
-    justify-items: end;
-    gap: 0.5rem;
-}
-.home-mine .result .pos-dnf { grid-column: 1 / 3; }
+.home-mine .num { text-align: right; white-space: nowrap; width: 1%; }
 .home-mine .t { font-weight: 600; font-variant-numeric: tabular-nums; }
 .home-mine .g { font-size: 0.8rem; color: var(--text-light); font-variant-numeric: tabular-nums; }
-/* Predicted rows: the model's numbers are shown in the prediction colour, not as fact */
-.home-mine .result--pred .t,
-.home-mine .result--pred .g { color: var(--primary-color); }
-.home-mine .result--pred .t::after { content: ' est.'; font-size: 0.7rem; font-weight: 500; }
+/* Predicted table: the model's numbers in the prediction colour, not as fact */
+.home-mine--pred .t,
+.home-mine--pred .g { color: var(--primary-color); }
 .home-mine .pos-other { color: var(--text-color); font-weight: 700; font-size: 0.8rem; }
 .home-mine .pos-dnf { font-size: 0.75rem; font-style: italic; color: var(--text-lighter); }
 .home-mine-empty { padding: 1rem 1.25rem; font-size: 0.9rem; color: var(--text-light); }
@@ -357,11 +341,11 @@
     /* Your athletes becomes stacked rows: date on line one, race on two,
        athlete on three, result on four. */
     .home-mine thead { display: none; }
-    .home-mine tr { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; padding: 0.7rem 1rem; }
+    .home-mine tr { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; padding: 0.7rem 1rem; border-bottom: 1px solid var(--border-color); }
     .home-mine td, .home-mine td:first-child, .home-mine td:last-child { display: block; padding: 0; width: auto; }
-    .home-mine .group { padding: 0.35rem 1rem; }
-    .home-mine .group td { padding: 0; }
     .home-mine .race { flex-basis: 100%; }
     .home-mine .who-cell { flex-basis: 100%; margin-top: 0.3rem; }
-    .home-mine .num { margin-left: auto; }
+    /* Numbers run along one line under the athlete, each with its column label */
+    .home-mine .num { display: inline-flex; align-items: center; gap: 0.35rem; margin-right: 0.75rem; }
+    .home-mine .num[data-label]::before { content: attr(data-label); font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-lighter); }
 }

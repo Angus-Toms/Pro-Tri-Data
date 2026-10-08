@@ -12,43 +12,53 @@
     <a href="/athlete-leaderboard" class="section-link">Find athletes</a>
 </div>
 {% else %}
-<table class="home-mine">
-    <thead><tr><th>Date</th><th>Race</th><th>Athlete</th><th class="num">Result</th></tr></thead>
+{% macro who(x) %}<a href="/athlete/{{ x.athlete_id }}" class="home-who">{{ athlete_img(x) }}<span class="home-who-name">{{ x.name }}{{ flag(x.country_alpha3) }}</span></a>{% endmacro %}
+{% macro pos(p) %}{% if p in (1, 2, 3) %}<span class="pos-circle {{ ['gold', 'silver', 'bronze'][p - 1] }}">{{ p }}</span>{% else %}<span class="pos-other">{{ p }}</span>{% endif %}{% endmacro %}
+{% if coming %}
+<h4 class="home-mine-title">Coming up</h4>
+<table class="home-mine home-mine--pred">
+    <thead><tr><th>Date</th><th>Race</th><th>Athlete</th><th class="num">Predicted</th><th class="num">Pred. time</th><th class="num">Gap</th></tr></thead>
     <tbody>
-        {% if coming %}
-        <tr class="group"><td colspan="4"><div class="group-row"><span class="group-lbl">Coming up</span><span class="result result--head"><span>Pred.</span><span>Time</span><span>Gap</span><span>Rating</span></span></div></td></tr>
         {% for s in coming %}
         <tr>
             <td class="date">{{ s.race_date.strftime('%a %-d %b') }}</td>
             <td class="race"><a href="/race/{{ s.race_id }}"><b>{{ s.race_title }}</b></a><span class="small">{{ s.prog_name }}{% if s.entries %} &middot; {{ s.entries }} entries{% endif %}</span></td>
-            <td class="who-cell"><a href="/athlete/{{ s.athlete_id }}" class="home-who">{{ athlete_img(s) }}<span class="home-who-name">{{ s.name }}{{ flag(s.country_alpha3) }}</span></a></td>
-            <td class="num"><span class="result result--pred">
-                {% if s.pred_pos %}{% if s.pred_pos <= 3 %}<span class="pos-circle {{ ['gold', 'silver', 'bronze'][s.pred_pos - 1] }}">{{ s.pred_pos }}</span>{% else %}<span class="pos-other">{{ s.pred_pos }}</span>{% endif %}<span class="t">{{ s.time or '' }}</span><span class="g">{{ s.gap or '' }}</span><span class="home-chg"></span>
-                {% else %}<span class="pos-dnf">No prediction</span><span class="g"></span><span class="home-chg"></span>{% endif %}
-            </span></td>
+            <td class="who-cell">{{ who(s) }}</td>
+            {% if s.pred_pos %}
+            <td class="num pos" data-label="Predicted">{{ pos(s.pred_pos) }}</td>
+            <td class="num t" data-label="Pred. time">{{ s.time or '' }}</td>
+            <td class="num g" data-label="Gap">{{ s.gap or '' }}</td>
+            {% else %}
+            <td class="num" colspan="3"><span class="pos-dnf">No prediction yet</span></td>
+            {% endif %}
         </tr>
         {% endfor %}
-        {% endif %}
-        {% if results %}
-        <tr class="group"><td colspan="4"><div class="group-row"><span class="group-lbl">{{ results_heading }}</span><span class="result result--head"><span>Pos</span><span>Time</span><span>Gap</span><span>Rating</span></span></div></td></tr>
+    </tbody>
+</table>
+{% endif %}
+{% if results %}
+<h4 class="home-mine-title">{{ results_heading }}</h4>
+<table class="home-mine">
+    <thead><tr><th>Date</th><th>Race</th><th>Athlete</th><th class="num">Pos</th><th class="num">Time</th><th class="num">Gap</th><th class="num">Rating</th></tr></thead>
+    <tbody>
         {% for r in results %}
         <tr>
             <td class="date">{{ r.race_date.strftime('%a %-d %b') }}</td>
             <td class="race"><a href="/race/{{ r.race_id }}"><b>{{ r.race_title }}</b></a><span class="small">{{ r.prog_name }}</span></td>
-            <td class="who-cell"><a href="/athlete/{{ r.athlete_id }}" class="home-who">{{ athlete_img(r) }}<span class="home-who-name">{{ r.name }}{{ flag(r.country_alpha3) }}</span></a></td>
-            <td class="num"><span class="result">
-                {% if r.position in (1, 2, 3) %}<span class="pos-circle {{ ['gold', 'silver', 'bronze'][r.position - 1] }}">{{ r.position }}</span>
-                {% elif r.position %}<span class="pos-other">{{ r.position }}</span>
-                {% else %}<span class="pos-dnf">{{ r.status }}</span>{% endif %}
-                {% if r.position %}<span class="t">{{ r.time or '' }}</span>{% endif %}
-                <span class="g">{{ r.gap or '' }}</span>
-                <span class="home-chg {{ r.change.css_class }}">{{ r.change.formatted_str | safe }}</span>
-            </span></td>
+            <td class="who-cell">{{ who(r) }}</td>
+            {% if r.position %}
+            <td class="num pos" data-label="Pos">{{ pos(r.position) }}</td>
+            <td class="num t" data-label="Time">{{ r.time or '' }}</td>
+            <td class="num g" data-label="Gap">{{ r.gap or '' }}</td>
+            {% else %}
+            <td class="num" colspan="3"><span class="pos-dnf">{{ r.status }}</span></td>
+            {% endif %}
+            <td class="num" data-label="Rating"><span class="home-chg {{ r.change.css_class }}">{{ r.change.formatted_str | safe }}</span></td>
         </tr>
         {% endfor %}
-        {% endif %}
     </tbody>
 </table>
+{% endif %}
 {% endif %}
 {% if suggestions %}
 <p class="home-also">Also on this week's start lists from {{ country_name }}: {% for a in suggestions %}<a href="/athlete/{{ a.athlete_id }}">{{ a.name }}</a>{{ ', ' if not loop.last }}{% endfor %}</p>
