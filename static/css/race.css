@@ -407,7 +407,21 @@
 .results-table .athlete-col  { width: 190px; }
 .results-table .yob-col      { width: 90px; }
 .results-table .time-col     { width: calc((100% - 360px) / 6); }
-.results-table .pct-col      { width: 70px; font-variant-numeric: tabular-nums; }
+.results-table .pct-col      { width: 96px; }
+
+/* Win / Podium: the value over a thin bar filled to the probability (--p) */
+.pct-bar {
+    display: block;
+    width: 56px;
+    height: 4px;
+    margin-top: 4px;
+    border-radius: 2px;
+    background: linear-gradient(to right, var(--primary-color) var(--p), var(--border-color) 0);
+}
+.pct-col--podium .pct-bar {
+    background: linear-gradient(to right, rgba(232, 93, 4, 0.45) var(--p), var(--border-color) 0);
+}
+.time-cell-main.pct-low { font-weight: 400; color: var(--text-lighter); }
 
 .rating-table .athlete-col   { width: 190px; }
 .rating-table .yob-col       { width: 90px; }

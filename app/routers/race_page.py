@@ -123,7 +123,7 @@ def _prediction_rows(stored, people, extra=()):
             'podium_pct':         r['podium_pct'],
         }
         for k in ('win_pct', 'podium_pct'):
-            row[f'{k}_label'] = '<1%' if r[k] < 0.005 else f'{r[k]:.0%}'
+            row[f'{k}_label'] = f'{r[k]:.0%}'
         for k in extra:
             row[k] = p.get(k, '')
         for disc in DISCS:
