@@ -2164,8 +2164,8 @@ a.rt-best-race:hover { color: var(--primary-color); }
 .rt-best-change.rating-neutral,
 .rt-best-change.no-best-performance { color: var(--text-lighter); }
 
-/* Course conditions cell — formatted offset + cond-pill. Pill sits on the
-   same text baseline as the offset value so the two read as one unit. */
+/* Course conditions cell — formatted offset + cond-pill, centred together
+   by the flex row (so no inline nudge on the pill). */
 .rt-cond-val {
     display: inline-flex;
     align-items: center;
@@ -2175,7 +2175,7 @@ a.rt-best-race:hover { color: var(--primary-color); }
     color: var(--text-color);
     font-variant-numeric: tabular-nums;
 }
-.rt-cond-val .cond-pill { margin: 0; vertical-align: middle; }
+.rt-cond-val .cond-pill { top: 0; }
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
@@ -2283,8 +2283,9 @@ body.help-tour-open { overflow: hidden; }
 /* ── Standard classification pill ── */
 /* Centred on the text beside it (race name, rating, value): `middle` centres on
    the x-height, and the nudge lifts it to the centre of capitals and figures.
-   align-self does the same job in the flex rows that line items up by baseline. */
-.std-pill {
+   align-self does the same job in the flex rows that line items up by baseline.
+   .cond-pill (course conditions) is the same pill in other colours. */
+.std-pill, .cond-pill {
     display: inline-block;
     padding: 2px 8px;
     border-radius: 999px;
@@ -2331,16 +2332,7 @@ body.help-tour-open { overflow: hidden; }
 .race-rank-link:hover { color: var(--primary-color); }
 
 /* ── Course condition pill ── */
-.cond-pill {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: 0.62rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-top: 0.4rem;
-}
+/* Shape and alignment shared with .std-pill above; only the colours differ. */
 .cond-pill--very_fast { background: rgba(21,  128, 61,  0.15); color: #15803d; }
 .cond-pill--fast      { background: rgba(74,  222, 128, 0.18); color: #166534; }
 .cond-pill--normal    { background: rgba(100, 116, 139, 0.12); color: #475569; }

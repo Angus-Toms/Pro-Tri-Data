@@ -185,8 +185,8 @@
     color: rgba(255, 255, 255, 0.6);
 }
 
-/* The flex cell already centres the tier pill; base.css's inline nudge would lift it */
-.h2h-stat-cell .std-pill { top: 0; }
+/* The flex cell already centres the pills; base.css's inline nudge would lift them */
+.h2h-stat-cell .std-pill, .h2h-stat-cell .cond-pill { top: 0; }
 
 /* Context line under a value (best-performance or fastest-split athlete):
    wraps onto its own line, centred under the value. */
