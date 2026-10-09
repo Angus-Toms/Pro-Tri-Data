@@ -405,11 +405,9 @@
 }
 
 .results-table .athlete-col  { width: 190px; }
-.results-table .yob-col      { width: 90px; }
 .results-table .time-col     { width: calc((100% - 360px) / 6); }
 
 .rating-table .athlete-col   { width: 190px; }
-.rating-table .yob-col       { width: 90px; }
 .rating-table .time-col      { width: calc((100% - 360px) / 5); }
 
 .rating-change {
@@ -418,13 +416,6 @@
     display: inline-flex;
     align-items: center;
     gap: 0.3em;
-}
-
-/* YOB column - de-emphasised, smaller and lighter than main data */
-.results-table .yob-col,
-.rating-table  .yob-col {
-    font-size: 0.75rem;
-    color: var(--text-lighter);
 }
 
 /* ============================================
@@ -584,11 +575,7 @@
 .pred-result-name { font-weight: 600; font-size: 0.875rem; }
 .pred-result-meta { font-size: 0.75rem; color: var(--text-lighter); }
 
-/* Predicted rows - persistent orange tint on all cells */
-.predicted-row td { background: rgba(231, 100, 30, 0.13); }
-.predicted-row:hover td { background: rgba(231, 100, 30, 0.20); }
-
-
+/* Predicted rows flash in, then keep the tint set in the race table section */
 @keyframes pred-flash {
     0%   { background: rgba(231, 100, 30, 0.45); }
     100% { background: rgba(231, 100, 30, 0.13); }
@@ -660,13 +647,7 @@
 }
 
 
-/* Results / Predictions toggle */
-.results-section-controls {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
+/* View switch above the race table */
 .race-view-toggle {
     display: flex;
     gap: 2px;
@@ -697,37 +678,375 @@
     box-shadow: 0 1px 3px rgba(0,0,0,0.12);
 }
 
-.race-view.hidden { display: none; }
-
-/* Position diff badges */
-/* Fixed-width, centred: "-" and "^25" occupy the same box so the badges line
-   up row to row and the athlete name next to them doesn't shift. */
-.pos-diff {
-    display: inline-flex;
+/* ============================================
+   RACE TABLE - one table with several views of the same rows
+   (partials/_race_table.html, initRaceTable in race.js). Only the current
+   view's cells (.vc.on) show. Columns step down by width: hide-1024 and
+   hide-768 drop out at that width, and at 480 a row keeps one headline value
+   (.hl) with the rest in a tap-open drawer.
+   ============================================ */
+.race-table-toolbar {
+    display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 0.25em;
-    min-width: 2.4em;
-    font-size: 0.65rem;
-    font-weight: 700;
-    margin-left: 3px;
-    vertical-align: middle;
-    line-height: 1;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
 }
 
-.pos-diff-up   { color: var(--success-color); }
-.pos-diff-down { color: var(--error-color); }
-.pos-diff-flat { color: var(--text-lighter); }
+.race-find { position: relative; display: block; }
+.race-find svg {
+    position: absolute;
+    left: 0.65rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    color: var(--text-lighter);
+    pointer-events: none;
+}
+.race-find input {
+    width: 250px;
+    padding: 0.45rem 0.75rem 0.45rem 2rem;
+    font: inherit;
+    font-size: 0.85rem;
+    color: var(--text-color);
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-sizing: border-box;
+    transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+.race-find input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(232, 93, 4, 0.12);
+}
 
-/* Debut row in predictions table - de-emphasised (no pre-race ratings so less reliable) */
-.debut-row td { color: var(--text-light); font-style: italic; }
+.race-view-sub { margin: 0 0 0.85rem; }
+.race-table-chips { display: none; }
+
+/* overflow: clip rounds the corners without making a scroll container, so the
+   header row can stick to the page under the site header. */
+.race-table-section.race-table-wrap { overflow: clip; margin-bottom: 0.75rem; }
+.race-table thead th { position: sticky; top: 53px; z-index: 5; }
+
+.race-table .vc:not(.on) { display: none; }
+.race-table .th-short { display: none; }
+/* Up to nine columns (Predictions): headers wrap, padding is tighter than the
+   site default, and the sort arrow shows only on the sorted or hovered column */
+.race-table th { white-space: normal; }
+.race-table th,
+.race-table td { padding-left: 0.75rem; padding-right: 0.75rem; }
+.race-table th:not(.asc):not(.desc):not(:hover) .sort-icon { display: none; }
+/* Which column comes last depends on the view, so no extra gutter on it */
+.race-table th:last-child { padding-right: 0.75rem; }
+
+.race-table .position-col { width: 66px; padding-right: 0.4rem; }
+.race-table .athlete-col  { width: 240px; }
+.race-table .vc.mid       { width: 84px; }
+.race-table .vc.mid-wide  { width: 110px; }
+
+.race-table .athlete-sub {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--text-lighter);
+}
+.race-table .cell-label,
+.race-table .toggle-col { display: none; }
+.race-table .no-value { color: var(--text-lighter); }
+.race-table .time-cell-main.strong { font-weight: 700; }
+/* Rating and its change side by side, the change centred on the number; in a
+   column too narrow for both, the change wraps underneath */
+.race-table .race-rating { display: flex; flex-wrap: wrap; align-items: center; column-gap: 0.3em; }
+.race-table .run-gain { font-weight: 700; }
+.race-table .phone-only { display: none; }
+.race-table .pct-bar { max-width: 100%; }
+
+/* Predictions view: places gained or lost against the prediction, under the
+   finishing position. Orange for beating it, grey for missing it - green and
+   red stay reserved for rating changes. */
+.race-table .pred-diff { display: none; }
+.race-table[data-view="predictions"] .pred-diff {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15em;
+    width: 22px;
+    margin-top: 3px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-lighter);
+}
+.race-table .pred-diff.up { color: var(--primary-color); }
+.race-table .pred-diff .chg-arrow { width: 0.75em; height: 0.75em; }
+
+/* Labels and row styles that belong to one view */
+.race-table:not([data-view="predictions"]) .only-predictions,
+.race-table:not([data-view="ratings"]) .only-ratings { display: none; }
+.race-table[data-view="ratings"] .debut-row td { color: var(--text-light); font-style: italic; }
+.race-table[data-view="predictions"] .low-conf-row td { color: var(--text-light); }
 .debut-label { font-size: 0.75em; color: var(--text-lighter); font-style: italic; }
-
-/* Low-confidence prediction rows (few career starts): de-emphasised, marked with
-   the sprout badge next to the name. */
-.low-conf-row td { color: var(--text-light); }
 .low-conf-mark { margin-left: 0.2rem; }
 .low-conf-mark svg { width: 0.95em; height: 0.95em; }
+
+/* JS stripes the visible rows (a search or the top-20 cut hides some) */
+.race-table tbody tr:nth-child(even) td { background: transparent; }
+.race-table tbody tr.stripe td { background: #f2f4f6; }
+.race-table tbody tr.is-hidden { display: none; }
+/* Added predictions keep their tint over the stripes */
+.race-table tbody tr.predicted-row td { background: rgba(231, 100, 30, 0.13); }
+
+@media (max-width: 1024px) {
+    .race-table .athlete-col { width: 180px; }
+    /* Fewer columns from here down: let them share the width evenly */
+    .race-table .vc.mid,
+    .race-table .vc.mid-wide { width: auto; }
+    .race-table .vc.hide-1024 { display: none; }
+    .race-table th,
+    .race-table td { padding-left: 0.6rem; padding-right: 0.6rem; }
+    .race-table th:first-child,
+    .race-table td:first-child { padding-left: 1rem; }
+    .race-table th:last-child { padding-right: 0.6rem; }
+    .race-table .position-col { padding-right: 0.4rem; }
+    /* Narrower columns: tighter header type and short labels */
+    .race-table th { font-size: 0.68rem; letter-spacing: 0.05em; }
+    .race-table .th-full { display: none; }
+    .race-table .th-short { display: inline; }
+}
+
+@media (max-width: 768px) {
+    .race-table-toolbar { flex-direction: column; align-items: stretch; }
+    .race-table-toolbar .race-view-btn { flex: 1; padding-left: 0.25rem; padding-right: 0.25rem; }
+    .race-find input { width: 100%; }
+
+    .race-table .position-col { width: 50px; }
+    .race-table .athlete-col  { width: 132px; }
+    .race-table .vc.hide-768 { display: none; }
+    .race-table th { font-size: 0.65rem; letter-spacing: 0.04em; }
+    .race-table td,
+    .race-table .time-cell-main,
+    .race-table .overall-time { font-size: 0.8rem; }
+    .race-table th,
+    .race-table td { padding-left: 0.4rem; padding-right: 0.4rem; }
+    .race-table th:first-child,
+    .race-table td:first-child { padding-left: 0.6rem; }
+    .race-table th:last-child { padding-right: 0.4rem; }
+}
+
+/* Phone: each row is pos | athlete | headline | chevron, and the chevron opens
+   the view's other columns on a line underneath. */
+@media (max-width: 480px) {
+    .race-table-chips {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        overflow-x: auto;
+        padding: 0.2rem 0 0.35rem;
+        margin-bottom: 0.35rem;
+        scrollbar-width: thin;
+    }
+
+    table.race-table,
+    .race-table tbody { display: block; }
+    .race-table thead { display: none; }
+    .race-table tbody tr {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        column-gap: 0.2rem;
+        padding: 0.55rem 0.6rem 0.55rem 0.4rem;
+    }
+    .race-table tbody tr.is-hidden { display: none; }
+    /* Cells are separate flex items, so backgrounds go on the row */
+    .race-table tbody td {
+        display: none;
+        padding: 0;
+        border: 0;
+        background: transparent !important;
+    }
+    .race-table tbody tr.stripe { background: #f2f4f6; }
+    .race-table tbody tr:hover { background: var(--highlight); }
+    .race-table tbody tr.predicted-row { background: rgba(231, 100, 30, 0.13); }
+
+    .race-table td.position-col {
+        display: block;
+        order: -1;
+        min-width: 42px;
+        padding: 0 0.3rem;
+        text-align: center;
+    }
+    .race-table[data-view="predictions"] .pred-diff { margin: 3px auto 0; }
+    .race-table td.athlete-col { display: block; flex: 1 1 0; min-width: 0; padding-right: 0.75rem; }
+    .race-table td.vc.on.hl { display: block; order: 1; text-align: right; }
+    .race-table .hl .race-rating { justify-content: flex-end; }
+    .race-table td.toggle-col { display: block; order: 2; }
+    .race-table .wide-only { display: none; }
+    .race-table .phone-only { display: block; }
+
+    .race-table tr.expanded::after { content: ''; flex-basis: 100%; height: 0; order: 3; }
+    /* The drawer is a three-column grid: the view's other columns still on
+       screen at this width, plus any marked .drawer (predicted splits) */
+    .race-table tr.expanded td.vc.on:not(.hl):not(.hide-768):not(.hide-1024),
+    .race-table tr.expanded td.vc.on.drawer {
+        display: flex;
+        flex: 0 0 calc((100% - 0.4rem) / 3);
+        flex-direction: column;
+        align-items: center;
+        align-self: flex-start;
+        gap: 1px;
+        order: 4;
+        padding-top: 0.45rem;
+        text-align: center;
+        line-height: 1.2;
+    }
+    .race-table tr.expanded td:not(.hl) .race-rating { justify-content: center; }
+    .race-table tr.expanded td:not(.hl) .cell-label {
+        display: block;
+        font-size: 0.58rem;
+        font-weight: 500;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--text-lighter);
+    }
+
+    .row-toggle {
+        display: inline-flex;
+        padding: 4px 0;
+        background: none;
+        border: 0;
+        line-height: 0;
+        color: var(--text-lighter);
+        cursor: pointer;
+    }
+    /* Chevron points right when closed, down when open */
+    .row-toggle svg { transform: rotate(-90deg); transition: transform 0.15s ease; }
+    .race-table tr.expanded .row-toggle svg { transform: rotate(0deg); }
+}
+
+.race-table-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+    font-size: 0.8rem;
+    color: var(--text-lighter);
+}
+
+/* ============================================
+   RESULT CHARTS - bike groups, split times, rating changes. SVG drawn by
+   initResultCharts in race.js at the container's width.
+   ============================================ */
+.race-chart-sub { margin: 0 0 0.85rem; max-width: 75ch; }
+.race-chart {
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1rem 1.25rem;
+    margin-bottom: 2rem;
+}
+.race-chart svg { display: block; font-family: inherit; overflow: visible; }
+.race-chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 1.1rem;
+    margin-bottom: 0.6rem;
+    font-size: 0.78rem;
+    color: var(--text-light);
+}
+.race-chart-key { display: inline-flex; align-items: center; gap: 0.4rem; }
+.key-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #c3c6cc; }
+.key-dot.up   { background: var(--success-color); }
+.key-dot.down { background: var(--error-color); }
+.key-dot.standout { background: transparent; box-shadow: inset 0 0 0 1.5px var(--text-color); }
+
+/* Podium: the site's medal colours, ringed in their darker text tone */
+.key-dot.pod-1 { background: var(--gold);   box-shadow: 0 0 0 1.5px var(--gold-text); }
+.key-dot.pod-2 { background: var(--silver); box-shadow: 0 0 0 1.5px var(--silver-text); }
+.key-dot.pod-3 { background: var(--bronze); box-shadow: 0 0 0 1.5px var(--bronze-text); }
+.rc-pod { stroke-width: 1.5; }
+.rc-pod.pod-1 { fill: var(--gold);   stroke: var(--gold-text); }
+.rc-pod.pod-2 { fill: var(--silver); stroke: var(--silver-text); }
+.rc-pod.pod-3 { fill: var(--bronze); stroke: var(--bronze-text); }
+.pod-text { font-weight: 700; }
+.pod-text.pod-1 { color: var(--gold-text); }
+.pod-text.pod-2 { color: var(--silver-text); }
+.pod-text.pod-3 { color: var(--bronze-text); }
+
+.rc-grid    { stroke: var(--border-color); stroke-width: 1; }
+.rc-base    { stroke: #d1d5db; stroke-width: 1; }
+.rc-zero    { stroke: var(--text-lighter); stroke-width: 1; }
+.rc-median  { stroke: var(--text-lighter); stroke-width: 1; }
+.rc-bracket { stroke: var(--text-lighter); stroke-width: 1.2; fill: none; }
+.rc-axis    { fill: var(--text-lighter); font-size: 11px; }
+.rc-label   { fill: var(--text-color); font-size: 12px; font-weight: 600; }
+.rc-group   { fill: var(--text-light); font-size: 11px; font-weight: 600; }
+.rc-dot     { fill: #c3c6cc; stroke: var(--white); stroke-width: 1.5; }
+.rc-up      { fill: var(--success-color); stroke: var(--white); stroke-width: 1.5; }
+.rc-down    { fill: var(--error-color); stroke: var(--white); stroke-width: 1.5; }
+.rc-ring    { fill: none; stroke: var(--text-color); stroke-width: 1.5; }
+.rc-hit     { fill: transparent; cursor: pointer; }
+.rc-name {
+    fill: var(--text-color);
+    font-size: 11.5px;
+    font-weight: 600;
+    paint-order: stroke;
+    stroke: var(--white);
+    stroke-width: 4px;
+    stroke-linejoin: round;
+}
+
+.race-chart-tip {
+    position: fixed;
+    z-index: 1100;
+    pointer-events: none;
+    max-width: 240px;
+    padding: 0.45rem 0.65rem;
+    border-radius: 6px;
+    background: var(--navy);
+    color: #fff;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    font-variant-numeric: tabular-nums;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.race-chart-notes {
+    display: grid;
+    gap: 0.3rem;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.82rem;
+    color: var(--text-light);
+}
+.race-chart-notes b { color: var(--text-color); }
+.race-chart-standouts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem 1.5rem;
+    margin-top: 0.75rem;
+    font-size: 0.82rem;
+    color: var(--text-light);
+}
+.race-chart-standouts h5 {
+    margin: 0 0 0.3rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-lighter);
+}
+.race-chart-standouts ol { margin: 0; padding-left: 1.1rem; display: grid; gap: 0.2rem; }
+.race-chart-standouts b { color: var(--text-color); }
+@media (max-width: 480px) {
+    .race-chart { padding: 0.75rem; }
+    .race-chart-standouts { grid-template-columns: minmax(0, 1fr); }
+}
 
 /* Corrections table */
 .corrections-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }

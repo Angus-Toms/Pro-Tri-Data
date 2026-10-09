@@ -74,38 +74,33 @@
     </div>
 </div>
 
-<!-- Results Table -->
+<!-- Results Table: one table, with Times / Positions / Ratings / Predictions views of the same rows -->
+{% from "partials/_race_table.html" import toolbar, foot, th, td, time, rating, pct, pos_marker, athlete, toggle %}
+{% set dv = 'times' %}
+{% set view_keys = views | map('first') | list %}
 <div class="results-section-head">
-    <div class="page-section-head" id="results-section-title"><span><span class="section-label">Race Results</span> {{ help_icon('race-results') }}</span></div>
-    <div class="results-section-controls">
-        {% if has_predictions %}
-        <div class="race-view-toggle">
-            <button class="race-view-btn" data-view="predictions">Predictions</button>
-            <button class="race-view-btn active" data-view="results">Results</button>
-        </div>
-        {% endif %}
-        <div class="table-actions">
-        {% set _course = 'long' if race_distance in ('middle','t100','long') else 'short' %}
-        <button id="add-prediction-btn" class="btn-add-prediction btn-table-action"
-                data-gender="{{ race.gender }}" data-course="{{ _course }}"
-                title="Add athlete prediction" aria-label="Add athlete prediction">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <line x1="19" y1="8" x2="19" y2="14"/>
-                <line x1="22" y1="11" x2="16" y2="11"/>
-            </svg>
-            <span class="btn-table-action-label">Add athlete</span>
-        </button>
-        {% with download_url = "/download/races/" ~ race.race_id ~ "/results" %}{% include "partials/download_button.html" %}{% endwith %}
-        {% set _first = (splits_data | selectattr('position') | list | first) %}
-        {% if _first %}
-        <button type="button" class="btn-table-action" data-share="{{ _first.athlete_id }}" data-share-design="p1_result" title="Share a result card">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>
-            <span class="btn-table-action-label">Share</span>
-        </button>
-        {% endif %}
-        </div>
+    <div class="page-section-head"><span>Race Results {{ help_icon('race-results') }}</span></div>
+    <div class="table-actions">
+    {% set _course = 'long' if race_distance in ('middle','t100','long') else 'short' %}
+    <button id="add-prediction-btn" class="btn-add-prediction btn-table-action"
+            data-gender="{{ race.gender }}" data-course="{{ _course }}"
+            title="Add athlete prediction" aria-label="Add athlete prediction">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <line x1="19" y1="8" x2="19" y2="14"/>
+            <line x1="22" y1="11" x2="16" y2="11"/>
+        </svg>
+        <span class="btn-table-action-label">Add athlete</span>
+    </button>
+    {% with download_url = "/download/races/" ~ race.race_id ~ "/results" %}{% include "partials/download_button.html" %}{% endwith %}
+    {% set _first = (splits_data | selectattr('position') | list | first) %}
+    {% if _first %}
+    <button type="button" class="btn-table-action" data-share="{{ _first.athlete_id }}" data-share-design="p1_result" title="Share a result card">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>
+        <span class="btn-table-action-label">Share</span>
+    </button>
+    {% endif %}
     </div>
 </div>
 <div id="prediction-modal" class="prediction-modal hidden" role="dialog" aria-modal="true" aria-labelledby="prediction-modal-title">
@@ -137,209 +132,109 @@
     This race result likely combined multiple finals - listed positions reflect overall standings, but finish times may not be strictly increasing.
 </p>
 {% endif %}
-<div id="results-view" class="race-view">
-    <div class="results-sort-chips" role="tablist" aria-label="Sort race results">
-        <button class="sort-chip" data-sort-col="0" type="button">Position<svg class="chip-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
-        <button class="sort-chip" data-sort-col="8" type="button">Overall<svg class="chip-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
-        <button class="sort-chip" data-sort-col="3" type="button">Swim<svg class="chip-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
-        <button class="sort-chip" data-sort-col="4" type="button">T1<svg class="chip-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
-        <button class="sort-chip" data-sort-col="5" type="button">Bike<svg class="chip-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
-        <button class="sort-chip" data-sort-col="6" type="button">T2<svg class="chip-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
-        <button class="sort-chip" data-sort-col="7" type="button">Run<svg class="chip-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
-    </div>
-    <div class="race-table-section">
-        <table class="sortable-table results-table">
-            <thead>
-                <tr>
-                    <th class="sortable position-col" data-sort="position">Pos</th>
-                    <th class="sortable athlete-col" data-sort="string">Athlete</th>
-                    <th class="sortable yob-col" data-sort="number">YOB</th>
-                    <th class="sortable time-col" data-sort="time">Swim</th>
-                    <th class="sortable time-col" data-sort="time">T1</th>
-                    <th class="sortable time-col" data-sort="time">Bike</th>
-                    <th class="sortable time-col" data-sort="time">T2</th>
-                    <th class="sortable time-col" data-sort="time">Run</th>
-                    <th class="sortable time-col overall-col" data-sort="time">Overall</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if splits_data %}
-                    {% for athlete in splits_data %}
-                    <tr>
-                        <td class="position-col" data-value="{{ athlete.position if athlete.position is not none else athlete.status }}">
-                            {% if athlete.position == 1 %}<span class="pos-circle gold">1</span>
-                            {% elif athlete.position == 2 %}<span class="pos-circle silver">2</span>
-                            {% elif athlete.position == 3 %}<span class="pos-circle bronze">3</span>
-                            {% elif athlete.status in ['DNF', 'DNS', 'DQ', 'LAP', 'NC'] %}<span class="pos-dnf">{{ athlete.status }}</span>
-                            {% else %}<span class="pos-other">{{ athlete.position }}</span>{% endif %}
-                            {% if athlete.pos_diff is not none %}
-                                {% if athlete.pos_diff > 0 %}<span class="pos-diff pos-diff-up"><svg class="chg-arrow" viewBox="0 0 10 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1,6.5 5,1.5 9,6.5"/></svg>{{ athlete.pos_diff }}</span>
-                                {% elif athlete.pos_diff < 0 %}<span class="pos-diff pos-diff-down"><svg class="chg-arrow" viewBox="0 0 10 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1,1.5 5,6.5 9,1.5"/></svg>{{ athlete.pos_diff | abs }}</span>
-                                {% else %}<span class="pos-diff pos-diff-flat">-</span>{% endif %}
-                            {% endif %}
-                        </td>
-                        <td class="athlete-col" data-value="{{ athlete.name }}">
-                            <a href="/athlete/{{ athlete.athlete_id }}" class="link">
-                                {{ athlete.name }} {{ flag(athlete.country_alpha3) }}
-                            </a>
-                        </td>
-                        <td class="yob-col" data-value="{{ athlete.year_of_birth if athlete.year_of_birth else 0 }}">
-                            {{"{} ({})".format(athlete.year_of_birth, athlete.age) if athlete.year_of_birth else "" }}
-                        </td>
-                        <td class="time-col split-col{{ ' split-fastest' if athlete.swim_fastest else '' }}" data-value="{{ athlete.swim_s }}">
-                            <span class="time-disc-label">Swim</span>
-                            <span class="time-cell-main{{ ' fastest' if athlete.swim_fastest else '' }}">{{ athlete.swim_s }}</span>
-                            <span class="time-cell-gap">{{ 'fastest' if athlete.swim_fastest and athlete.swim_s else athlete.swim_behind_s }}</span>
-                        </td>
-                        <td class="time-col split-col{{ ' split-fastest' if athlete.t1_fastest else '' }}" data-value="{{ athlete.t1_s }}">
-                            <span class="time-disc-label">T1</span>
-                            <span class="time-cell-main{{ ' fastest' if athlete.t1_fastest else '' }}">{{ athlete.t1_s }}</span>
-                            <span class="time-cell-gap">{{ 'fastest' if athlete.t1_fastest and athlete.t1_s else athlete.t1_behind_s }}</span>
-                        </td>
-                        <td class="time-col split-col{{ ' split-fastest' if athlete.bike_fastest else '' }}" data-value="{{ athlete.bike_s }}">
-                            <span class="time-disc-label">Bike</span>
-                            <span class="time-cell-main{{ ' fastest' if athlete.bike_fastest else '' }}">{{ athlete.bike_s }}</span>
-                            <span class="time-cell-gap">{{ 'fastest' if athlete.bike_fastest and athlete.bike_s else athlete.bike_behind_s }}</span>
-                        </td>
-                        <td class="time-col split-col{{ ' split-fastest' if athlete.t2_fastest else '' }}" data-value="{{ athlete.t2_s }}">
-                            <span class="time-disc-label">T2</span>
-                            <span class="time-cell-main{{ ' fastest' if athlete.t2_fastest else '' }}">{{ athlete.t2_s }}</span>
-                            <span class="time-cell-gap">{{ 'fastest' if athlete.t2_fastest and athlete.t2_s else athlete.t2_behind_s }}</span>
-                        </td>
-                        <td class="time-col split-col{{ ' split-fastest' if athlete.run_fastest else '' }}" data-value="{{ athlete.run_s }}">
-                            <span class="time-disc-label">Run</span>
-                            <span class="time-cell-main{{ ' fastest' if athlete.run_fastest else '' }}">{{ athlete.run_s }}</span>
-                            <span class="time-cell-gap">{{ 'fastest' if athlete.run_fastest and athlete.run_s else athlete.run_behind_s }}</span>
-                        </td>
-                        <td class="time-col overall-col" data-value="{{ athlete.overall_s }}">
-                            <span class="overall-time">{{ athlete.overall_s }}</span>
-                            {% if athlete.overall_behind_s %}<span class="time-cell-gap">{{ athlete.overall_behind_s }}</span>{% endif %}
-                        </td>
-                        <td class="splits-toggle-col" aria-hidden="true">
-                            <button type="button" class="splits-toggle" aria-label="Show splits" aria-expanded="false">
-                                <svg class="splits-toggle-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-                            </button>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                {% else %}
-                    <tr>
-                        <td colspan="9" class="no-data">No data available</td>
-                    </tr>
-                {% endif %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-{% if has_predictions %}
-{% set _dist_label = {'sprint':'sprint','standard':'standard distance','middle':'middle distance','t100':'T100','long':'long course'}.get(race_distance, race_distance) %}
-<p id="predictions-subtitle" class="page-section-sub hidden" style="margin-bottom:0.75rem">Predicted splits and finishing order based on pre-race ratings, using a global model trained on {{ "women's" if race.gender == "female" else "men's" }} {{ _dist_label }} races. These don't account for this specific course or conditions. Athletes marked {{ low_conf_badge('low-conf-inline') }} have few career starts, so their ratings haven't settled - we're less confident in their predictions.</p>
-<div id="predictions-view" class="race-view hidden">
-    <div class="results-sort-chips" role="tablist" aria-label="Sort predictions">
-        <button class="sort-chip" data-sort-col="0" type="button">Position<svg class="chip-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
-        <button class="sort-chip" data-sort-col="6" type="button">Overall<svg class="chip-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
-        <button class="sort-chip" data-sort-col="3" type="button">Swim<svg class="chip-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
-        <button class="sort-chip" data-sort-col="4" type="button">Bike<svg class="chip-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
-        <button class="sort-chip" data-sort-col="5" type="button">Run<svg class="chip-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
-    </div>
-    <div class="race-table-section">
-        <table class="sortable-table results-table">
-            <thead>
-                <tr>
-                    <th class="sortable position-col" data-sort="position">Pos</th>
-                    <th class="sortable athlete-col" data-sort="string">Athlete</th>
-                    <th class="sortable yob-col" data-sort="number">YOB</th>
-                    <th class="sortable time-col" data-sort="time">Swim</th>
-                    <th class="sortable time-col" data-sort="time">Bike</th>
-                    <th class="sortable time-col" data-sort="time">Run</th>
-                    <th class="sortable time-col overall-col" data-sort="time">Overall</th>
-                    <th class="sortable pct-col" data-sort="number">Win</th>
-                    <th class="sortable pct-col" data-sort="number">Podium</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in predictions %}
-                <tr class="{{ 'low-conf-row' if row.is_low_confidence else '' }}">
-                    <td class="position-col" data-value="{{ row.predicted_position }}">
-                        {% if row.predicted_position == 1 %}<span class="pos-circle gold">1</span>
-                        {% elif row.predicted_position == 2 %}<span class="pos-circle silver">2</span>
-                        {% elif row.predicted_position == 3 %}<span class="pos-circle bronze">3</span>
-                        {% else %}<span class="pos-other">{{ row.predicted_position }}</span>{% endif %}
-                    </td>
-                    <td class="athlete-col" data-value="{{ row.name }}">
-                        <a href="/athlete/{{ row.athlete_id }}" class="link">
-                            {{ row.name }} {{ flag(row.country_alpha3) }}
-                        </a>{% if row.is_low_confidence %} {{ low_conf_badge('low-conf-mark') }}{% endif %}
-                    </td>
-                    <td class="yob-col" data-value="{{ row.year_of_birth if row.year_of_birth else 0 }}">
-                        {{"{} ({})".format(row.year_of_birth, row.age) if row.year_of_birth else "" }}
-                    </td>
-                    <td class="time-col split-col{{ ' split-fastest' if row.swim_fastest else '' }}" data-value="{{ row.swim_s }}">
-                        <span class="time-disc-label">Swim</span>
-                        <span class="time-cell-main{{ ' fastest' if row.swim_fastest else '' }}">{{ row.swim_s }}</span>
-                        <span class="time-cell-gap">{{ 'fastest' if row.swim_fastest and row.swim_s else row.swim_behind_s }}</span>
-                    </td>
-                    <td class="time-col split-col{{ ' split-fastest' if row.bike_fastest else '' }}" data-value="{{ row.bike_s }}">
-                        <span class="time-disc-label">Bike</span>
-                        <span class="time-cell-main{{ ' fastest' if row.bike_fastest else '' }}">{{ row.bike_s }}</span>
-                        <span class="time-cell-gap">{{ 'fastest' if row.bike_fastest and row.bike_s else row.bike_behind_s }}</span>
-                    </td>
-                    <td class="time-col split-col{{ ' split-fastest' if row.run_fastest else '' }}" data-value="{{ row.run_s }}">
-                        <span class="time-disc-label">Run</span>
-                        <span class="time-cell-main{{ ' fastest' if row.run_fastest else '' }}">{{ row.run_s }}</span>
-                        <span class="time-cell-gap">{{ 'fastest' if row.run_fastest and row.run_s else row.run_behind_s }}</span>
-                    </td>
-                    <td class="time-col overall-col" data-value="{{ row.overall_s }}">
-                        <span class="overall-time">{{ row.overall_s }}</span>
-                        {% if row.overall_behind_s %}<span class="time-cell-gap">{{ row.overall_behind_s }}</span>{% endif %}
-                    </td>
-                    <td class="split-col pct-col" data-value="{{ row.win_pct }}">
-                        <span class="time-disc-label">Win</span>
-                        {% if row.win_pct < 0.005 %}
-                        <span class="time-cell-main pct-low">&lt;1%</span>
-                        {% else %}
-                        <span class="time-cell-main">{{ row.win_pct_label }}</span>
-                        <span class="pct-bar" style="--p: {{ (row.win_pct * 100) | round(1) }}%"></span>
-                        {% endif %}
-                    </td>
-                    <td class="split-col pct-col pct-col--podium" data-value="{{ row.podium_pct }}">
-                        <span class="time-disc-label">Podium</span>
-                        {% if row.podium_pct < 0.005 %}
-                        <span class="time-cell-main pct-low">&lt;1%</span>
-                        {% else %}
-                        <span class="time-cell-main">{{ row.podium_pct_label }}</span>
-                        <span class="pct-bar" style="--p: {{ (row.podium_pct * 100) | round(1) }}%"></span>
-                        {% endif %}
-                    </td>
-                    <td class="splits-toggle-col" aria-hidden="true">
-                        <button type="button" class="splits-toggle" aria-label="Show splits" aria-expanded="false">
-                            <svg class="splits-toggle-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-                        </button>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+{{ toolbar(views, dv) }}
+<p class="page-section-sub race-view-sub" data-view-sub="times">Split times. The gap under each split is to the fastest split of the race; under Overall, to the winner.</p>
+{% if 'positions' in view_keys %}
+<p class="page-section-sub race-view-sub" data-view-sub="positions" hidden>Place and gap to the leader after each leg, from cumulative times. Run gain is places made up between the start of the run and the finish.</p>
 {% endif %}
-
-<!-- Ratings Table -->
-<div class="results-section-head">
-    <div class="page-section-head"><span>Ratings &amp; Changes {{ help_icon('race-rating-changes') }}</span></div>
-    {% if ratings_data %}
-    <div class="results-section-controls">
-        <button type="button" class="btn-table-action" data-share="{{ ratings_data[0].athlete_id }}" data-share-design="p4_rating" title="Share a rating card">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>
-            <span class="btn-table-action-label">Share</span>
-        </button>
-    </div>
-    {% endif %}
+{% if 'ratings' in view_keys %}
+<p class="page-section-sub race-view-sub" data-view-sub="ratings" hidden>Each rating after this race, with the change this race made. Disciplines have their own scales, so compare down a column rather than across.</p>
+{% endif %}
+{% if 'predictions' in view_keys %}
+{% set _dist_label = {'sprint':'sprint','standard':'standard distance','middle':'middle distance','t100':'T100','long':'long course'}.get(race_distance, race_distance) %}
+<p class="page-section-sub race-view-sub" data-view-sub="predictions" hidden>Predicted splits and finishing order from pre-race ratings, using a global model trained on {{ "women's" if race.gender == "female" else "men's" }} {{ _dist_label }} races, so they don't account for this course or conditions. Pos is where each athlete finished, with the places gained or lost against the prediction. Athletes marked {{ low_conf_badge('low-conf-inline') }} have few career starts, so their ratings haven't settled - we're less confident in their predictions.</p>
+{% endif %}
+<div class="race-table-chips" aria-label="Sort"></div>
+<div class="race-table-section race-table-wrap">
+    <table class="race-table" id="race-table" data-view="{{ dv }}">
+        <thead>
+            <tr>
+                <th class="sortable position-col" data-key="pos" data-sort="position" data-label="Position">Pos</th>
+                <th class="sortable athlete-col" data-key="name" data-sort="string" data-label="Athlete">Athlete</th>
+                {{ th('t-swim', 'Swim', 'times', dv, 'time') }}
+                {{ th('t-t1', 'T1', 'times', dv, 'time', 'hide-768') }}
+                {{ th('t-bike', 'Bike', 'times', dv, 'time') }}
+                {{ th('t-t2', 'T2', 'times', dv, 'time', 'hide-768') }}
+                {{ th('t-run', 'Run', 'times', dv, 'time') }}
+                {{ th('t-overall', 'Overall', 'times', dv, 'time', 'hl') }}
+                {% if 'positions' in view_keys %}
+                {{ th('p-swim', 'After swim', 'positions', dv, 'number') }}
+                {{ th('p-t1', 'After T1', 'positions', dv, 'number', 'hide-768') }}
+                {{ th('p-bike', 'After bike', 'positions', dv, 'number') }}
+                {{ th('p-t2', 'After T2', 'positions', dv, 'number', 'hide-768') }}
+                {{ th('p-finish', 'Finish', 'positions', dv, 'number') }}
+                {{ th('p-gain', 'Run gain', 'positions', dv, 'number', 'mid hl', 'desc') }}
+                {% endif %}
+                {% if 'ratings' in view_keys %}
+                {{ th('r-overall', 'Overall', 'ratings', dv, 'rating', 'hl', 'desc') }}
+                {{ th('r-swim', 'Swim', 'ratings', dv, 'rating', '', 'desc') }}
+                {{ th('r-bike', 'Bike', 'ratings', dv, 'rating', '', 'desc') }}
+                {{ th('r-run', 'Run', 'ratings', dv, 'rating', '', 'desc') }}
+                {{ th('r-trans', 'Transition', 'ratings', dv, 'rating', 'hide-768', 'desc', 'Trans.') }}
+                {% endif %}
+                {% if 'predictions' in view_keys %}
+                {{ th('pr-pos', 'Predicted', 'predictions', dv, 'number', 'mid-wide hl', 'asc', 'Pred.') }}
+                {{ th('pr-swim', 'Swim', 'predictions', dv, 'time', 'hide-1024 drawer') }}
+                {{ th('pr-bike', 'Bike', 'predictions', dv, 'time', 'hide-1024 drawer') }}
+                {{ th('pr-run', 'Run', 'predictions', dv, 'time', 'hide-1024 drawer') }}
+                {{ th('pr-overall', 'Overall', 'predictions', dv, 'time') }}
+                {{ th('pr-win', 'Win', 'predictions', dv, 'number', 'mid', 'desc') }}
+                {{ th('pr-pod', 'Podium', 'predictions', dv, 'number', 'mid', 'desc') }}
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for a in rows %}
+            {% set fin = a.status not in ['DNF', 'DNS', 'DQ', 'LAP', 'NC'] and a.position is not none %}
+            <tr data-name="{{ a.name }}" data-country="{{ a.country_alpha3 }}">
+                <td class="position-col" data-value="{{ a.position if a.position is not none else a.status }}">
+                    {% if fin %}{{ pos_marker(a.position) }}{% else %}<span class="pos-dnf">{{ a.status }}</span>{% endif %}
+                    {% if a.pos_diff is not none %}
+                    {% if a.pos_diff > 0 %}<span class="pred-diff up" title="Predicted {{ ordinal(a.pred.predicted_position) }}"><svg class="chg-arrow" viewBox="0 0 10 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1,6.5 5,1.5 9,6.5"/></svg>{{ a.pos_diff }}</span>
+                    {% elif a.pos_diff < 0 %}<span class="pred-diff down" title="Predicted {{ ordinal(a.pred.predicted_position) }}"><svg class="chg-arrow" viewBox="0 0 10 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1,1.5 5,6.5 9,1.5"/></svg>{{ -a.pos_diff }}</span>
+                    {% else %}<span class="pred-diff same" title="As predicted">=</span>{% endif %}
+                    {% endif %}
+                </td>
+                {{ athlete(a, low_conf_badge('low-conf-mark only-predictions') if a.pred and a.pred.is_low_confidence else '') }}
+                {% call td('times', dv, a.swim_s, 'Swim') %}{{ time(a.swim_s, a.swim_fastest, a.swim_behind_s) }}{% endcall %}
+                {% call td('times', dv, a.t1_s, 'T1', 'hide-768') %}{{ time(a.t1_s, a.t1_fastest, a.t1_behind_s) }}{% endcall %}
+                {% call td('times', dv, a.bike_s, 'Bike') %}{{ time(a.bike_s, a.bike_fastest, a.bike_behind_s) }}{% endcall %}
+                {% call td('times', dv, a.t2_s, 'T2', 'hide-768') %}{{ time(a.t2_s, a.t2_fastest, a.t2_behind_s) }}{% endcall %}
+                {% call td('times', dv, a.run_s, 'Run') %}{{ time(a.run_s, a.run_fastest, a.run_behind_s) }}{% endcall %}
+                {% call td('times', dv, a.overall_s, 'Overall', 'hl') %}{% if a.overall_s %}<span class="overall-time">{{ a.overall_s }}</span>{% if a.overall_behind_s %}<span class="time-cell-gap">{{ a.overall_behind_s }}</span>{% endif %}{% else %}<span class="no-value">-</span>{% endif %}{% endcall %}
+                {% if 'positions' in view_keys %}
+                {% for k, label, cls in [(0, 'After swim', ''), (1, 'After T1', 'hide-768'), (2, 'After bike', ''), (3, 'After T2', 'hide-768')] %}
+                {% call td('positions', dv, a.places[k], label, cls) %}{% if a.places[k] %}<span class="time-cell-main">{{ ordinal(a.places[k]) }}</span><span class="time-cell-gap">{{ a.place_gaps[k] or 'leading' }}</span>{% else %}<span class="no-value">-</span>{% endif %}{% endcall %}
+                {% endfor %}
+                {% call td('positions', dv, a.position if fin else none, 'Finish') %}{% if fin %}<span class="time-cell-main">{{ ordinal(a.position) }}</span><span class="time-cell-gap">{{ a.overall_behind_s or 'leading' }}</span>{% else %}<span class="pos-dnf">{{ a.status }}</span>{% endif %}{% endcall %}
+                {# On a phone this is the row's only Positions value, so it spells out the move instead of a bare number #}
+                {% call td('positions', dv, a.run_gain, 'Run gain', 'mid hl') %}{% if a.run_gain is not none %}{% set gain = '+' ~ a.run_gain if a.run_gain > 0 else ('−' ~ (-a.run_gain) if a.run_gain < 0 else '0') %}<span class="wide-only"><span class="time-cell-main run-gain">{{ gain }}</span><span class="time-cell-gap">from {{ ordinal(a.places[3]) }}</span></span><span class="phone-only"><span class="time-cell-main">{{ ordinal(a.places[3]) }} → {{ ordinal(a.position) }}</span><span class="time-cell-gap">{{ gain ~ ' on the run' if a.run_gain else 'held on the run' }}</span></span>{% else %}<span class="no-value">-</span>{% endif %}{% endcall %}
+                {% endif %}
+                {% if 'ratings' in view_keys %}
+                {% for d, label, cls in [('overall', 'Overall', 'hl'), ('swim', 'Swim', ''), ('bike', 'Bike', ''), ('run', 'Run', ''), ('transition', 'Transition', 'hide-768')] %}
+                {% call td('ratings', dv, a.rating[d ~ '_rating'] if a.rating else none, label, cls) %}{{ rating(a.rating[d ~ '_rating'], a.rating[d ~ '_change'], d == 'overall') if a.rating else rating(none) }}{% endcall %}
+                {% endfor %}
+                {% endif %}
+                {% if 'predictions' in view_keys %}
+                {% set p = a.pred %}
+                {% call td('predictions', dv, p.predicted_position if p else none, 'Predicted', 'mid-wide hl') %}{% if p %}<span class="time-cell-main strong">{{ ordinal(p.predicted_position) }}</span>{% else %}<span class="no-value">-</span>{% endif %}{% endcall %}
+                {% for d, label in [('swim', 'Swim'), ('bike', 'Bike'), ('run', 'Run')] %}
+                {% call td('predictions', dv, p[d ~ '_s'] if p else none, label, 'hide-1024 drawer') %}{{ time(p[d ~ '_s'], p[d ~ '_fastest'], p[d ~ '_behind_s']) if p else time(none) }}{% endcall %}
+                {% endfor %}
+                {% call td('predictions', dv, p.overall_s if p else none, 'Overall') %}{% if p and p.overall_s %}<span class="overall-time">{{ p.overall_s }}</span>{% if p.overall_behind_s %}<span class="time-cell-gap">{{ p.overall_behind_s }}</span>{% endif %}{% else %}<span class="no-value">-</span>{% endif %}{% endcall %}
+                {% call td('predictions', dv, p.win_pct if p else none, 'Win', 'mid') %}{{ pct(p.win_pct, p.win_pct_label) if p else time(none) }}{% endcall %}
+                {% call td('predictions', dv, p.podium_pct if p else none, 'Podium', 'mid') %}{{ pct(p.podium_pct, p.podium_pct_label, true) if p else time(none) }}{% endcall %}
+                {% endif %}
+                {{ toggle() }}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
+{{ foot() }}
 {% if ignored_info %}
 {# Pick a message based on the reason. Oversized fields are almost always a
-   combined Elite + AG result table from the source data — say so explicitly
+   combined Elite + AG result table from the source data - say so explicitly
    instead of the generic "taken from another race" line. #}
 {%- set is_oversized = ignored_info.reason and 'entries (likely combined' in ignored_info.reason -%}
 <p class="ignored-race-notice">
@@ -354,99 +249,6 @@
     Check the full race results (<a href="/race/{{ ignored_info.parent_race_id }}" class="link">{{ ignored_info.parent_race_title }}</a>) to view rating changes.
     {% endif %}
 </p>
-{% else %}
-<div class="ratings-sort-chips" role="tablist" aria-label="Sort race ratings">
-    <button class="sort-chip" data-sort-col="0" type="button">Position<svg class="chip-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
-    <button class="sort-chip" data-sort-col="3" type="button">Overall<svg class="chip-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
-    <button class="sort-chip" data-sort-col="4" type="button">Swim<svg class="chip-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
-    <button class="sort-chip" data-sort-col="5" type="button">Bike<svg class="chip-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
-    <button class="sort-chip" data-sort-col="6" type="button">Run<svg class="chip-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
-    <button class="sort-chip" data-sort-col="7" type="button">Transition<svg class="chip-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
-</div>
-<div class="race-table-section">
-    <div>
-        <table class="sortable-table rating-table">
-            <thead>
-                <tr>
-                    <th class="sortable position-col" data-sort="position">Pos</th>
-                    <th class="sortable athlete-col" data-sort="string">Athlete</th>
-                    <th class="sortable yob-col" data-sort="number">YOB</th>
-                    <th class="sortable rating-col overall-col" data-sort="rating">Overall</th>
-                    <th class="sortable rating-col" data-sort="rating">Swim</th>
-                    <th class="sortable rating-col" data-sort="rating">Bike</th>
-                    <th class="sortable rating-col" data-sort="rating">Run</th>
-                    <th class="sortable rating-col" data-sort="rating">Transition</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if ratings_data %}
-                    {% for athlete in ratings_data %}
-                    <tr>
-                        <td class="position-col" data-value="{{ athlete.position if athlete.position is not none else athlete.status }}">
-                            {% if athlete.position == 1 %}<span class="pos-circle gold">1</span>
-                            {% elif athlete.position == 2 %}<span class="pos-circle silver">2</span>
-                            {% elif athlete.position == 3 %}<span class="pos-circle bronze">3</span>
-                            {% elif athlete.status in ['DNF', 'DNS', 'DQ', 'LAP', 'NC'] %}<span class="pos-dnf">{{ athlete.status }}</span>
-                            {% else %}<span class="pos-other">{{ athlete.position }}</span>{% endif %}
-                        </td>
-                        <td class="athlete-col" data-value="{{ athlete.name }}">
-                            <a href="/athlete/{{ athlete.athlete_id }}" class="link">
-                                {{ athlete.name }} {{ flag(athlete.country_alpha3) }}
-                            </a>
-                        </td>
-                        <td class="yob-col" data-value="{{ athlete.year_of_birth if athlete.year_of_birth else 0 }}">
-                            {{ "{} ({})".format(athlete.year_of_birth, athlete.age) if athlete.year_of_birth else "" }}
-                        </td>
-                        <td class="overall-col" data-value="{{ athlete.overall_rating }}">
-                            <div class="rating-cell">
-                                <span class="overall-time">{{ athlete.overall_rating }}</span>
-                                <span class="rating-change {{ athlete.overall_change.css_class }}">{{ athlete.overall_change.formatted_str | safe }}</span>
-                            </div>
-                        </td>
-                        <td class="split-col" data-value="{{ athlete.swim_rating }}">
-                            <span class="time-disc-label">Swim</span>
-                            <div class="rating-cell">
-                                {{ athlete.swim_rating }}
-                                <span class="rating-change {{ athlete.swim_change.css_class }}">{{ athlete.swim_change.formatted_str | safe }}</span>
-                            </div>
-                        </td>
-                        <td class="split-col" data-value="{{ athlete.bike_rating }}">
-                            <span class="time-disc-label">Bike</span>
-                            <div class="rating-cell">
-                                {{ athlete.bike_rating }}
-                                <span class="rating-change {{ athlete.bike_change.css_class }}">{{ athlete.bike_change.formatted_str | safe }}</span>
-                            </div>
-                        </td>
-                        <td class="split-col" data-value="{{ athlete.run_rating }}">
-                            <span class="time-disc-label">Run</span>
-                            <div class="rating-cell">
-                                {{ athlete.run_rating }}
-                                <span class="rating-change {{ athlete.run_change.css_class }}">{{ athlete.run_change.formatted_str | safe }}</span>
-                            </div>
-                        </td>
-                        <td class="split-col" data-value="{{ athlete.transition_rating }}">
-                            <span class="time-disc-label">Transition</span>
-                            <div class="rating-cell">
-                                {{ athlete.transition_rating }}
-                                <span class="rating-change {{ athlete.transition_change.css_class }}">{{ athlete.transition_change.formatted_str | safe }}</span>
-                            </div>
-                        </td>
-                        <td class="splits-toggle-col" aria-hidden="true">
-                            <button type="button" class="splits-toggle" aria-label="Show discipline ratings" aria-expanded="false">
-                                <svg class="splits-toggle-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-                            </button>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                {% else %}
-                    <tr>
-                        <td colspan="8" class="no-data">No data available</td>
-                    </tr>
-                {% endif %}
-            </tbody>
-        </table>
-    </div>
-</div>
 {% endif %}
 
 <!-- Corrections -->
@@ -501,62 +303,43 @@
 </div>
 {% endif %}
 
-<!-- Time Distribution Histograms -->
-<div class="page-section-head">Time Distributions</div>
-<div class="charts-grid">
-    <div class="mini-chart">
-        <h4>Overall Times</h4>
-        <div class="chart-container-compact"><canvas id="overall-times-canvas"></canvas></div>
-    </div>
-    <div class="mini-chart">
-        <h4>Swim Times</h4>
-        <div class="chart-container-compact"><canvas id="swim-times-canvas"></canvas></div>
-    </div>
-    <div class="mini-chart">
-        <h4>Bike Times</h4>
-        <div class="chart-container-compact"><canvas id="bike-times-canvas"></canvas></div>
-    </div>
-    <div class="mini-chart">
-        <h4>Run Times</h4>
-        <div class="chart-container-compact"><canvas id="run-times-canvas"></canvas></div>
-    </div>
-    <div class="mini-chart">
-        <h4>T1 Times</h4>
-        <div class="chart-container-compact"><canvas id="t1-times-canvas"></canvas></div>
-    </div>
-    <div class="mini-chart">
-        <h4>T2 Times</h4>
-        <div class="chart-container-compact"><canvas id="t2-times-canvas"></canvas></div>
-    </div>
+<!-- Result charts: drawn by race.js initResultCharts from race-chart-data -->
+{% macro podium_legend() -%}
+<div class="race-chart-legend">
+    {% for a in chart_data.athletes if a.pos <= 3 %}
+    <span class="race-chart-key"><i class="key-dot pod-{{ a.pos }}"></i>{{ ordinal(a.pos) }} {{ a.name }}</span>
+    {% endfor %}
+    <span class="race-chart-key"><i class="key-dot"></i>Other finishers</span>
 </div>
-
-{# Rating Distribution Histograms — only meaningful when ELO ran for this
-   race. Skip the whole section for ignored / oversized / multi-stage-stage
-   rows since their rating histograms would be empty or stale. #}
-{% if not ignored_info %}
-<!-- Rating Distribution Histograms -->
-<div class="page-section-head">Rating Distributions</div>
-<div class="charts-grid">
-    <div class="mini-chart full-width">
-        <h4>Overall Ratings</h4>
-        <div class="chart-container-compact"><canvas id="overall-ratings-canvas"></canvas></div>
+{%- endmacro %}
+{% if chart_data.show.groups %}
+<div class="page-section-head">Bike Groups</div>
+<p class="page-section-sub race-chart-sub">Where each finisher started the run, grouped where they were 10 seconds or less apart. In draft-legal racing the group an athlete makes on the bike usually decides their race.</p>
+<div class="race-chart" data-chart="groups">
+    {{ podium_legend() }}
+    <div class="race-chart-plot"></div>
+    <ul class="race-chart-notes"></ul>
+</div>
+{% endif %}
+{% if chart_data.show.splits %}
+<div class="page-section-head">Split Times</div>
+<p class="page-section-sub race-chart-sub">One dot per finisher on each leg's own time scale, faster to the left. The tick marks the median.</p>
+<div class="race-chart" data-chart="splits">
+    {{ podium_legend() }}
+    <div class="race-chart-plot"></div>
+</div>
+{% endif %}
+{% if chart_data.show.ratings %}
+<div class="page-section-head">Rating Changes</div>
+<p class="page-section-sub race-chart-sub">Each finisher's overall rating change against where they finished. Ratings move on how an athlete did against expectation, not on place alone, so the outliers are the stories: the three biggest gains and losses are marked.</p>
+<div class="race-chart" data-chart="ratings">
+    <div class="race-chart-legend">
+        <span class="race-chart-key"><i class="key-dot up"></i>Gained</span>
+        <span class="race-chart-key"><i class="key-dot down"></i>Lost</span>
+        <span class="race-chart-key"><i class="key-dot standout"></i>Biggest gains and losses</span>
     </div>
-    <div class="mini-chart">
-        <h4>Swim Ratings</h4>
-        <div class="chart-container-compact"><canvas id="swim-ratings-canvas"></canvas></div>
-    </div>
-    <div class="mini-chart">
-        <h4>Bike Ratings</h4>
-        <div class="chart-container-compact"><canvas id="bike-ratings-canvas"></canvas></div>
-    </div>
-    <div class="mini-chart">
-        <h4>Run Ratings</h4>
-        <div class="chart-container-compact"><canvas id="run-ratings-canvas"></canvas></div>
-    </div>
-    <div class="mini-chart">
-        <h4>Transition Ratings</h4>
-        <div class="chart-container-compact"><canvas id="transition-ratings-canvas"></canvas></div>
-    </div>
+    <div class="race-chart-plot"></div>
+    <div class="race-chart-standouts"></div>
 </div>
 {% endif %}
 
@@ -564,19 +347,7 @@
 <script id="prediction-data" type="application/json">{{ prediction_data | tojson }}</script>
 <script id="race-athlete-ids" type="application/json">{{ splits_data | map(attribute='athlete_id') | list | tojson }}</script>
 <script id="race-year" type="application/json">{{ race.date.year }}</script>
-
-<!-- Chart data (read by race.js initRaceCharts) -->
-<script id="overall-time-hist-data" type="application/json">{{ overall_time_hist | tojson }}</script>
-<script id="swim-time-hist-data" type="application/json">{{ swim_time_hist | tojson }}</script>
-<script id="bike-time-hist-data" type="application/json">{{ bike_time_hist | tojson }}</script>
-<script id="run-time-hist-data" type="application/json">{{ run_time_hist | tojson }}</script>
-<script id="t1-time-hist-data" type="application/json">{{ t1_time_hist | tojson }}</script>
-<script id="t2-time-hist-data" type="application/json">{{ t2_time_hist | tojson }}</script>
-<script id="overall-ratings-hist-data" type="application/json">{{ overall_rating_hist | tojson }}</script>
-<script id="swim-ratings-hist-data" type="application/json">{{ swim_rating_hist | tojson }}</script>
-<script id="bike-ratings-hist-data" type="application/json">{{ bike_rating_hist | tojson }}</script>
-<script id="run-ratings-hist-data" type="application/json">{{ run_rating_hist | tojson }}</script>
-<script id="transition-ratings-hist-data" type="application/json">{{ transition_rating_hist | tojson }}</script>
+<script id="race-chart-data" type="application/json">{{ chart_data | tojson }}</script>
 
 <!-- Comments: empty host, partial fetched client-side so race HTML stays anonymous -->
 <div class="page-section-head">Comments</div>

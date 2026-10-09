@@ -3711,8 +3711,6 @@ body.help-tour-open { overflow: hidden; }
     .rating-table  td.date-col      { display: none; }
     .results-table td.program-col,
     .rating-table  td.program-col   { display: none; }
-    .results-table td.yob-col,
-    .rating-table  td.yob-col       { display: none; }
     /* Fixed min-width so DNF / DNS / LAP labels fit and the column stays
        aligned row-to-row (the circle and the text otherwise size very
        differently). */

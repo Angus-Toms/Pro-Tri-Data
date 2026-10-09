@@ -175,7 +175,7 @@ function sortTable(table, column, asc = true) {
         if (sortType === 'time') {
             aVal = parseTime(aVal);
             bVal = parseTime(bVal);
-        } else if ( sortType === 'rating') {
+        } else if (sortType === 'rating' || sortType === 'number') {
             aVal = parseFloat(aVal);
             bVal = parseFloat(bVal);
         } else if (sortType === 'position') {
@@ -196,9 +196,9 @@ function sortTable(table, column, asc = true) {
             }
         }
 
-        // Missing splits and ratings (DNFs, unrecorded legs) sink to the bottom in
-        // either direction, so sorting a leg always opens on real times.
-        if (sortType === 'time' || sortType === 'rating') {
+        // Missing values (DNFs, unrecorded legs, no rating) sink to the bottom in
+        // either direction, so sorting a column always opens on real values.
+        if (sortType === 'time' || sortType === 'rating' || sortType === 'number') {
             const aMissing = !isFinite(aVal), bMissing = !isFinite(bVal);
             if (aMissing || bMissing) return aMissing - bMissing;
         }
@@ -386,16 +386,14 @@ const HELP_TOURS = {
           text: 'How fast the course raced compared with typical times over this distance. Flags slow swims, fast bikes and so on - from currents, terrain, heat or measurement.' },
     ],
     'race-results': [
-        { sel: '#results-view .race-table-section', title: 'Results',
-          text: 'The official finishing order with full splits. The fastest split of the race is highlighted; every other time shows the gap behind it.' },
-        { sel: '.race-view-toggle', title: 'Predictions vs Results',
-          text: 'Results are what actually happened. Predictions show what the model expected before the race, based purely on pre-race ratings. Toggle between them to see who over- or under-performed.' },
+        { sel: '#race-table', title: 'Results',
+          text: 'The official finishing order. The fastest split of the race is highlighted; every other time shows the gap behind it. Click any column header to sort.' },
+        { sel: '.race-view-toggle', title: 'Views',
+          text: 'Each view shows the same athletes. Times has the splits, Positions where each athlete was after every leg, Ratings what this race did to each rating (beating expectation earns points, underperforming costs them), and Predictions what the model expected before the race, with the places each athlete gained or lost against it.' },
+        { sel: '.race-find', title: 'Find an athlete',
+          text: 'The table shows the top 20. Search by name or three-letter country code, or show the whole field below the table.' },
         { sel: '#add-prediction-btn', title: 'Add an athlete',
           text: 'Search for any athlete who wasn\'t in this race and the model predicts where they would have finished, calibrated to this race\'s course and conditions.' },
-    ],
-    'race-rating-changes': [
-        { sel: '.race-table-section .rating-table', title: 'Ratings & changes',
-          text: _ratingBasics + ' The small green or red number next to each rating is what this race changed it by: beating expectation earns points, underperforming costs them.' },
     ],
     'upcoming-standards': [
         { sel: '.ratings-table th.rt-rating', column: true, title: 'Race standard',
@@ -404,8 +402,8 @@ const HELP_TOURS = {
           text: _tierText },
     ],
     'upcoming-predictions': [
-        { sel: '#predictions-view .race-table-section, .race-table-section', title: 'Predicted results',
-          text: 'The model\'s expected splits and finishing order, from each athlete\'s current rating. These are pre-race estimates - they don\'t know the course or the weather, and actual results will differ.' },
+        { sel: '#race-table', title: 'Start list',
+          text: 'Everyone entered, in predicted finishing order. Predictions shows the model\'s expected splits and chances, from each athlete\'s current rating; they don\'t know the course or the weather, and actual results will differ. Ratings shows each athlete\'s current ratings.' },
     ],
 };
 

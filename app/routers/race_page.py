@@ -152,8 +152,6 @@ def _build_time_histograms(time_values, bins=20):
         "swim":    {"background": "#4CAF50", "display_name": "Swim"},
         "bike":    {"background": "#FF9800", "display_name": "Bike"},
         "run":     {"background": "#E91E63", "display_name": "Run"},
-        "t1":      {"background": "#9C27B0", "display_name": "Transition 1"},
-        "t2":      {"background": "#673AB7", "display_name": "Transition 2"},
     }
     chart_data = {}
     for disc, values in time_values.items():
@@ -258,6 +256,26 @@ def get_race(request: Request, race_id: int, partial: bool = False):
     for r in results + ratings:
         r["age"] = race_year - r["year_of_birth"] if r["year_of_birth"] else None
 
+    # Place and gap to the leader after each leg (swim, T1, bike, T2) from
+    # cumulative splits, for the Positions view. A missing split means no place
+    # from that point on. Run gain is places made up from the start of the run
+    # to the official finish.
+    for r in results:
+        cum, r["cum"] = 0, []
+        for leg in ("swim", "t1", "bike", "t2"):
+            cum = cum + r[f"{leg}_s"] if cum is not None and (r[f"{leg}_s"] or 0) > 0 else None
+            r["cum"].append(cum)
+        r["places"], r["place_gaps"] = [None] * 4, [None] * 4
+    for k in range(4):
+        reached = sorted((r for r in results if r["cum"][k] is not None), key=lambda r: r["cum"][k])
+        for i, r in enumerate(reached):
+            r["places"][k] = i + 1
+            r["place_gaps"][k] = format_time_behind(r["cum"][k] - reached[0]["cum"][k])
+    for r in results:
+        finished = r["status"] not in DNF_STATUSES and r["position"] is not None
+        r["run_gain"] = r["places"][3] - r["position"] if finished and r["places"][3] else None
+    has_splits = any(r["places"][0] for r in results)
+
     # Predictions are precomputed at build time (ptd_data/predictions.py) and
     # served straight from race_predictions / race_course_conditions.
     race_distance = queries.get_race_distance_type(race_id)  # 'sprint' | 'standard' | None
@@ -319,6 +337,43 @@ def get_race(request: Request, race_id: int, partial: bool = False):
         "run_change":        format_rating_change(r["run_change"]),
         "transition_change": format_rating_change(r["transition_change"]),
     } for r in ratings]
+
+    # One row per athlete for the results table: its Times, Positions, Ratings
+    # and Predictions views are columns of the same rows.
+    rating_rows = {r["athlete_id"]: r for r in ratings_data}
+    pred_rows = {r["athlete_id"]: r for r in predictions} if predictions else {}
+    rows = [{**r, "rating": rating_rows.get(r["athlete_id"]), "pred": pred_rows.get(r["athlete_id"])}
+            for r in splits_data]
+    views = [("times", "Times")]
+    if has_splits:
+        views.append(("positions", "Positions"))
+    if ratings and not ignored_info:
+        views.append(("ratings", "Ratings"))
+    if predictions:
+        views.append(("predictions", "Predictions"))
+
+    # Charts under the table, drawn by race.js from this. Finishers only. Bike
+    # groups only for draft-legal elite racing, where the group an athlete makes
+    # on the bike largely decides their race; gaps are to whoever led out of T2.
+    change_by_id = {r["athlete_id"]: r["overall_change"] for r in ratings} if ratings and not ignored_info else {}
+    t2_lead = min((r["cum"][3] for r in results if r["cum"][3] is not None), default=None)
+    chart_athletes = [{
+        "name":   r["name"],
+        "pos":    r["position"],
+        "splits": [r["swim_s"] or 0, r["bike_s"] or 0, r["run_s"] or 0, r["overall_s"] or 0],
+        "t2_gap": r["cum"][3] - t2_lead if r["cum"][3] is not None else None,
+        "chg":    change_by_id.get(r["athlete_id"]),
+        "pred":   pred_rows[r["athlete_id"]]["predicted_position"] if r["athlete_id"] in pred_rows else None,
+    } for r in results if r["status"] not in DNF_STATUSES and r["position"] is not None]
+    chart_data = {
+        "athletes": chart_athletes,
+        "show": {
+            "groups":  is_elite and race["distance"] in ("sprint", "standard")
+                       and sum(a["t2_gap"] is not None for a in chart_athletes) >= 6,
+            "splits":  sum(a["splits"][0] > 0 for a in chart_athletes) >= 3,
+            "ratings": sum(a["chg"] is not None for a in chart_athletes) >= 3,
+        },
+    }
 
     # Format standards and classify by percentile vs all races of this gender
     race_standards = {d: format_rating(v) for d, v in standards.items()}
@@ -401,10 +456,6 @@ def get_race(request: Request, race_id: int, partial: bool = False):
             "any_changed":   any(f["changed"] for f in fields),
         })
 
-    # Histograms
-    time_hists   = _build_time_histograms(queries.get_race_time_values(race_id))
-    rating_hists = _build_rating_histograms(queries.get_race_rating_values(race_id))
-
     event_id = race.get("event_id")
     event_races = queries.get_races_by_event(event_id) if event_id else []
     series = queries.get_series_for_race(race_id)
@@ -459,21 +510,10 @@ def get_race(request: Request, race_id: int, partial: bool = False):
         "race_course":           race_rank_row['course'] if race_rank_row else None,
         "best_performances": best_performances,
         "splits_data":    splits_data,
-        "ratings_data":   ratings_data,
-        "overall_time_hist":       time_hists.get("overall", {}),
-        "swim_time_hist":          time_hists.get("swim", {}),
-        "bike_time_hist":          time_hists.get("bike", {}),
-        "run_time_hist":           time_hists.get("run", {}),
-        "t1_time_hist":            time_hists.get("t1", {}),
-        "t2_time_hist":            time_hists.get("t2", {}),
-        "overall_rating_hist":     rating_hists.get("overall", {}),
-        "swim_rating_hist":        rating_hists.get("swim", {}),
-        "bike_rating_hist":        rating_hists.get("bike", {}),
-        "run_rating_hist":         rating_hists.get("run", {}),
-        "transition_rating_hist":  rating_hists.get("transition", {}),
+        "rows":           rows,
+        "views":          views,
+        "chart_data":     chart_data,
         "prediction_data":         prediction_data,
-        "predictions":             predictions,
-        "has_predictions":         predictions is not None,
         "race_distance":           race_distance,
         "course_conditions":       course_conditions if not ignored_info else None,
         "series":                  series,
@@ -663,6 +703,11 @@ def _get_upcoming_race(request: Request, race, partial: bool):
         ],
         key=lambda e: pred_order.get(e['athlete_id'], e['start_num'] or 999),
     )
+    # One row per entry for the start-list table: Predictions and Ratings views
+    # are columns of the same rows.
+    pred_rows = {r['athlete_id']: r for r in predictions} if predictions else {}
+    rows = [{**e, 'pred': pred_rows.get(e['athlete_id'])} for e in upcoming_ratings_data]
+    views = ([('predictions', 'Predictions')] if predictions else []) + [('ratings', 'Ratings')]
 
     race_standards = {d: format_rating(v) for d, v in standards.items()}
     thresholds = queries.get_race_standard_thresholds(race['gender'])
@@ -710,8 +755,8 @@ def _get_upcoming_race(request: Request, race, partial: bool):
         "race_course":           rank_bucket,
         "splits_data":           [],
         "predictions":           predictions,
-        "has_predictions":       predictions is not None,
-        "upcoming_ratings_data": upcoming_ratings_data,
+        "rows":                  rows,
+        "views":                 views,
         "overall_time_hist":     time_hists.get("overall", {}),
         "swim_time_hist":        time_hists.get("swim", {}),
         "bike_time_hist":        time_hists.get("bike", {}),

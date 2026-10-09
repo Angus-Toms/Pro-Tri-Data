@@ -1,0 +1,87 @@
+{# Unified race table, shared by the finished-race and start-list pages.
+
+   One row per athlete; each view (Times, Positions, Ratings, Predictions) is a
+   set of columns on those rows. Every view cell carries `vc v-<view>`, and
+   race.js marks the current view's cells `on` (the server marks the default
+   view's, so the table reads without JS). `hl` is the view's headline cell, the
+   one value a phone row keeps. `hide-1024` / `hide-768` drop a column at that
+   width and below; `drawer` still lists such a column in the phone row's
+   drawer. `mid` / `mid-wide` are fixed-width columns on wide screens. #}
+
+{% macro toolbar(views, default_view) -%}
+<div class="race-table-toolbar">
+    {% if views | length > 1 %}
+    <div class="race-view-toggle" role="group" aria-label="Table view">
+        {% for key, label in views %}
+        <button type="button" class="race-view-btn{{ ' active' if key == default_view }}" data-view="{{ key }}" aria-pressed="{{ 'true' if key == default_view else 'false' }}">{{ label }}</button>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <label class="race-find" for="race-find-input">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="race-find-input" type="search" placeholder="Find athlete or country" autocomplete="off" aria-label="Find athlete or country">
+    </label>
+</div>
+{%- endmacro %}
+
+{% macro foot() -%}
+<div class="race-table-foot">
+    <span class="race-table-count"></span>
+    <button type="button" class="btn-table-action race-show-all" hidden></button>
+</div>
+{%- endmacro %}
+
+{# `short` is the header below 1024px, for labels too long for narrow columns. #}
+{% macro th(key, label, view, dv, sort, cls='', first='asc', short='') -%}
+<th class="sortable vc v-{{ view }}{{ ' on' if view == dv }}{{ ' ' ~ cls if cls }}" data-key="{{ key }}" data-sort="{{ sort }}" data-label="{{ label }}"{% if first == 'desc' %} data-first="desc"{% endif %}>
+{%- if short %}<span class="th-full">{{ label }}</span><span class="th-short">{{ short }}</span>{% else %}{{ label }}{% endif -%}
+</th>
+{%- endmacro %}
+
+{# A view cell. `label` names the value in the phone drawer. #}
+{% macro td(view, dv, value, label, cls='') -%}
+<td class="vc v-{{ view }}{{ ' on' if view == dv }}{{ ' ' ~ cls if cls }}" data-value="{{ value if value is not none else '' }}"><span class="cell-label">{{ label }}</span>{{ caller() }}</td>
+{%- endmacro %}
+
+{% macro time(t, fastest, behind) -%}
+{%- if t -%}
+<span class="time-cell-main{{ ' fastest' if fastest }}">{{ t }}</span><span class="time-cell-gap">{{ 'fastest' if fastest else behind }}</span>
+{%- else -%}
+<span class="no-value">-</span>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro rating(value, change=none, strong=false) -%}
+{%- if value is not none -%}
+<span class="time-cell-main race-rating{{ ' strong' if strong }}">{{ value }}{% if change %}<span class="rating-change {{ change.css_class }}">{{ change.formatted_str | safe }}</span>{% endif %}</span>
+{%- else -%}
+<span class="no-value">-</span>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro pct(p, label, soft=false) -%}
+{%- if p < 0.005 -%}
+<span class="time-cell-main pct-low">&lt;1%</span>
+{%- else -%}
+<span class="time-cell-main">{{ label }}</span><span class="pct-bar{{ ' pct-bar--soft' if soft }}" style="--p: {{ (p * 100) | round(1) }}%"></span>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro pos_marker(pos) -%}
+{%- if pos == 1 %}<span class="pos-circle gold">1</span>
+{%- elif pos == 2 %}<span class="pos-circle silver">2</span>
+{%- elif pos == 3 %}<span class="pos-circle bronze">3</span>
+{%- else %}<span class="pos-other">{{ pos }}</span>{% endif -%}
+{%- endmacro %}
+
+{# Name, flag and an age/country line under it. `extra` sits after the flag. #}
+{% macro athlete(a, extra='') -%}
+<td class="athlete-col" data-value="{{ a.name }}">
+    <a href="/athlete/{{ a.athlete_id }}" class="link">{{ a.name }} {{ flag(a.country_alpha3) }}</a>{{ extra }}
+    <span class="athlete-sub">{{ ('Age ' ~ a.age ~ ' · ') if a.age }}{{ a.country_alpha3 }}</span>
+</td>
+{%- endmacro %}
+
+{% macro toggle() -%}
+<td class="toggle-col"><button type="button" class="row-toggle" aria-label="Show more" aria-expanded="false"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button></td>
+{%- endmacro %}
