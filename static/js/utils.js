@@ -166,8 +166,10 @@ function sortTable(table, column, asc = true) {
         const aCell = a.cells[column];
         const bCell = b.cells[column];
         
-        let aVal = aCell.getAttribute('data-value') || aCell.textContent.trim();
-        let bVal = bCell.getAttribute('data-value') || bCell.textContent.trim();
+        // An empty data-value means "no value", not "use the text": the text of a
+        // split cell is its phone label ("Bike"), which would parse as a 0:00 time.
+        let aVal = aCell.hasAttribute('data-value') ? aCell.getAttribute('data-value') : aCell.textContent.trim();
+        let bVal = bCell.hasAttribute('data-value') ? bCell.getAttribute('data-value') : bCell.textContent.trim();
         
         // Handle different data types
         if (sortType === 'time') {
@@ -193,7 +195,14 @@ function sortTable(table, column, asc = true) {
                 bVal = bNum;
             }
         }
-        
+
+        // Missing splits and ratings (DNFs, unrecorded legs) sink to the bottom in
+        // either direction, so sorting a leg always opens on real times.
+        if (sortType === 'time' || sortType === 'rating') {
+            const aMissing = !isFinite(aVal), bMissing = !isFinite(bVal);
+            if (aMissing || bMissing) return aMissing - bMissing;
+        }
+
         if (aVal < bVal) return asc ? -1 : 1;
         if (aVal > bVal) return asc ? 1 : -1;
         return 0;

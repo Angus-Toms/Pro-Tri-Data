@@ -360,7 +360,6 @@ function initRaceViewToggle() {
 // athlete page implementation; each .results-sort-chips / .ratings-sort-chips
 // row sorts the table inside its next-sibling wrapper.
 function initRaceSortChips() {
-    const defaultAscFor = { position: true, discipline: false };
     document.querySelectorAll('.results-sort-chips, .ratings-sort-chips').forEach(chipRow => {
         const table = chipRow.nextElementSibling?.querySelector('table.sortable-table');
         if (!table) return;
@@ -377,12 +376,11 @@ function initRaceSortChips() {
                 const wasDesc = chip.classList.contains('desc');
                 chips.forEach(c => c.classList.remove('selected', 'asc', 'desc'));
 
-                // Toggle direction when re-clicking; otherwise:
-                //   position -> asc (1st first), other (time/rating) -> desc.
-                const axis = chip.dataset.sortAxis || (col === 0 ? 'position' : 'value');
-                let asc;
-                if (wasSelected) asc = wasDesc;
-                else asc = defaultAscFor[axis] ?? false;
+                // Toggle direction when re-clicking; otherwise go by the column's
+                // type: position/rank and times asc (1st and fastest first),
+                // ratings desc (highest first).
+                const sortType = table.querySelectorAll('th')[col].dataset.sort;
+                const asc = wasSelected ? wasDesc : (col === 0 || sortType === 'time');
 
                 chip.classList.add('selected', asc ? 'asc' : 'desc');
                 sortTable(table, col, asc);
