@@ -721,6 +721,10 @@ def _get_upcoming_race(request: Request, race, partial: bool):
         "days_until":            days_until,
         "entry_count":           len(entries),
         "is_upcoming":           True,
+        # Elite races are listed before their start list is out; the page is
+        # then just the hero and a prompt to like it, with nothing to index.
+        "has_start_list":        bool(entries),
+        "noindex":               not entries,
         "series":                None,
         "breadcrumb":            _build_breadcrumb(race, race_id,
                                                    queries.get_recurring_event_for_event(race.get('event_id'))

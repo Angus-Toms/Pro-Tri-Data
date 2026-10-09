@@ -39,11 +39,9 @@ async def home_mine(request: Request):
     # --- coming up: predicted position and gap to the predicted winner ---
     coming = queries.get_upcoming_races_for_athletes(athletes)
     preds = {rid: queries.get_race_predictions(rid) for rid in {s["race_id"] for s in coming}}
-    entries = queries.get_upcoming_race_entries_bulk(list(preds))
     for s in coming:
         rows = preds[s["race_id"]]
         mine = next((p for p in rows if p["athlete_id"] == s["athlete_id"]), None)
-        s["entries"]  = len(entries.get(s["race_id"], []))
         s["pred_pos"] = mine["predicted_position"] if mine else None
         s["time"] = format_time(mine["overall_s"]) if mine and mine["overall_s"] else None
         s["gap"] = None

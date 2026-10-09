@@ -261,22 +261,8 @@ a.hero-stat--link:hover .hero-stat-lbl {
     letter-spacing: 0;
 }
 
-.follow-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--spacing-lg);
-    align-items: start;
-}
-
-.follow-card-title {
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-lighter);
-    margin-bottom: var(--spacing-xs);
-}
-
+/* Following: one list of athletes and people, then upcoming liked races.
+   Rows use the site's photo-and-name row; Unfollow is a quiet text action. */
 .follow-list {
     list-style: none;
     margin: 0;
@@ -288,46 +274,38 @@ a.hero-stat--link:hover .hero-stat-lbl {
     align-items: center;
     justify-content: space-between;
     gap: var(--spacing-md);
-    padding: 0.65rem 0;
+    padding: 0.6rem 0;
     border-bottom: 1px solid var(--border-color);
 }
+.follow-list-item:first-child { padding-top: 0; }
+.follow-list-item:last-child { border-bottom: none; padding-bottom: 0; }
+.follow-list-item .home-who-name small { font-weight: 400; }
 
-.follow-list-item:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
+.follow-subhead {
+    margin: var(--spacing-lg) 0 0;
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--border-color);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-lighter);
 }
+.follow-subhead + .account-help { display: block; margin: 0.2rem 0 0.6rem; }
 
-.follow-list-main {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
+.follow-race {
     min-width: 0;
-}
-
-.follow-list-link {
     color: var(--text-color);
     text-decoration: none;
-    font-size: 0.9rem;
-    font-weight: 600;
 }
-
-.follow-list-link:hover {
-    color: var(--primary-color);
-}
-
-.follow-list-sub {
-    color: var(--text-light);
-    font-size: 0.78rem;
-}
+.follow-race b { display: block; font-size: 0.9rem; font-weight: 600; }
+.follow-race small { display: block; font-size: 0.74rem; color: var(--text-light); }
+.follow-race:hover b { color: var(--primary-color); }
 
 .follow-empty {
     color: var(--text-light);
     font-size: 0.88rem;
-    margin: var(--spacing-sm) 0 0;
-}
-
-.follow-empty a {
-    color: var(--primary-color);
+    margin: 0;
 }
 
 .danger-zone {
@@ -393,22 +371,42 @@ a.hero-stat--link:hover .hero-stat-lbl {
     fill: currentColor;
 }
 
-/* Dark race hero variant */
-.race-hero .btn-follow {
-    background: transparent;
-    border-color: rgba(255, 255, 255, 0.35);
-    color: rgba(255, 255, 255, 0.85);
+/* Race like: a bare heart and its count, beside the comment count. Filled
+   orange once liked. The navy race hero and the home page blocks set the
+   resting colour and size. */
+.race-like {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    font-variant-numeric: tabular-nums;
+    transition: color var(--transition-fast);
 }
+.race-like .follow-ic { width: 1em; height: 1em; flex: none; }
+.race-like:hover,
+.race-like.following { color: var(--primary-color); }
+.race-like.following .follow-ic { fill: currentColor; }
+.race-like [hidden] { display: none; }
 
-.race-hero .btn-follow:hover {
-    border-color: var(--primary-color);
+/* Confirmation after liking an upcoming race */
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: 1.5rem;
+    z-index: 1200;
+    transform: translateX(-50%);
+    max-width: calc(100vw - 2rem);
+    padding: 0.7rem 1rem;
+    border-radius: var(--border-radius);
+    background: var(--navy);
     color: var(--white);
-}
-
-.race-hero .btn-follow.following {
-    background: rgba(232, 93, 4, 0.18);
-    border-color: var(--primary-color);
-    color: var(--white);
+    font-size: 0.85rem;
+    box-shadow: var(--box-shadow-lg);
 }
 
 /* Leaderboard cards: push to the row's right edge */
@@ -1183,8 +1181,7 @@ a.mention-race:hover    { border-color: var(--navy); }
         white-space: normal;
     }
 
-    .account-grid,
-    .follow-grid {
+    .account-grid {
         grid-template-columns: 1fr;
     }
 
@@ -1209,11 +1206,6 @@ a.mention-race:hover    { border-color: var(--navy); }
 }
 
 @media (max-width: 480px) {
-    /* Section sub-text drops under the heading instead of wrapping mid-line */
-    .page-section-head .page-section-sub {
-        display: block;
-    }
-
     .btn-follow .follow-label {
         display: none;
     }
@@ -1417,14 +1409,13 @@ a.mention-race:hover    { border-color: var(--navy); }
     overflow-wrap: anywhere;
 }
 
-/* Reactions received: icon in its reaction colour, count in white */
-.profile-hero-reaction {
-    display: inline-flex;
-    align-items: center;
+/* Reactions the user's comments have received, beside the Comments heading */
+.profile-received {
+    display: flex;
+    flex-wrap: wrap;
     gap: 0.3rem;
-    color: color-mix(in srgb, var(--rc) 70%, #fff);
+    letter-spacing: 0;
 }
-.profile-hero-reaction svg { width: 14px; height: 14px; }
 
 .profile-hero-actions {
     display: flex;
@@ -1745,12 +1736,6 @@ a.mention-race:hover    { border-color: var(--navy); }
 }
 
 /* ---------- Follower counts and people-follow ---------- */
-.follow-group {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.6rem;
-}
-
 .follower-count {
     font-size: 0.82rem;
     color: var(--text-light);
@@ -1762,24 +1747,23 @@ a.mention-race:hover    { border-color: var(--navy); }
     font-weight: 700;
 }
 
-/* On navy heroes (athlete page) */
-.athlete-hero .follower-count { color: rgba(255, 255, 255, 0.6); }
-.athlete-hero .follower-count strong { color: #fff; }
-
 .btn-follow[hidden] { display: none; }
 
-/* Follow button on the navy profile header, as on the race hero */
+/* Follow button on the navy athlete and profile heroes */
+.athlete-hero .btn-follow,
 .profile-hero .btn-follow {
     background: transparent;
     border-color: rgba(255, 255, 255, 0.35);
     color: rgba(255, 255, 255, 0.85);
 }
 
+.athlete-hero .btn-follow:hover,
 .profile-hero .btn-follow:hover {
     border-color: var(--primary-color);
     color: var(--white);
 }
 
+.athlete-hero .btn-follow.following,
 .profile-hero .btn-follow.following {
     background: rgba(232, 93, 4, 0.18);
     border-color: var(--primary-color);

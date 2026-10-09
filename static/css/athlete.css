@@ -146,17 +146,16 @@
     font-size: 0.8rem;
 }
 
-/* Actions cluster (course selector + compare): stacked on the right of the hero,
-   selector on top, compare beneath. Pinned to the top of its grid cell so
-   the compare button sits in the corner whether or not the mode switcher
-   is present (single-program athletes have just the compare button here). */
+/* Actions row above the form table: the mode switcher (when an athlete has
+   more than one mode) on the left, the follow button pinned right so its
+   edge lines up with the form table's. */
 .athlete-hero-actions {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-    align-self: flex-end;   /* right edge aligns with the form table below */
+    align-items: center;
+    gap: 0.75rem;
+    align-self: stretch;
 }
+.athlete-hero-actions .btn-follow { margin-left: auto; }
 
 /* Right column of the hero: compact mode switcher (top) + current-form widget
    below, left-aligned so the switcher, title and table share a left edge.
@@ -638,15 +637,6 @@ tr.sub-race-row .link:hover {
         flex: 1 1 320px;
         min-width: 0;
     }
-    .athlete-hero-actions {
-        flex-direction: row;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        /* No margin-left:auto: when actions sits on row 1, info's flex-grow
-           pushes it to the right end naturally; when actions wraps to row 2
-           it should sit at the left edge to match the info above. */
-    }
 
     /* Right column drops to a full-width row below the info (like the race
        hero podium stacking under the title). */
@@ -707,10 +697,20 @@ tr.sub-race-row .link:hover {
         flex: 0 1 auto;       /* override the 320px basis from <=768 */
         align-items: center;
     }
+    /* Switcher centred, then the follow button full width beneath it */
     .athlete-hero-actions {
-        align-self: center;     /* override align-self:start from base */
-        justify-content: center;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.6rem;
     }
+    .athlete-hero-actions .btn-follow {
+        margin-left: 0;
+        width: 100%;
+        max-width: 360px;       /* the form table's width */
+        justify-content: center;
+        padding: 0.55rem 0.8rem;
+    }
+    .athlete-hero .btn-follow .follow-label { display: inline; }
     .athlete-hero-right {
         align-items: center;
         width: 100%;

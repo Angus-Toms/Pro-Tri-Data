@@ -7,7 +7,7 @@ from app.display_helpers import flag
 from ptd_data import queries
 from ptd_users import queries as uq
 from app.routers.comments import render_comment_body, tag_refs
-from app.routers.account import PB_FIELDS
+from app.routers.account import PB_FIELDS, following_rows
 from app.routers.router_utils import format_time, rel_time, user_avatar
 
 router = APIRouter()
@@ -49,18 +49,13 @@ async def profile(request: Request, user_id: int, offset: int = Query(0, ge=0)):
             }
         groups[c["race_id"]]["comments"].append(c)
 
-    # --- following: athlete follows are public, races and people are not ---
-    follows = await uq.get_follows(user_id)
-    athletes_by_id = queries.get_athletes_brief_bulk(follows["athletes"])
-    following = [athletes_by_id[a] for a in reversed(follows["athletes"]) if a in athletes_by_id]
-
     return templates.TemplateResponse("user_profile.html", {
         "request":      request,
         "active_page":  None,
         "profile":      profile,
         "country_name": country["country_full"] if country else None,
         "groups":       list(groups.values()),
-        "following":    following,
+        "following":    await following_rows(user_id),
         "offset":       offset,
         "has_more":     has_more,
         "page_size":    PAGE_SIZE,

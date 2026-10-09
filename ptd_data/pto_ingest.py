@@ -5,7 +5,11 @@ into the shared DB schema alongside WT short-course data.
 Usage:
     python -m ptd_data.pto_ingest                      # full 1979-present
     python -m ptd_data.pto_ingest --year 2024          # single year
+    python -m ptd_data.pto_ingest --days 30            # listings covering the last 30 days
     python -m ptd_data.pto_ingest --athletes-only      # backfill athlete profiles
+
+A race already in the DB is not fetched again, except one dated within
+--days, which is re-fetched so a gender PTO posts late still lands.
 
 Each new PTO athlete's profile is fetched inline during race ingest so that
 yob/height/weight/nickname are available at match-time (otherwise two
@@ -18,7 +22,7 @@ import csv
 import re
 import time
 import unicodedata
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import requests
@@ -222,7 +226,9 @@ class PTOIngester:
             index.setdefault((country, gender), []).append((athlete_id, name, yob))
         return index
 
-    def run(self, years=None):
+    def run(self, years=None, recheck_from=None):
+        """recheck_from: re-fetch races already in the DB when dated on or
+        after this day. None re-fetches nothing that is stored."""
         if years is None:
             years = list(range(1979, date.today().year + 1))
 
@@ -242,13 +248,15 @@ class PTOIngester:
         # Decide what to skip, annotate each race with a reason, and dump the
         # full discovery set to all_pto_events.csv for overview (mirrors the
         # all_events.csv dump the WT ingest produces).
-        known_race_ids = {
+        # Stored per gender, so compare events: a discovered race only carries
+        # the event id until _ingest_race mints the per-gender race ids.
+        known_event_ids = {
             r[0] for r in self.conn.execute(
-                "SELECT race_id FROM races WHERE distance IN ('middle','t100','long')"
+                "SELECT DISTINCT event_id FROM races WHERE distance IN ('middle','t100','long')"
             ).fetchall()
         }
         for race in all_races:
-            race["skip_reason"] = self._skip_reason(race, known_race_ids)
+            race["skip_reason"] = self._skip_reason(race, known_event_ids, recheck_from)
 
         _dump_races_csv(all_races, "all_pto_events.csv")
         print(f"Wrote all_pto_events.csv ({len(all_races)} rows)")
@@ -311,13 +319,13 @@ class PTOIngester:
                 w.writerow(r)
         print(f"Wrote {len(rows)} merge candidates to {path.name} for manual review")
 
-    def _skip_reason(self, race, known_race_ids):
+    def _skip_reason(self, race, known_event_ids, recheck_from):
         """Why would we skip this race? Returns None if we'd ingest it."""
         if _is_wtcs_slug(race["slug"]):
             return "wtcs (covered by WT ingest)"
         if race["distance"] not in ("middle", "t100", "long"):
             return f"non-long-course ({race['distance']})"
-        if race["race_id"] in known_race_ids:
+        if race["event_id"] in known_event_ids and (recheck_from is None or race["sort_date"] < recheck_from):
             return "already in DB"
         return None
 
@@ -407,7 +415,7 @@ class PTOIngester:
             # Jan 1 of the year when the date label is missing.
             sort_date = _parse_date(f"{date_label} {race_year}") or date(race_year, 1, 1)
 
-            # Placeholder event_id; per-gender race_ids minted in _ingest_race
+            # Per-gender race_ids are minted in _ingest_race
             event_id = db.slug_id(f"{slug}-{race_year}")
             races.append({
                 "slug": slug,
@@ -421,7 +429,6 @@ class PTOIngester:
                 "sort_date": sort_date,
                 "prize_usd": 0,  # not on listing card; filled from race page
                 "event_id": event_id,
-                "race_id": event_id,
             })
             print(f"    {slug}/{race_year}  dist={distance}  brand={brand}  tier={tier or '-'}")
 
@@ -1253,10 +1260,10 @@ def insert_results_bulk(conn, rows):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Scrape PTO long-course results into DB")
     parser.add_argument("--year", type=int, help="Single year to ingest")
-    parser.add_argument("--recent", type=int, metavar="N",
-                            help="Only scrape the last N years of listings (default: all from 1979). "
-                                 "Race pages are always fetched only for unseen races; this just trims "
-                                 "the per-year listing fetches for incremental weekly runs.")
+    parser.add_argument("--days", type=int, metavar="N",
+                            help="Only scrape the year listings that cover the last N days, and re-fetch "
+                                 "stored races dated in that window (default: every year from 1979, "
+                                 "stored races never re-fetched).")
     parser.add_argument("--athletes-only", action="store_true",
                             help="Skip race ingestion; only enrich athlete profiles")
     args = parser.parse_args()
@@ -1267,22 +1274,23 @@ if __name__ == "__main__":
     if args.athletes_only:
         ingester.enrich_athletes()
     else:
+        recheck_from = None
         if args.year:
             years = [args.year]
-        elif args.recent:
-            current = date.today().year
-            years = list(range(current - args.recent + 1, current + 1))
+        elif args.days:
+            recheck_from = date.today() - timedelta(days=args.days)
+            years = list(range(recheck_from.year, date.today().year + 1))
         else:
             years = None  # defaults to full history 1979-present
 
-        ingester.run(years=years)
+        ingester.run(years=years, recheck_from=recheck_from)
 
         # Skip the full-roster enrichment pass on incremental runs. New
         # athletes already had their profile fetched inline in _resolve_athlete;
-        # re-scanning every historical NULL-field athlete every week just
+        # re-scanning every historical NULL-field athlete on every run just
         # re-fetches the same pages that PTO doesn't expose data for. Run a
-        # full ingest (no --recent / --year) to retry historical gaps.
-        if not args.recent and not args.year:
+        # full ingest (no --days / --year) to retry historical gaps.
+        if not args.days and not args.year:
             print("\nEnriching new athlete profiles...")
             ingester.enrich_athletes()
 

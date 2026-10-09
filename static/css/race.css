@@ -235,6 +235,11 @@
     white-space: nowrap;
 }
 .race-compare-link:hover { color: var(--primary-color); }
+.race-hero .race-like { color: rgba(255, 255, 255, 0.85); }
+.race-hero .race-like .follow-ic { width: 0.95em; height: 0.95em; }
+.race-hero .race-like:hover,
+.race-hero .race-like.following { color: var(--primary-color); }
+.race-compare-link [hidden] { display: none; }
 .race-compare-ic {
     width: 0.95em;
     height: 0.95em;
@@ -826,3 +831,16 @@
 /* The always-visible chevron column and the fastest-split annotation are
    shared with the country page's relay table; both live in base.css. */
 
+/* Upcoming race listed before its start list: one card asking for a like */
+.startlist-pending {
+    margin: 0 0 var(--spacing-xxl);
+    padding: var(--spacing-lg);
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+}
+.startlist-pending h2 { margin: 0 0 0.35rem; font-size: 1.125rem; font-weight: 700; }
+.startlist-pending p { margin: 0 0 var(--spacing-md); max-width: 60ch; font-size: 0.9rem; color: var(--text-light); }
+/* The site hides follow labels on phones; this button is the page's one action */
+.startlist-pending .btn-follow .follow-label { display: inline; }

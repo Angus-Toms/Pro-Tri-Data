@@ -14,6 +14,19 @@
 {%- endif -%}
 {%- endif -%}
 {%- endmacro %}
+{% if not has_start_list %}
+{# Listed before the start list is out: nothing to rate or predict yet, so
+   the page only asks people to like it and hear when the list lands. #}
+<div class="startlist-pending">
+    <h2>The start list isn't out yet</h2>
+    <p>Like this race and we'll tell you as soon as it is published, then every time it changes, with the predicted podium.</p>
+    <button type="button" class="btn-follow" data-follow-kind="race" data-follow-id="{{ race.race_id }}" aria-pressed="false"
+            data-label-off="Like this race" data-label-on="Liked" data-notify-on-like>
+        <svg class="follow-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+        <span class="follow-label">Like this race</span>
+    </button>
+</div>
+{% else %}
 <div class="page-section-head"><span>Race Standards {{ help_icon('upcoming-standards') }}</span></div>
 <div class="ratings-section">
     <div class="ratings-table-scroll">
@@ -243,6 +256,7 @@
 <script id="bike-ratings-hist-data" type="application/json">{{ bike_rating_hist | tojson }}</script>
 <script id="run-ratings-hist-data" type="application/json">{{ run_rating_hist | tojson }}</script>
 <script id="transition-ratings-hist-data" type="application/json">{{ transition_rating_hist | tojson }}</script>
+{% endif %}
 
 <!-- Comments: empty host, partial fetched client-side so race HTML stays anonymous -->
 <div class="page-section-head">Comments</div>

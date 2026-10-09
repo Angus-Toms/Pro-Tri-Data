@@ -64,8 +64,8 @@ def unsubscribe_url(user_id):
 
 
 def updates_subject(results, starts, races):
-    """'New results for <athlete>' or 'New results from <race>', naming the
-    first and counting the rest. Start lists alone say so."""
+    """'New results for <athlete>' or 'Start list update for <race>', naming
+    the first and counting the rest. Start lists alone say so."""
     def named(first, n):
         return first if n == 1 else f"{first} and {n - 1} other{'s' if n > 2 else ''}"
 
@@ -73,7 +73,10 @@ def updates_subject(results, starts, races):
     if athletes:
         noun = "start lists" if not results and not races else "results"
         return f"New {noun} for {named(athletes[0], len(athletes))}"
-    return f"New results from {named(races[0]['race_title'], len(races))}"
+    titles = list(dict.fromkeys(r["race_title"] for r in races))
+    kinds = {r["kind"] for r in races}
+    lead = {"results": "New results from", "startlist": "Start list update for"}[kinds.pop()] if len(kinds) == 1 else "Updates on"
+    return f"{lead} {named(titles[0], len(titles))}"
 
 
 def updates_title(results, starts, races):
@@ -83,7 +86,12 @@ def updates_title(results, starts, races):
     if sum(kinds) > 1:
         return "Latest from your follows"
     if races:
-        return "Results from your followed race" if len(races) == 1 else "Results from your followed races"
+        race_kinds = {r["kind"] for r in races}
+        if race_kinds == {"results"}:
+            return "Results from races you liked"
+        if race_kinds == {"startlist"}:
+            return "Start lists for races you liked"
+        return "Updates on races you liked"
     if results:
         return "New results from athletes you follow"
     return "New start lists for athletes you follow"
@@ -109,9 +117,11 @@ def render_updates(user_id, results, starts, races):
             + (f" ({s['predicted_gap']})" if s["predicted_gap"] else "")
             for s in starts] + [""]
     for race in races:
-        lines += [f"{race['race_title']} ({race['date']})"] + [
-            f"{p['position']}. {p['name']} {p['time']}" for p in race["podium"]] + [
-            f"Full results: {SITE_BASE_URL}/race/{race['race_id']}", ""]
+        lines += [f"{race['race_title']}, {race['prog_name']} ({race['date']})"]
+        if race["summary"]:
+            lines += [race["summary"]] + (["Predicted podium:"] if race["rows"] else [])
+        lines += [f"{p['position']}. {p['name']} {p['time']}" for p in race["rows"]] + [
+            f"{'Full results' if race['kind'] == 'results' else 'Start list'}: {SITE_BASE_URL}/race/{race['race_id']}", ""]
     lines += [f"Your athletes: {SITE_BASE_URL}/", f"Unsubscribe: {unsub}"]
     return subject, html, "\n".join(lines), unsub
 

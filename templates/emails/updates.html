@@ -59,14 +59,16 @@
 {% endif %}
 
 {% if races %}
-{% if show_heads %}{{ section_head('Your races') }}{% else %}<div style="height:6px;"></div>{% endif %}
+{% if show_heads %}{{ section_head('Races you liked') }}{% else %}<div style="height:6px;"></div>{% endif %}
 {% for race in races %}
+{% set link_label = 'Full results' if race.kind == 'results' else 'Start list' %}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:10px;border:1px solid #e5e7eb;border-radius:8px;">
 <tr><td colspan="4" style="padding:12px 14px 6px;">
   <a href="{{ site }}/race/{{ race.race_id }}" style="font-size:15px;font-weight:700;color:#111827;text-decoration:none;">{{ race.race_title }}</a>
   <span style="font-size:13px;color:#6b7280;"> · {{ race.prog_name }} · {{ race.date }}</span>
+  {% if race.summary %}<br><span style="font-size:13px;color:#111827;">{{ race.summary }}</span>{% if race.rows %}<br><span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;">Predicted podium</span>{% endif %}{% endif %}
 </td></tr>
-{% for p in race.podium %}
+{% for p in race.rows %}
 <tr>
   <td width="32" style="padding:5px 0 5px 14px;vertical-align:middle;">{{ pos(p.position, '') }}</td>
   <td width="40" style="padding:5px 0;vertical-align:middle;">{{ photo(p.photo, 28) }}</td>
@@ -75,7 +77,7 @@
 </tr>
 {% endfor %}
 {% if not single_race %}
-<tr><td colspan="4" style="padding:6px 14px 12px;"><a href="{{ site }}/race/{{ race.race_id }}" style="font-size:13px;font-weight:700;color:#e85d04;text-decoration:none;">Full results</a></td></tr>
+<tr><td colspan="4" style="padding:6px 14px 12px;"><a href="{{ site }}/race/{{ race.race_id }}" style="font-size:13px;font-weight:700;color:#e85d04;text-decoration:none;">{{ link_label }}</a></td></tr>
 {% else %}
 <tr><td colspan="4" style="height:8px;"></td></tr>
 {% endif %}
@@ -85,7 +87,7 @@
 
 <table role="presentation" cellpadding="0" cellspacing="0" style="margin:26px 0 0;"><tr>
 {% if single_race %}
-{% with href = site ~ '/race/' ~ races[0].race_id, label = 'Full results', secondary = false %}{% include "_button.html" %}{% endwith %}
+{% with href = site ~ '/race/' ~ races[0].race_id, label = 'Full results' if races[0].kind == 'results' else 'Start list', secondary = false %}{% include "_button.html" %}{% endwith %}
 <td width="10"></td>
 {% with href = site ~ '/', label = 'Your athletes', secondary = true %}{% include "_button.html" %}{% endwith %}
 {% else %}
@@ -95,6 +97,6 @@
 {% endblock %}
 
 {% block footer %}
-You're getting this because you follow athletes or races on Pro Tri Data.<br>
+You're getting this because you follow athletes or like races on Pro Tri Data.<br>
 <a href="{{ unsubscribe_url }}" style="color:#9ca3af;">Unsubscribe from these emails</a>
 {% endblock %}

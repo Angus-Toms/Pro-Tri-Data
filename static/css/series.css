@@ -643,6 +643,7 @@
     text-align: center;
     color: var(--text-lighter);
 }
+.ep-empty a { color: var(--primary-color); font-weight: 600; text-decoration: none; }
 
 /* Navy header: title block · standards strip · prev/next buttons. */
 .ep-head {

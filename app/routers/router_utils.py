@@ -133,3 +133,14 @@ def format_course_conditions(raw):
         mins, secs = divmod(abs(round(v["diff_s"])), 60)
         out[disc] = {"formatted": f"{sign}{mins:02d}:{secs:02d}", "category": v["category"]}
     return out
+
+
+def startlist_change(detail):
+    """What changed on a liked race's start list, for the bell and the update
+    email: 'start list is out, 52 entries' or 'start list updated, 3 in,
+    1 out, 52 entries'."""
+    entries = f"{detail['entries']} entr{'y' if detail['entries'] == 1 else 'ies'}"
+    if detail["first"]:
+        return f"start list is out, {entries}"
+    moves = [f"{detail['added']} in"] * bool(detail["added"]) + [f"{detail['removed']} out"] * bool(detail["removed"])
+    return f"start list updated, {', '.join(moves + [entries])}"

@@ -1,6 +1,6 @@
 # User System Design Draft
 
-Goal: accounts with email verification, profiles, follows (athletes and races), a personal
+Goal: accounts with email verification, profiles, follows (athletes and people), race likes, a personal
 feed, comments under races, and account deletion. Constraints: solo-maintained, lean,
 fail fast, and it must not interfere with the weekly DuckDB rebuild/sync.
 
@@ -88,7 +88,7 @@ create table sessions (
 
 create table follows (
     user_id    bigint not null references users on delete cascade,
-    kind       text not null check (kind in ('athlete', 'race', 'user')),
+    kind       text not null check (kind in ('athlete', 'race', 'user')),  -- 'race' is a like
     ref_id     bigint not null,            -- DuckDB athlete/race id, or a user_id
     created_at timestamptz not null default now(),
     primary key (user_id, kind, ref_id)
@@ -127,13 +127,23 @@ create table comment_reactions (
 create table notifications (
     notification_id bigint generated always as identity primary key,
     user_id    bigint not null references users on delete cascade,     -- recipient
-    comment_id bigint not null references comments on delete cascade,  -- the reply or mention
-    kind       text not null check (kind in ('reply', 'mention')),
+    comment_id bigint references comments on delete cascade,           -- reply or mention
+    race_id    bigint,                     -- startlist or results, for a liked race
+    detail     jsonb,                      -- startlist: {entries, added, removed, first}
+    kind       text not null check (kind in ('reply', 'mention', 'startlist', 'results')),
     created_at timestamptz not null default now(),
     read_at    timestamptz,
     unique (user_id, comment_id)
 );
 create index notifications_by_user on notifications (user_id, created_at desc);
+create unique index notifications_results_once on notifications (user_id, race_id) where kind = 'results';
+
+-- Every upcoming race's start list at the last update-email run, to diff against.
+create table race_startlists (
+    race_id     bigint primary key,
+    athlete_ids bigint[] not null,
+    seen_at     timestamptz not null default now()
+);
 
 -- "Continue as" on the login page: a one-time token stored in a browser cookie
 -- at logout, so that browser can log straight back in without an email link.
@@ -194,7 +204,8 @@ Auth (`app/routers/auth.py`)
 
 Settings (`app/routers/account.py`)
 - `GET /settings` - photo, display name, country, bio, club, socials, PBs, digest
-  toggle, followed athletes, races and people with unfollow controls, danger zone.
+  toggle, one list of followed athletes and people (newest first) and then
+  upcoming liked races, each with a quiet unfollow or remove action, danger zone.
   Reached from the avatar menu or Edit profile on your own profile. `/account`
   redirects here.
 - `POST /account/update`
@@ -202,10 +213,18 @@ Settings (`app/routers/account.py`)
   reports all go (cascades). Re-confirmation via typed phrase. No soft-delete state
   to maintain, nothing retained.
 
-Follows (`app/routers/follows.py`)
-- `POST /follow` body `{kind, ref_id}` - toggle, returns new state
-- Buttons: athlete hero, race hero, leaderboard cards. Logged-out click routes to /login
-  with a `next` redirect.
+Follows and race likes (`app/routers/follows.py`)
+- Two ideas. Following is for athletes and people, who produce news over time.
+  A race gets a like: a heart beside its comment count. On an upcoming race the
+  like also asks for news (every start-list change, then the results); on a
+  finished race it is only a reaction. Both live in `follows` (kind 'race').
+- `POST /follow` body `{kind, ref_id}` - toggle, returns new state and count.
+- `GET /race/{id}/counts` - like and comment counts for the race hero, fetched
+  client-side because old race pages are edge-cached for a week.
+- Follow buttons: athlete hero (right-hand actions, above the form table),
+  profile hero, hover card, leaderboard cards. Like hearts: race hero and the
+  home page event blocks, counts hidden at zero. Logged-out clicks route to
+  /login with a `next` redirect.
 
 Home personal layer (`app/routers/feed.py`)
 - `GET /home/mine` - partial injected above "This weekend" on the home page by
@@ -259,16 +278,16 @@ Profiles (`app/routers/profiles.py`)
 - `GET /user/{id}` - public, anonymous page (noindex): photo, name, flag, join date,
   comment and reactions-received counts, and the user's visible comments newest
   first, 30 per page, each linking to the comment on its race. Shows only what is
-  already public on race pages; email and follows stay private. Banned users 404.
+  already public on race pages, plus who they follow; email and race likes stay
+  private. Banned users 404.
 - Comment author names, avatars and person tags link here.
 - People can follow people (`follows.kind = 'user'`, not yourself). A followed
   person's comments appear on their profile, grouped by race with the parent
   quoted above each reply. Profiles use the athlete-page hero and show
-  follower, athletes-followed and comment counts plus reactions received, and
-  list the athletes they follow (athlete follows are public; races and people
-  are not); athlete pages show a follower count
-  beside the follow button. `POST /follow` returns the new count so every figure
-  for that target on the page updates in place.
+  follower, following and comment counts, with reactions received beside the
+  Comments heading, and list the athletes and people they follow. `POST /follow`
+  returns the new count so every figure for that target on the page updates in
+  place.
 - Optional public fields, edited on the settings page: bio (280 chars), club, an
   Instagram handle and a Strava athlete id (pasted links are reduced to these),
   and self-reported PBs for sprint, Olympic, 70.3 and 140.6, stored as seconds.
@@ -276,10 +295,20 @@ Profiles (`app/routers/profiles.py`)
   labels them self-reported. External links use rel="nofollow noopener ugc".
 
 Notifications
-- Two kinds, written in the same transaction as the comment: the author of the
+- Comment kinds, written in the same transaction as the comment: the author of the
   comment directly above a reply gets "X replied to your comment on Y race"; each
   tagged user gets "X mentioned you in a comment". Nobody is notified about their
   own comment, and a parent author who is also tagged gets only the reply.
+- Liked-race kinds, written by the update-email script after each weekly build:
+  'startlist' each time a liked upcoming race's start list changes (first list
+  out, or entries in or out; a race the script has never seen is only recorded).
+  Elite races are stored as soon as WT lists them, before any entries, so they
+  can be liked early: their page is the hero, a prompt to like the race and the
+  comments, kept out of the sitemap and noindexed until the list lands. Age-group
+  programmes only appear once they have entries,
+  and 'results' once when a liked race has a podium, for likes placed on or
+  before race day. These go to everyone who liked the race, opted in to email
+  or not, and link to the race page.
 - Header bell for logged-in users with an unread badge; the count rides on `/me`.
   Opening the panel fetches `GET /notifications` (latest 20) and marks all read
   (`POST /notifications/read`). Each item links to `/race/{id}#comment-{id}`,
@@ -293,8 +322,11 @@ Emails (`ptd_users/emails.py`, templates in `templates/emails/`)
   against the production database. One email per opted-in user listing new
   results for followed athletes (last 14 days, with rating change), new start-list
   entries with a predicted finish (rank by rating, as the site's predicted podium),
-  and podiums of followed races. `email_sent` records each item so nothing is
-  emailed twice. Controlled by `users.email_updates`.
+  and the liked-race notifications from the bell: start-list changes with the
+  current predicted podium, and results with the podium. Several start-list
+  changes to one race since the last email collapse to the newest. `email_sent`
+  records each item so nothing is emailed twice. Controlled by
+  `users.email_updates`.
 - Every update email carries a signed unsubscribe link (HMAC of the user id with
   `SECRET_KEY`) and List-Unsubscribe headers for one-click unsubscribe in mail apps.
 - Comment activity (replies, tags, reactions) stays in-app via the bell.

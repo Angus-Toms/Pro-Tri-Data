@@ -3,7 +3,8 @@
 #
 # Steps (in order):
 #   1. ingest       - fetch from World Triathlon API, upsert races/athletes/results
-#   2. startlist    - fetch upcoming events + start lists for /upcoming page
+#   2. startlist    - fetch every upcoming WT event + start lists for /upcoming page;
+#                     elite races are stored before their list is out so they can be liked
 #   2b. startlists  - load hand-entered long-course start lists (data/startlists/)
 #   3. fgp          - fetch French Grand Prix (triathlonseries.fr) results;
 #                     runs after WT (matches against the fresh WT roster) and
@@ -49,7 +50,12 @@
 #   ./build_db.sh --extend            # ratings/rankings: wipe from earliest new race date
 #                                       forward and rebuild from there, instead of full
 #                                       clear+recompute. Combine with --ratings-only for
-#                                       a fast post-ingest top-up.
+#                                       a fast post-ingest top-up. Implies --days=30.
+#   ./build_db.sh --days=N            # WT results ingest and PTO scrape cover only races
+#                                       dated in the last N days. Without it (and without
+#                                       --extend) both walk their whole history, which is
+#                                       what picks up results posted long after a race.
+#                                       Start lists always cover every future WT race.
 
 set -euo pipefail
 
@@ -64,6 +70,7 @@ elapsed() { echo -e "    done in ${BOLD}$(( SECONDS - $1 ))s${RESET}"; }
 
 DO_INGEST=true; DO_STARTLIST=true; DO_FGP=true; DO_BUNDESLIGA=true; DO_PTO=true; DO_MERGES=true; DO_INSTAGRAM=true; DO_STAGES=true; DO_IGNORED=true; DO_SERIES=true; DO_RECURRING=true; DO_AUTOCORR=true; DO_RATINGS=true; DO_PREDICTIONS=true; DO_COMPACT=true
 EXTEND=false
+DAYS=""
 
 for arg in "$@"; do
     case $arg in
@@ -84,16 +91,24 @@ for arg in "$@"; do
         --skip-compact)   DO_COMPACT=false ;;
         --ratings-only)   DO_INGEST=false; DO_STARTLIST=false; DO_FGP=false; DO_BUNDESLIGA=false; DO_PTO=false; DO_MERGES=false; DO_INSTAGRAM=false; DO_STAGES=false; DO_IGNORED=false; DO_SERIES=false; DO_RECURRING=false ;;
         --extend)         EXTEND=true ;;
+        --days=*)         DAYS="${arg#*=}" ;;
+        *) echo "Unknown option: $arg" >&2; exit 2 ;;
     esac
 done
+if $EXTEND && [ -z "$DAYS" ]; then DAYS=30; fi
 
 TOTAL_START=$SECONDS
 
 # ── 1. Ingest ─────────────────────────────────────────────────────────────────
 if $DO_INGEST; then
-    step "Ingest - fetch from World Triathlon API"
     T=$SECONDS
-    python3 -m ptd_data.ingest
+    if [ -n "$DAYS" ]; then
+        step "Ingest - fetch World Triathlon results from the last $DAYS days"
+        python3 -m ptd_data.ingest --days "$DAYS"
+    else
+        step "Ingest - fetch World Triathlon results, whole calendar"
+        python3 -m ptd_data.ingest
+    fi
     elapsed $T
 fi
 
@@ -102,14 +117,14 @@ fi
 # Must run after ingest so _purge_completed() can drop upcoming rows whose
 # races have since been ingested as completed.
 if $DO_STARTLIST; then
-    step "Start lists - fetch upcoming events (next 90 days) + entries"
+    step "Start lists - fetch every upcoming WT event + entries"
     T=$SECONDS
     python3 -m ptd_data.ingest --start-lists
     elapsed $T
 fi
 
 # ── 2b. Manual long-course start lists ───────────────────────────────────────
-# Hand-entered via /admin/startlist, pulled by weekly.sh into data/startlists/.
+# Hand-entered via /admin/startlist, pulled by refresh.sh into data/startlists/.
 # Same tables as the WT start lists, so predictions and /upcoming just work.
 if $DO_STARTLIST; then
     step "Manual start lists - load data/startlists/*.json"
@@ -139,15 +154,12 @@ fi
 
 # ── 4. PTO scrape ─────────────────────────────────────────────────────────────
 if $DO_PTO; then
-    if $EXTEND; then
-        step "PTO - scrape stats.protriathletes.org (current year only)"
+    T=$SECONDS
+    if [ -n "$DAYS" ]; then
+        step "PTO - scrape stats.protriathletes.org, races from the last $DAYS days"
+        python3 -m ptd_data.pto_ingest --days "$DAYS"
     else
         step "PTO - scrape stats.protriathletes.org for long-course results"
-    fi
-    T=$SECONDS
-    if $EXTEND; then
-        python3 -m ptd_data.pto_ingest --recent 1
-    else
         python3 -m ptd_data.pto_ingest
     fi
     elapsed $T

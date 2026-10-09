@@ -4,13 +4,13 @@
         <div class="race-hero-left">
             {% include "_race_breadcrumb.html" %}
             <h1 class="race-hero-title">{{ race.race_title }}{% if is_upcoming %} <span class="upcoming-badge">Upcoming</span>{% endif %}{% if race.is_multi_stage or (ignored_info and ignored_info.parent_is_multi_stage) %} {% include "_multi_stage_badge.html" %}{% endif %}</h1>
-            <div class="race-hero-meta">
+            <div class="race-hero-meta" data-race-counts="{{ race.race_id }}">
                 <span>{{ race.date.strftime('%d %B %Y') }}</span>
                 <span class="race-meta-dot">·</span>
                 <span>{% if race_location %}{{ race_location }}, {% endif %}{{ race_country }}</span>
                 {% if is_upcoming %}
                 <span class="race-meta-dot">·</span>
-                <span>{{ entry_count }} entries</span>
+                <span>{{ '%d entries' % entry_count if entry_count else 'Start list not out yet' }}</span>
                 {% if race.date %}
                 <span class="race-meta-dot">·</span>
                 {# Leave the contents to the JS countdown tick — server-side we
@@ -19,7 +19,6 @@
                    number on first paint. #}
                 <span class="race-countdown" data-race-date="{{ race.date.isoformat() }}" aria-live="polite"></span>
                 {% endif %}
-                {% with follow_kind = 'race', follow_id = race.race_id %}{% include "_follow_button.html" %}{% endwith %}
                 {% else %}
                 <span class="race-meta-dot">·</span>
                 <span>{{ race.athlete_count }} athletes</span>
@@ -33,8 +32,14 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="race-compare-ic"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>
                     <span class="race-compare-label">Share</span>
                 </a>
-                {% with follow_kind = 'race', follow_id = race.race_id %}{% include "_follow_button.html" %}{% endwith %}
                 {% endif %}
+                <span class="race-meta-dot">·</span>
+                {% with race_id = race.race_id, upcoming = is_upcoming, count = none %}{% include "_race_like.html" %}{% endwith %}
+                <span class="race-meta-dot">·</span>
+                <a href="#race-comments" class="race-compare-link" aria-label="Comments">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="race-compare-ic"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+                    <span data-comment-count hidden></span>
+                </a>
             </div>
             {% if event_races|length > 1 %}
             {%- set event_is_multi_stage = event_races | selectattr('is_multi_stage') | list | length > 0 -%}

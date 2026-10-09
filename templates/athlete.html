@@ -79,10 +79,6 @@
                     {% endif %}
                     {% if not athlete.active %}<span class="athlete-status-chip status-retired">Retired</span>{% endif %}
                 </h1>
-                <div class="follow-group">
-                    {% with follow_kind = 'athlete', follow_id = athlete.athlete_id %}{% include "_follow_button.html" %}{% endwith %}
-                    {% with follow_kind = 'athlete', follow_id = athlete.athlete_id, count = follower_count %}{% include "_follower_count.html" %}{% endwith %}
-                </div>
             </div>
             <div class="athlete-hero-meta">
                 {% if athlete.country_alpha3 %}
@@ -140,11 +136,11 @@
             </div>
         </div>
 
-        <!-- Right column: compact mode switcher above the current-form widget
-             (mirrors the race hero's podium column). -->
+        <!-- Right column: mode switcher and follow button above the
+             current-form widget (mirrors the race hero's podium column). -->
         <div class="athlete-hero-right">
-            {% if mode_summaries and mode_summaries|length > 1 %}
             <div class="athlete-hero-actions">
+                {% if mode_summaries and mode_summaries|length > 1 %}
                 <div class="athlete-mode-switcher" role="tablist" aria-label="Profile mode">
                     {% for m in mode_summaries %}
                     {% set is_active = m.key == active_mode %}
@@ -158,8 +154,9 @@
                     </a>
                     {% endfor %}
                 </div>
+                {% endif %}
+                {% with follow_kind = 'athlete', follow_id = athlete.athlete_id %}{% include "_follow_button.html" %}{% endwith %}
             </div>
-            {% endif %}
 
             {% if current_form %}
             {# Current form: equivalent race-day splits from the form model,

@@ -24,6 +24,7 @@
 {% endblock %}
 
 {% block content %}
+{% from "partials/following.html" import followed %}
 <div class="account-page">
     <section class="account-section">
         <div class="page-section-head">
@@ -103,7 +104,7 @@
                 </div>
                 <label class="account-check">
                     <input type="checkbox" name="email_updates" value="true"{% if form.email_updates %} checked{% endif %}>
-                    <span>Email me new results and start lists for the athletes and races I follow</span>
+                    <span>Email me results and start lists for the athletes I follow and the races I like</span>
                 </label>
                 <div class="account-form-actions">
                     <button type="submit" class="btn-primary">Save changes</button>
@@ -113,76 +114,40 @@
     </section>
 
     <section class="account-section" id="following">
-        <div class="page-section-head">
-            <span>Following <span class="page-section-sub">{{ followed_athletes | length }} athlete{{ '' if followed_athletes | length == 1 else 's' }}, {{ followed_races | length }} race{{ '' if followed_races | length == 1 else 's' }}, {{ followed_users | length }} {{ 'person' if followed_users | length == 1 else 'people' }}</span></span>
-        </div>
-        <div class="follow-grid">
-            <div class="account-card">
-                <div class="follow-card-title">Athletes</div>
-                {% if followed_athletes %}
-                <ul class="follow-list">
-                    {% for a in followed_athletes %}
-                    <li class="follow-list-item">
-                        <div class="follow-list-main">
-                            <a href="/athlete/{{ a.athlete_id }}" class="follow-list-link">{{ a.name }} {{ flag(a.country_alpha3, a.country_full) }}</a>
-                            <span class="follow-list-sub">{{ a.country_full }}</span>
-                        </div>
-                        <form method="post" action="/account/unfollow" onsubmit="window.ptdUser.invalidate()">
-                            <input type="hidden" name="kind" value="athlete">
-                            <input type="hidden" name="ref_id" value="{{ a.athlete_id }}">
-                            <button type="submit" class="btn-secondary btn-small">Unfollow</button>
-                        </form>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <p class="follow-empty">No athletes yet. Find some on the <a href="/athlete-leaderboard">leaderboard</a>.</p>
-                {% endif %}
-            </div>
-            <div class="account-card">
-                <div class="follow-card-title">Races</div>
-                {% if followed_races %}
-                <ul class="follow-list">
-                    {% for r in followed_races %}
-                    <li class="follow-list-item">
-                        <div class="follow-list-main">
-                            <a href="/race/{{ r.race_id }}" class="follow-list-link">{{ r.race_title }}</a>
-                            <span class="follow-list-sub">{{ r.prog_name }} <span class="feed-dot">·</span> {{ r.race_date.strftime('%d %b %Y') }}</span>
-                        </div>
-                        <form method="post" action="/account/unfollow" onsubmit="window.ptdUser.invalidate()">
-                            <input type="hidden" name="kind" value="race">
-                            <input type="hidden" name="ref_id" value="{{ r.race_id }}">
-                            <button type="submit" class="btn-secondary btn-small">Unfollow</button>
-                        </form>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <p class="follow-empty">No races yet. Browse <a href="/upcoming">upcoming races</a>.</p>
-                {% endif %}
-            </div>
-            <div class="account-card">
-                <div class="follow-card-title">People</div>
-                {% if followed_users %}
-                <ul class="follow-list">
-                    {% for u in followed_users %}
-                    <li class="follow-list-item">
-                        <a href="/user/{{ u.user_id }}" class="follow-list-person">
-                            {{ user_avatar(u.user_id, u.display_name, u.avatar_version, 'sm') }}
-                            <span class="follow-list-link">{{ u.display_name }} {% if u.country %}{{ flag(u.country) }}{% endif %}</span>
-                        </a>
-                        <form method="post" action="/account/unfollow" onsubmit="window.ptdUser.invalidate()">
-                            <input type="hidden" name="kind" value="user">
-                            <input type="hidden" name="ref_id" value="{{ u.user_id }}">
-                            <button type="submit" class="btn-secondary btn-small">Unfollow</button>
-                        </form>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <p class="follow-empty">Nobody yet. Follow people from their profile or the card that appears when you hover over a commenter.</p>
-                {% endif %}
-            </div>
+        <div class="page-section-head"><span>Following</span></div>
+        <div class="account-card">
+            {% if following %}
+            <ul class="follow-list">
+                {% for f in following %}
+                <li class="follow-list-item">
+                    {{ followed(f) }}
+                    <form method="post" action="/account/unfollow" onsubmit="window.ptdUser.invalidate()">
+                        <input type="hidden" name="kind" value="{{ f.kind }}">
+                        <input type="hidden" name="ref_id" value="{{ f.athlete_id if f.kind == 'athlete' else f.user_id }}">
+                        <button type="submit" class="comment-action">Unfollow</button>
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="follow-empty">Nobody yet. Follow athletes from their pages and people from their profiles.</p>
+            {% endif %}
+            {% if liked_races %}
+            <div class="follow-subhead">Races you liked</div>
+            <p class="account-help">You hear when their start lists change and when results are in.</p>
+            <ul class="follow-list">
+                {% for r in liked_races %}
+                <li class="follow-list-item">
+                    <a href="/race/{{ r.race_id }}" class="follow-race"><b>{{ r.race_title }}</b><small>{{ r.prog_name }} &middot; {{ r.race_date.strftime('%a %-d %b') }}</small></a>
+                    <form method="post" action="/account/unfollow" onsubmit="window.ptdUser.invalidate()">
+                        <input type="hidden" name="kind" value="race">
+                        <input type="hidden" name="ref_id" value="{{ r.race_id }}">
+                        <button type="submit" class="comment-action">Remove</button>
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
         </div>
     </section>
 
@@ -191,7 +156,7 @@
             <span>Delete account</span>
         </div>
         <div class="account-card danger-zone">
-            <p class="danger-text">This permanently removes your account, sessions, follows and comments. There is no undo. Type <strong>{{ delete_phrase }}</strong> to confirm.</p>
+            <p class="danger-text">This permanently removes your account, your comments and everything you follow or like. There is no undo. Type <strong>{{ delete_phrase }}</strong> to confirm.</p>
             <form method="post" action="/account/delete" class="danger-form" onsubmit="window.ptdUser.invalidate()">
                 <input type="text" name="confirm" class="account-input" placeholder="{{ delete_phrase }}" autocomplete="off" required>
                 <button type="submit" class="btn-danger">Delete my account</button>

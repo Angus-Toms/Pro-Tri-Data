@@ -316,7 +316,9 @@ def sitemap_events(request: Request) -> Response:
 @lru_cache(maxsize=1)
 def _upcoming_race_ids():
     return [r[0] for r in _get_conn().execute(
-        "SELECT race_id FROM upcoming_races ORDER BY race_date"
+        # Races listed before their start list is out are thin pages (noindex)
+        "SELECT race_id FROM upcoming_races "
+        "WHERE race_id IN (SELECT race_id FROM start_list_entries) ORDER BY race_date"
     ).fetchall()]
 
 

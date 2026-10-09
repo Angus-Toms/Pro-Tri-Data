@@ -45,19 +45,31 @@ def _form_values(user):
     return values
 
 
+async def following_rows(user_id):
+    """The athletes and people a user follows, newest first, as one list of
+    display rows tagged with their kind. Shared with the public profile."""
+    following = await uq.get_following(user_id)
+    athletes = queries.get_athletes_brief_bulk([i for k, i in following if k == "athlete"])
+    people = await uq.get_users_brief([i for k, i in following if k == "user"])
+    rows = []
+    for kind, ref_id in following:
+        brief = (athletes if kind == "athlete" else people).get(ref_id)
+        if brief:  # ids can drop out of DuckDB when a rebuild merges athletes
+            rows.append({"kind": kind, **brief})
+    return rows
+
+
 async def _render_account(request, user, saved=False, error=None, status_code=200, draft=None):
     """draft: the submitted form values, so a rejected save keeps what was typed."""
-    follows = await uq.get_follows(user["user_id"])
-    athletes_by_id = queries.get_athletes_brief_bulk(follows["athletes"])
-    races_by_id    = queries.get_races_brief_bulk(follows["races"])
-    users_by_id    = await uq.get_users_brief(follows["users"])
+    # Only upcoming liked races are listed: a like on a finished race is a
+    # reaction with nothing left to manage.
+    liked = queries.get_races_brief_bulk((await uq.get_follows(user["user_id"]))["races"])
     return templates.TemplateResponse("settings.html", {
         "request":     request,
         "active_page": None,
         "user":        user,
-        "followed_athletes": [athletes_by_id[a] for a in follows["athletes"] if a in athletes_by_id],
-        "followed_races":    [races_by_id[r] for r in follows["races"] if r in races_by_id],
-        "followed_users":    [users_by_id[u] for u in follows["users"] if u in users_by_id],
+        "following":   await following_rows(user["user_id"]),
+        "liked_races": sorted((r for r in liked.values() if r["is_upcoming"]), key=lambda r: r["race_date"]),
         "countries":   queries.get_nationality_options(),
         "saved":       saved,
         "error":       error,

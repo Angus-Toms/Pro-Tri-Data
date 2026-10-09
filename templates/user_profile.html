@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% from "_reaction_icons.html" import reaction_icon %}
-{% from "partials/home_event.html" import athlete_img %}
+{% from "partials/following.html" import followed %}
 {% block hero %}
 <div class="profile-hero">
     <div class="profile-hero-inner">
@@ -44,10 +44,6 @@
                 <span><span class="hero-stat-n">{{ profile.following_count }}</span> following</span>
                 <span class="hero-meta-dot">·</span>
                 <span><span class="hero-stat-n">{{ profile.comment_count }}</span> comment{{ '' if profile.comment_count == 1 else 's' }}</span>
-                {% for kind, label, n in received %}
-                <span class="hero-meta-dot">·</span>
-                <span class="profile-hero-reaction reaction--{{ kind }}" title="{{ n }} {{ label }}">{{ reaction_icon(kind) }}<span class="hero-stat-n">{{ n }}</span></span>
-                {% endfor %}
             </div>
         </div>
         <div class="profile-hero-actions">
@@ -75,22 +71,28 @@
     {% endif %}
 
     <section class="profile-section">
-        <div class="page-section-head">
-            <span>Following <span class="page-section-sub">{{ following | length }} athlete{{ '' if following | length == 1 else 's' }}</span></span>
-        </div>
+        <div class="page-section-head"><span>Following</span></div>
         {% if following %}
         <ul class="profile-follow-grid">
-            {% for a in following %}
-            <li><a href="/athlete/{{ a.athlete_id }}" class="home-who">{{ athlete_img(a) }}<span class="home-who-name">{{ a.name }}{{ flag(a.country_alpha3, a.country_full) }}</span></a></li>
-            {% endfor %}
+            {% for f in following %}<li>{{ followed(f) }}</li>{% endfor %}
         </ul>
         {% else %}
-        <p class="profile-empty">{{ profile.display_name }} doesn't follow any athletes yet.</p>
+        <p class="profile-empty">{{ profile.display_name }} isn't following anyone yet.</p>
         {% endif %}
     </section>
 
     <section class="profile-section">
-        <div class="page-section-head"><span>Comments</span></div>
+        <div class="page-section-head">
+            <span>Comments</span>
+            {% if received %}
+            {# Reactions the comments have earned, beside the heading rather than in the hero #}
+            <span class="profile-received">
+                {% for kind, label, n in received %}
+                <span class="received-badge received-badge--light reaction--{{ kind }}" title="{{ n }} {{ label }}">{{ reaction_icon(kind) }}<span>{{ n }}</span></span>
+                {% endfor %}
+            </span>
+            {% endif %}
+        </div>
         {% if groups %}
         {% for g in groups %}
         <div class="profile-race">

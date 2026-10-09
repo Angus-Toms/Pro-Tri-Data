@@ -71,14 +71,14 @@ def index(request: Request):
             r["podium"] = _predicted_podium(entries.get(r["race_id"], []), r)
     upcoming = [e for e in candidates if any(r["podium"] for r in e["races"])][:3] or candidates[:3]
 
-    # Follower and comment counts live in Postgres; the handler is sync
+    # Like and comment counts live in Postgres; the handler is sync
     # (threadpool-limited, see main.py) so hop to the event loop for them.
     race_ids = [r["race_id"] for e in recent + upcoming for r in e["races"]]
-    followers, comments = anyio.from_thread.run(_race_counts, race_ids)
+    likes, comments = anyio.from_thread.run(_race_counts, race_ids)
     for e in recent + upcoming:
         for r in e["races"]:
-            r["followers"] = followers.get(r["race_id"], 0)
-            r["comments"]  = comments.get(r["race_id"], 0)
+            r["likes"]    = likes.get(r["race_id"], 0)
+            r["comments"] = comments.get(r["race_id"], 0)
 
     # --- schedule strip: last four events raced, next six to come ---
     def strip_item(e, status):

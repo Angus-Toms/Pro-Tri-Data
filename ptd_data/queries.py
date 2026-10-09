@@ -4523,6 +4523,8 @@ def get_upcoming_race_leaderboard(gender, course, country=None):
         JOIN events e ON ur.event_id = e.event_id
         LEFT JOIN nationalities n ON e.country = n.country_full
         WHERE ur.gender = ?
+          -- No start list, no standard to rank by
+          AND ur.race_id IN (SELECT race_id FROM start_list_entries)
         {country_sql}
         ORDER BY ur.race_date ASC, ur.race_id ASC
     """, [gender] + country_params).fetchall()
@@ -6246,17 +6248,32 @@ def get_upcoming_races_for_athletes(athlete_ids):
     placeholders = ",".join("?" * len(athlete_ids))
     rows = _get_conn().execute(f"""
         SELECT ur.race_id, ur.race_title, ur.prog_name, ur.race_date, ur.gender,
-               ur.category, ur.event_spec_ids, e.country, a.athlete_id, a.name
+               ur.category, ur.event_spec_ids, e.country, a.athlete_id, a.name,
+               n.alpha3 AS country_alpha3
         FROM start_list_entries sle
-        JOIN upcoming_races ur ON sle.race_id = ur.race_id
-        JOIN events e          ON ur.event_id = e.event_id
-        JOIN athletes a        ON sle.athlete_id = a.athlete_id
+        JOIN upcoming_races ur      ON sle.race_id = ur.race_id
+        JOIN events e               ON ur.event_id = e.event_id
+        JOIN athletes a             ON sle.athlete_id = a.athlete_id
+        LEFT JOIN nationalities n   ON a.country_full = n.country_full
         WHERE sle.athlete_id IN ({placeholders})
         ORDER BY ur.race_date, ur.race_id
     """, list(athlete_ids)).fetchall()
     cols = ["race_id", "race_title", "prog_name", "race_date", "gender",
-            "category", "event_spec_ids", "country", "athlete_id", "name"]
+            "category", "event_spec_ids", "country", "athlete_id", "name", "country_alpha3"]
     return [dict(zip(cols, r)) for r in rows]
+
+
+def get_upcoming_startlists():
+    """{race_id: [athlete_ids]} for every upcoming race, sorted, and empty
+    while its start list isn't out. The update email script diffs these
+    between runs to tell people who liked a race what changed."""
+    rows = _get_conn().execute("""
+        SELECT ur.race_id, list(sle.athlete_id ORDER BY sle.athlete_id) FILTER (WHERE sle.athlete_id IS NOT NULL)
+        FROM upcoming_races ur
+        LEFT JOIN start_list_entries sle ON sle.race_id = ur.race_id
+        GROUP BY ur.race_id
+    """).fetchall()
+    return {rid: ids or [] for rid, ids in rows}
 
 
 def get_recent_results_for_athletes(athlete_ids, days=90):

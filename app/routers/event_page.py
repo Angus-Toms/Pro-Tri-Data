@@ -178,6 +178,7 @@ def get_event(request: Request, event_id: int):
                 race["standard_classes"] = None
             race["event_id"] = event_id
             race["is_upcoming"] = True
+            race["has_start_list"] = bool(entries_by_race.get(race["race_id"]))
             race["podium"] = _predicted_podium(
                 entries_by_race.get(race["race_id"], []), race)
 

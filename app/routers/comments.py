@@ -12,7 +12,7 @@ from app.display_helpers import flag
 from ptd_data import queries
 from ptd_users import queries as uq
 from ptd_users.auth import current_user, require_admin, require_user
-from app.routers.router_utils import athlete_img_url, rel_time, user_avatar
+from app.routers.router_utils import athlete_img_url, rel_time, startlist_change, user_avatar
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -272,14 +272,22 @@ async def notifications(request: Request):
     user = await require_user(request)
     notes = await uq.list_notifications(user["user_id"])
     races = queries.get_races_brief_bulk({n["race_id"] for n in notes})
-    return JSONResponse([{
-        "kind":   n["kind"],
-        "actor":  n["display_name"],
-        "race":   races[n["race_id"]]["race_title"] if n["race_id"] in races else None,
-        "url":    f"/race/{n['race_id']}#comment-{n['comment_id']}",
-        "when":   rel_time(n["created_at"]),
-        "unread": n["read_at"] is None,
-    } for n in notes], headers=NO_STORE)
+    out = []
+    for n in notes:
+        race = races.get(n["race_id"])
+        if n["comment_id"]:
+            out.append({"kind": n["kind"], "actor": n["display_name"],
+                        "race": race["race_title"] if race else None,
+                        "url": f"/race/{n['race_id']}#comment-{n['comment_id']}"})
+        elif race:
+            # Liked-race updates name the programme too: an event's races share a title.
+            out.append({"kind": n["kind"], "race": f"{race['race_title']}, {race['prog_name']}",
+                        "change": startlist_change(n["detail"]) if n["detail"] else None,
+                        "url": f"/race/{n['race_id']}"})
+        else:
+            continue
+        out[-1].update(when=rel_time(n["created_at"]), unread=n["read_at"] is None)
+    return JSONResponse(out, headers=NO_STORE)
 
 
 @router.post("/notifications/read")

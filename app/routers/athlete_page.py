@@ -2,7 +2,6 @@ import math
 from datetime import date, timedelta
 from functools import lru_cache
 
-import anyio
 from fastapi import HTTPException, Query, Request, APIRouter
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -11,7 +10,6 @@ from app.display_helpers import flag
 
 from ptd_data import db, queries
 from ptd_data.predictions import LOW_CONF_STARTS
-from ptd_users import queries as uq
 from app.routers.router_utils import (
     format_time, format_time_behind, format_rating_change, format_1yr_rating_change,
 )
@@ -775,11 +773,7 @@ def get_athlete(request: Request, athlete_id: int,
     else:
         active_mode = f'elite-{course}'
 
-    # Sync handler (threadpool-limited, see main.py), so hop back to the event
-    # loop for the asyncpg call.
-    follower_count = anyio.from_thread.run(uq.follower_count, "athlete", athlete_id)
     return templates.TemplateResponse("athlete.html", {
-        "follower_count": follower_count,
         "request":        request,
         "active_page":    "athletes",
         "noindex":        not queries.athlete_is_indexable(athlete_id),

@@ -34,3 +34,12 @@ async def follow_toggle(request: Request, body: FollowBody):
     return JSONResponse({"following": following,
                          "followers": await uq.follower_count(body.kind, body.ref_id)},
                         headers={"Cache-Control": "no-store"})
+
+
+@router.get("/race/{race_id}/counts")
+async def race_counts(race_id: int):
+    """Like and comment counts for the race hero. Fetched client-side so the
+    edge-cached race HTML never holds a stale figure."""
+    return JSONResponse({"likes": await uq.follower_count("race", race_id),
+                         "comments": (await uq.comment_counts([race_id])).get(race_id, 0)},
+                        headers={"Cache-Control": "no-store"})

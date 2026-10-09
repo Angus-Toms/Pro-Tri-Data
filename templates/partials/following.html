@@ -1,0 +1,10 @@
+{# One followed athlete or person, the same row on settings and profiles:
+   photo, name and flag, with what they are underneath. #}
+{% from "partials/home_event.html" import athlete_img %}
+{% macro followed(f) -%}
+{% if f.kind == 'athlete' -%}
+<a href="/athlete/{{ f.athlete_id }}" class="home-who">{{ athlete_img(f) }}<span class="home-who-name">{{ f.name }}{{ flag(f.country_alpha3, f.country_full) }}<small>{{ f.country_full }}</small></span></a>
+{%- else -%}
+<a href="/user/{{ f.user_id }}" class="home-who">{{ user_avatar(f.user_id, f.display_name, f.avatar_version, 'sm') }}<span class="home-who-name">{{ f.display_name }}{% if f.country %}{{ flag(f.country) }}{% endif %}<small>Member</small></span></a>
+{%- endif %}
+{%- endmacro %}

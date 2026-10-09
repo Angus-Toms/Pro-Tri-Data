@@ -438,14 +438,40 @@ def infer_distance(spec_ids, winner_time_s=None):
     return 'standard'  # conservative fallback
 
 
+def fetch_events(**params):
+    """Every /events page for the given filters (start_date / end_date,
+    ISO dates; an open end means the whole future calendar)."""
+    events, page = [], 1
+    while True:
+        data = _session.get(f"{BASE_URL}/events", params={**params, "page": page, "per_page": 500}).json()
+        if not data.get('data'):
+            break
+        events.extend(data['data'])
+        print(f"  Page {page} ({len(events)} events)")
+        if not data.get('next_page_url'):
+            break
+        page += 1
+        sleep(0.5)
+    return events
+
+
 class Ingester:
     def __init__(self, conn):
         self.conn = conn
 
-    def run(self):
-        """Full ingestion: fetch events, filter, fetch results, write to DB."""
-        print("Fetching all events from API...")
-        events = self._fetch_all_events()
+    def run(self, days=None):
+        """Fetch events, filter, fetch results, write to DB. With `days`, only
+        events dated in the last `days` days are fetched and every one of them
+        is re-checked for programs not yet in the DB. Without it, the whole WT
+        calendar back to 1985 is walked, which is what catches results WT
+        uploads long after the race."""
+        if days:
+            start = date.today() - timedelta(days=days)
+            print(f"Fetching events {start} → {date.today()} from API...")
+            events = fetch_events(start_date=start.isoformat(), end_date=date.today().isoformat())
+        else:
+            print("Fetching all events from API...")
+            events = fetch_events()
         print(f"Fetched {len(events)} total events")
 
         short_events = [e for e in events if is_short_course(e) or is_relay_event(e)]
@@ -456,10 +482,12 @@ class Ingester:
         # both assume observations arrive in chronological order).
         short_events.sort(key=lambda e: str(e.get('event_date', '') or ''))
 
-        with open("all_events.csv", "w") as f:
-            pd.DataFrame(events).to_csv(f, index=False)
+        # The overview dump only makes sense for the whole calendar.
+        if not days:
+            with open("all_events.csv", "w") as f:
+                pd.DataFrame(events).to_csv(f, index=False)
 
-        self._ingest_events(short_events)
+        self._ingest_events(short_events, recheck_days=days or 30)
         db.backfill_sub_category(self.conn)
         self._backfill_race_handles()
         db.reconcile_athlete_nationality(self.conn)
@@ -504,34 +532,7 @@ class Ingester:
             )
         print(f"  Re-derived race_handle on {len(updates)} short-course rows")
 
-    def _fetch_all_events(self):
-        """Paginate through /events endpoint."""
-        all_events = []
-        page = 1
-
-        while True:
-            response = _session.get(
-                f"{BASE_URL}/events",
-                params={"page": page, "per_page": 500},
-            )
-            data = response.json()
-
-            if 'data' not in data or not data['data']:
-                break
-
-            all_events.extend(data['data'])
-            print(f"  Page {page} ({len(all_events)} events)")
-
-            if not data.get('next_page_url'):
-                break
-
-            page += 1
-            sleep(0.5)
-
-        return all_events
-
-
-    def _ingest_events(self, events):
+    def _ingest_events(self, events, recheck_days):
         """Single pass over events - fetches programs once, processes both genders."""
         all_existing = set(
             r[0] for r in self.conn.execute(
@@ -551,7 +552,7 @@ class Ingester:
         # already "in the DB". Re-check any event that finished recently so
         # the straggler programs land; already-ingested prog_ids are skipped
         # per program below.
-        recheck_cutoff = (date.today() - timedelta(days=30)).isoformat()
+        recheck_cutoff = (date.today() - timedelta(days=recheck_days)).isoformat()
         recheck_ids = {
             e['event_id'] for e in events
             if e['event_id'] in existing_event_ids
@@ -904,22 +905,19 @@ class Ingester:
 
 
 class StartListIngester:
-    """Fetches start lists for upcoming short-course races (next 90 days) and writes to DB."""
+    """Fetches start lists for every upcoming short-course WT race and writes
+    to DB. Always the whole future calendar: entries change right up to race
+    day, and a list published months out still needs refreshing. Elite races
+    are stored before their list is out, so people can like them early and
+    hear when it lands."""
 
     def __init__(self, conn):
         self.conn = conn
 
     def run(self):
         today = date.today()
-        end = today + timedelta(days=90)
-
-        print(f"Fetching upcoming events {today} → {end}...")
-        resp = _session.get(f"{BASE_URL}/events", params={
-            'start_date': today.isoformat(),
-            'end_date': end.isoformat(),
-            'per_page': 100,
-        })
-        events = resp.json().get('data', [])
+        print(f"Fetching every upcoming event from {today}...")
+        events = fetch_events(start_date=today.isoformat())
         short_events = [e for e in events if is_short_course(e)]
         print(f"Found {len(short_events)} short course events")
 
@@ -946,13 +944,16 @@ class StartListIngester:
                 prog_id = int(prog['prog_id'])
                 entries = self._fetch_entries(event_id, prog_id)
                 sleep(0.3)
-                if not entries:
+                # Age-group programmes come as per-age waves that mostly never
+                # get a published list, so they only appear once one exists.
+                if not entries and category != 'elite':
                     continue
 
                 self._upsert_upcoming_race(event, prog, gender, category)
                 count = self._upsert_entries(prog_id, entries, gender)
                 total_entries += count
-                print(f"  {prog_name} — {event['event_title']}: {count} entries")
+                print(f"  {prog_name} — {event['event_title']}: "
+                      + (f"{count} entries" if count else "no start list yet"))
 
         print(f"Done. {total_entries} total start list entries")
 
@@ -1059,13 +1060,15 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--start-lists", action="store_true",
-                        help="Fetch upcoming events + start lists (next 90 days) instead of the main ingest")
+                        help="Fetch every upcoming event's start lists instead of the main ingest")
+    parser.add_argument("--days", type=int, metavar="N",
+                        help="Results ingest: only events dated in the last N days (default: the whole calendar)")
     args = parser.parse_args()
 
     conn = db.get_conn(read_only=False)
     if args.start_lists:
         StartListIngester(conn).run()
     else:
-        Ingester(conn).run()
+        Ingester(conn).run(days=args.days)
     conn.close()
     print("Done.")

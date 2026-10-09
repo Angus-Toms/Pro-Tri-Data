@@ -1,26 +1,40 @@
 #!/bin/bash
-# weekly.sh - ingest + ratings extend + DB sync to the Hetzner box. Run by hand.
+# refresh.sh - ingest + ratings extend + DB sync to the Hetzner box. Run by
+# hand, as often as you like: results and the PTO scrape only look back
+# --days days (default 30), while start lists always cover every future WT
+# race, so frequent runs stay cheap and keep start lists current.
+#
+#   ./scripts/refresh.sh             # last 30 days of results
+#   ./scripts/refresh.sh --days 120  # a wider sweep for results posted late
 #
 # Sends a macOS notification on non-zero exit. Two log files:
-#   weekly.latest.log   — current run only, cleared on start. Filtered down
+#   refresh.latest.log  — current run only, cleared on start. Filtered down
 #                         to step headers + key summary lines so a quick
 #                         tail shows what stage the run is in without
 #                         drowning in per-athlete noise.
-#   weekly.verbose.log  — current run only, cleared on start. Unfiltered
+#   refresh.verbose.log — current run only, cleared on start. Unfiltered
 #                         output for when something fails and you need
 #                         the per-athlete detail.
-#   weekly.history.csv  — append-only. One row per run with start/finish
+#   refresh.history.csv — append-only. One row per run with start/finish
 #                         timestamps, duration, status, and the per-table
 #                         net deltas (new events / races / athletes /
 #                         results) so long-term progress is grep-able.
 
 set -uo pipefail
 
+DAYS=30
+while [ $# -gt 0 ]; do
+    case $1 in
+        --days) DAYS=$2; shift 2 ;;
+        *) echo "Usage: $0 [--days N]" >&2; exit 2 ;;
+    esac
+done
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-LATEST_LOG="$SCRIPT_DIR/weekly.latest.log"
-VERBOSE_LOG="$SCRIPT_DIR/weekly.verbose.log"
-HISTORY_CSV="$SCRIPT_DIR/weekly.history.csv"
+LATEST_LOG="$SCRIPT_DIR/refresh.latest.log"
+VERBOSE_LOG="$SCRIPT_DIR/refresh.verbose.log"
+HISTORY_CSV="$SCRIPT_DIR/refresh.history.csv"
 
 # launchd jobs start with an almost-empty PATH. Add the usual suspects so
 # python3, wrangler, ssh, scp all resolve.
@@ -56,18 +70,18 @@ print(con.execute(f"select count(*) from {sys.argv[1]}").fetchone()[0])
 PY
 }
 
-# Lines worth keeping in the condensed `weekly.latest.log`. Step headers
+# Lines worth keeping in the condensed `refresh.latest.log`. Step headers
 # from build_db.sh start with "==>"; ingest progress prints "Done." /
 # "Checked"; explicit OK/FAIL markers from this script; the start/end
 # banners; rebuild-step summary lines that already contain counts.
 LATEST_FILTER='^(==>|====|  Run |  Baseline|  Final|  Net:|\[OK\]|\[FAIL\]|\[WARN\]|Done\.|Checked |Ingested |Loaded |Rule-based |Recurring fallback|Rebuilding |Wrote |Skipped |Compacted DB|Found |Downloaded |Processed |Uploaded )'
 
 notify_fail() {
-    osascript -e "display notification \"$1\" with title \"PTD weekly FAILED\" sound name \"Basso\"" >/dev/null 2>&1 || true
+    osascript -e "display notification \"$1\" with title \"PTD refresh FAILED\" sound name \"Basso\"" >/dev/null 2>&1 || true
 }
 
 notify_warn() {
-    osascript -e "display notification \"$1\" with title \"PTD weekly WARNING\"" >/dev/null 2>&1 || true
+    osascript -e "display notification \"$1\" with title \"PTD refresh WARNING\"" >/dev/null 2>&1 || true
 }
 
 START_ISO=$(date '+%Y-%m-%dT%H:%M:%S%z')
@@ -81,7 +95,7 @@ RESULTS_BEFORE=$(db_count results)
 # Run-stage header is written to both logs so they each open with context.
 {
     echo "================================================================"
-    echo "  Run started: $START_ISO"
+    echo "  Run started: $START_ISO (results from the last $DAYS days)"
     echo "  Baseline: ${EVENTS_BEFORE} events / ${RACES_BEFORE} races / ${ATHLETES_BEFORE} athletes / ${RESULTS_BEFORE} results"
     echo "================================================================"
 } | tee "$LATEST_LOG" "$VERBOSE_LOG" >/dev/null
@@ -143,7 +157,7 @@ pull_startlists() {
 }
 run_step "startlists pull" pull_startlists
 
-run_step "build_db --extend" "$SCRIPT_DIR/build_db.sh" --extend
+run_step "build_db --extend --days=$DAYS" "$SCRIPT_DIR/build_db.sh" --extend "--days=$DAYS"
 rc=$?
 if [ $rc -ne 0 ]; then
     STATUS="build_db:$rc"
@@ -204,9 +218,10 @@ if [ "$STATUS" = "success" ]; then
     fi
 fi
 
-# Pull the week's Search Console rows and refresh growth/gsc_report.md. Runs
-# regardless of deploy status - it only reads the GSC API, and a failed deploy
-# is exactly a week you still want the search numbers for. Non-fatal: a Google
+# Pull recent Search Console rows and refresh growth/gsc_report.md. Days are
+# replaced wholesale, so running it every refresh is safe. Runs regardless of
+# deploy status - it only reads the GSC API, and a failed deploy is exactly
+# when you still want the search numbers. Non-fatal: a Google
 # API blip must not mark the data pipeline as failed.
 run_step "gsc_query_miner" python scripts/gsc_query_miner.py
 rc=$?

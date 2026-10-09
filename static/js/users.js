@@ -55,13 +55,22 @@ function initFollowButtons(root) {
     window.ptdUser.load().then(me => {
         if (me) syncFollowButtons(me, scope);
     });
+    // Race heroes ship without live figures (old race pages are edge-cached
+    // for a week), so like and comment counts are fetched here.
+    scope.querySelectorAll('[data-race-counts]').forEach(async el => {
+        const id = el.dataset.raceCounts;
+        const { likes, comments } = await fetch(`/race/${id}/counts`).then(r => r.json());
+        setFollowerCount('race', id, likes);
+        el.querySelectorAll('[data-comment-count]').forEach(c => { c.textContent = comments; c.hidden = !comments; });
+    });
 }
 
 function setFollowState(btn, following) {
     btn.classList.toggle('following', following);
     btn.setAttribute('aria-pressed', String(following));
+    // Buttons can name their own states (a race's "Like this race" / "Liked").
     const label = btn.querySelector('.follow-label');
-    if (label) label.textContent = following ? 'Following' : 'Follow';
+    if (label) label.textContent = following ? (btn.dataset.labelOn || 'Following') : (btn.dataset.labelOff || 'Follow');
 }
 
 function syncFollowButtons(me, root) {
@@ -74,13 +83,24 @@ function syncFollowButtons(me, root) {
     });
 }
 
-// Every follower figure for this target on the page: counts beside buttons,
-// profile header stats and hover cards.
+// Every follower figure for this target on the page: profile header stats,
+// hover cards and race like counts. Like counts carry no label and hide at zero.
 function setFollowerCount(kind, id, n) {
     document.querySelectorAll(`[data-follower-count="${kind}:${id}"]`).forEach(el => {
         el.querySelector('[data-num]').textContent = n;
-        el.querySelector('[data-label]').textContent = n === 1 ? 'follower' : 'followers';
+        const label = el.querySelector('[data-label]');
+        if (label) label.textContent = n === 1 ? 'follower' : 'followers';
+        if ('hideZero' in el.dataset) el.hidden = n === 0;
     });
+}
+
+function showToast(text) {
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.setAttribute('role', 'status');
+    el.textContent = text;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 4000);
 }
 
 async function handleFollowClick(btn) {
@@ -99,6 +119,7 @@ async function handleFollowClick(btn) {
     document.querySelectorAll(`[data-follow-kind="${btn.dataset.followKind}"][data-follow-id="${btn.dataset.followId}"]`)
         .forEach(b => setFollowState(b, following));
     setFollowerCount(btn.dataset.followKind, btn.dataset.followId, followers);
+    if (following && 'notifyOnLike' in btn.dataset) showToast("Liked. We'll let you know when the start list or results change.");
     window.ptdUser.invalidate();
 }
 
@@ -493,14 +514,17 @@ function initNotifications(me) {
         panel.innerHTML = '<div class="notif-empty">Loading</div>';
         const notes = await fetch('/notifications').then(r => r.json());
         panel.innerHTML = notes.length ? notes.map(n => {
-            const text = n.kind === 'reply'
-                ? `<strong>${escHtml(n.actor)}</strong> replied to your comment on <strong>${escHtml(n.race)}</strong>`
-                : `<strong>${escHtml(n.actor)}</strong> mentioned you in a comment`;
+            const text = {
+                reply:     () => `<strong>${escHtml(n.actor)}</strong> replied to your comment on <strong>${escHtml(n.race)}</strong>`,
+                mention:   () => `<strong>${escHtml(n.actor)}</strong> mentioned you in a comment`,
+                startlist: () => `<strong>${escHtml(n.race)}</strong>: ${escHtml(n.change)}`,
+                results:   () => `Results are in for <strong>${escHtml(n.race)}</strong>`,
+            }[n.kind]();
             return `<a class="notif-item${n.unread ? ' unread' : ''}" href="${n.url}">
                 <span class="notif-text">${text}</span>
                 <span class="notif-when">${escHtml(n.when)}</span>
             </a>`;
-        }).join('') : '<div class="notif-empty">No notifications yet. Replies to your comments and tags appear here.</div>';
+        }).join('') : '<div class="notif-empty">No notifications yet. Replies, tags and news on races you like appear here.</div>';
         if (!badge.hidden) {
             badge.hidden = true;
             await fetch('/notifications/read', { method: 'POST' });

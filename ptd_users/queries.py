@@ -1,5 +1,6 @@
 # All user-system SQL. Raw asyncpg against db.pool, no ORM.
 
+import json
 from datetime import datetime, timedelta, timezone
 
 from ptd_users import db
@@ -149,6 +150,17 @@ async def get_follows(user_id):
         "races":    [r["ref_id"] for r in rows if r["kind"] == "race"],
         "users":    [r["ref_id"] for r in rows if r["kind"] == "user"],
     }
+
+
+async def get_following(user_id):
+    """[(kind, ref_id)] for the athletes and people a user follows, newest
+    first. Race likes are reactions, not follows, and are left out."""
+    rows = await db.pool.fetch("""
+        select kind, ref_id from follows
+        where user_id = $1 and kind in ('athlete', 'user')
+        order by created_at desc
+    """, user_id)
+    return [(r["kind"], r["ref_id"]) for r in rows]
 
 
 async def follower_count(kind, ref_id):
@@ -361,20 +373,6 @@ async def moderation_queue():
     return [dict(r) for r in rows]
 
 
-async def get_recent_comments_for_feed(race_ids, user_ids, limit=20):
-    """Latest visible comments on followed races or by followed people."""
-    rows = await db.pool.fetch("""
-        select c.comment_id, c.race_id, c.user_id, c.body, c.created_at,
-               u.display_name, u.country, case when u.avatar is null then 0 else u.avatar_version end as avatar_version
-        from comments c join users u using (user_id)
-        where (c.race_id = any($1) or c.user_id = any($2))
-          and c.hidden_at is null and c.deleted_at is null
-        order by c.created_at desc
-        limit $3
-    """, race_ids, user_ids, limit)
-    return [dict(r) for r in rows]
-
-
 # --- user tags and notifications ---------------------------------------------
 
 async def search_race_commenters(race_id, q, limit=5):
@@ -409,19 +407,22 @@ async def unread_notification_count(user_id):
 
 
 async def list_notifications(user_id, limit=20):
-    """Latest notifications, newest first, with who acted and where. A comment
-    removed since keeps its notification out of the list."""
+    """Latest notifications, newest first: replies and tags with who acted,
+    and start-list and results updates for liked races. A comment removed
+    since keeps its notification out of the list."""
     rows = await db.pool.fetch("""
-        select n.notification_id, n.kind, n.created_at, n.read_at,
-               c.comment_id, c.race_id, u.display_name
+        select n.notification_id, n.kind, n.created_at, n.read_at, n.detail,
+               coalesce(c.race_id, n.race_id) as race_id, c.comment_id, u.display_name
         from notifications n
-        join comments c using (comment_id)
-        join users u on u.user_id = c.user_id
-        where n.user_id = $1 and c.hidden_at is null and c.deleted_at is null
+        left join comments c using (comment_id)
+        left join users u on u.user_id = c.user_id
+        where n.user_id = $1
+          and (n.comment_id is null or (c.hidden_at is null and c.deleted_at is null))
         order by n.created_at desc
         limit $2
     """, user_id, limit)
-    return [dict(r) for r in rows]
+    # asyncpg hands jsonb back as text; only start-list notes carry a detail.
+    return [{**r, "detail": json.loads(r["detail"]) if r["detail"] else None} for r in rows]
 
 
 async def mark_notifications_read(user_id):
@@ -432,7 +433,8 @@ async def mark_notifications_read(user_id):
 
 # --- public profiles -----------------------------------------------------------
 # Only what is already public on race pages: name, flag, photo, join date and
-# visible comments. Email and follows stay private.
+# visible comments, plus the athletes and people followed. Email and race
+# likes stay private.
 
 async def get_public_profile(user_id):
     row = await db.pool.fetchrow("""
@@ -442,7 +444,7 @@ async def get_public_profile(user_id):
                (select count(*) from comments c
                 where c.user_id = u.user_id and c.hidden_at is null and c.deleted_at is null) as comment_count,
                (select count(*) from follows f where f.kind = 'user' and f.ref_id = u.user_id) as follower_count,
-               (select count(*) from follows f where f.kind = 'athlete' and f.user_id = u.user_id) as following_count
+               (select count(*) from follows f where f.kind in ('athlete', 'user') and f.user_id = u.user_id) as following_count
         from users u where u.user_id = $1 and not u.is_banned
     """, user_id)
     return dict(row) if row else None
@@ -520,16 +522,73 @@ async def delete_remembered(token_hashes):
 # --- follow-update emails -------------------------------------------------------
 
 async def users_for_update_emails():
-    """Opted-in users with follows: [{user_id, email, athletes, races}]."""
+    """Opted-in users who follow athletes or like races: [{user_id, email, athletes}]."""
     rows = await db.pool.fetch("""
         select u.user_id, u.email,
-               coalesce(array_agg(f.ref_id) filter (where f.kind = 'athlete'), '{}') as athletes,
-               coalesce(array_agg(f.ref_id) filter (where f.kind = 'race'), '{}') as races
+               coalesce(array_agg(f.ref_id) filter (where f.kind = 'athlete'), '{}') as athletes
         from users u join follows f using (user_id)
-        where u.email_updates and not u.is_banned
+        where u.email_updates and not u.is_banned and f.kind in ('athlete', 'race')
         group by u.user_id
     """)
     return [dict(r) for r in rows]
+
+
+async def race_notifications_since(user_ids, since):
+    """{user_id: [race notifications]} created since `since`, oldest first,
+    for the update email to pick up the ones it hasn't sent."""
+    rows = await db.pool.fetch("""
+        select notification_id, user_id, kind, race_id, detail, created_at
+        from notifications
+        where user_id = any($1::bigint[]) and race_id is not null and created_at >= $2
+        order by created_at
+    """, list(user_ids), since)
+    out = {}
+    for r in rows:
+        out.setdefault(r["user_id"], []).append(
+            {**r, "detail": json.loads(r["detail"]) if r["detail"] else None})
+    return out
+
+
+# --- race likes: start-list and results updates -----------------------------------
+
+async def race_likes():
+    """Every race like: [{user_id, race_id, liked_at}]."""
+    rows = await db.pool.fetch("""
+        select f.user_id, f.ref_id as race_id, f.created_at as liked_at
+        from follows f join users u using (user_id)
+        where f.kind = 'race' and not u.is_banned
+    """)
+    return [dict(r) for r in rows]
+
+
+async def race_startlists():
+    """{race_id: set(athlete_ids)} as recorded at the last update run."""
+    rows = await db.pool.fetch("select race_id, athlete_ids from race_startlists")
+    return {r["race_id"]: set(r["athlete_ids"]) for r in rows}
+
+
+async def record_race_updates(startlist_notes, results_notes, startlists):
+    """One transaction: the new bell notifications and the start lists they
+    were measured against, so a crash can neither lose a change nor announce
+    it twice. startlist_notes is [(user_id, race_id, detail)], results_notes
+    [(user_id, race_id)], startlists {race_id: [athlete_ids]} for every
+    upcoming race."""
+    async with db.pool.acquire() as conn, conn.transaction():
+        await conn.executemany("""
+            insert into notifications (user_id, kind, race_id, detail)
+            values ($1, 'startlist', $2, $3::jsonb)
+        """, [(u, r, json.dumps(d)) for u, r, d in startlist_notes])
+        await conn.executemany("""
+            insert into notifications (user_id, kind, race_id) values ($1, 'results', $2)
+            on conflict do nothing
+        """, results_notes)
+        await conn.executemany("""
+            insert into race_startlists (race_id, athlete_ids) values ($1, $2)
+            on conflict (race_id) do update set athlete_ids = excluded.athlete_ids, seen_at = now()
+            where race_startlists.athlete_ids is distinct from excluded.athlete_ids
+        """, list(startlists.items()))
+        await conn.execute("delete from race_startlists where race_id <> all($1::bigint[])",
+                           list(startlists))
 
 
 async def sent_items(user_id):
