@@ -586,9 +586,21 @@ tr.sub-race-row .link:hover {
 /* (Desktop-hide rules for .time-disc-label, sort chips and .splits-toggle-col
    live in base.css so both the athlete and race tables get them.) */
 
-/* Upcoming races table - wider pos col, 4 splits instead of 6 */
+/* Upcoming races table - wider pos col, 4 splits plus win chance. The race
+   column takes what's left so the table fits without scrolling. */
+.upcoming-races-table .date-col     { width: 110px; }
+.upcoming-races-table .race-col     { width: auto; }
+.upcoming-races-table .program-col  { width: 120px; }
 .upcoming-races-table .position-col { width: 72px; }
 .upcoming-races-table .time-col     { width: 90px; }
+.race-col-prog { display: none; }
+/* Tablets: the program drops under the race name to give the race column room */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .upcoming-races-table .program-col  { display: none; }
+    .upcoming-races-table .race-col-prog { display: block; font-size: 0.75rem; color: var(--text-lighter); }
+    .upcoming-races-table .time-col     { width: 80px; }
+    .upcoming-races-table .pct-col      { width: 84px; }
+}
 
 /* Mirror the results-table pattern so declared widths sum to exactly 100%
    (no proportional rescaling). Fixed total = 135+247+95+80+110 = 667; the

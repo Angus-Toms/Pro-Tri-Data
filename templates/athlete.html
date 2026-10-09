@@ -310,7 +310,7 @@
 
 {% if upcoming_races %}
 <div class="page-section-head"><span>Upcoming Races {{ help_icon('athlete-upcoming') }}</span></div>
-<p class="page-section-sub" style="margin-bottom:0.75rem">Predicted positions and splits are based on current ratings. Actual results may vary.</p>
+<p class="page-section-sub" style="margin-bottom:0.75rem">Predicted position, splits and chance of winning, based on current ratings. Actual results may vary.</p>
 <div class="table-section results-table upcoming-races-table">
     <table class="sortable-table">
         <thead>
@@ -318,11 +318,12 @@
                 <th class="sortable date-col"     data-sort="date">Date</th>
                 <th class="sortable race-col"     data-sort="string">Race</th>
                 <th class="sortable program-col"  data-sort="string">Program</th>
-                <th class="sortable position-col" data-sort="number">Pred. Pos</th>
-                <th class="sortable time-col"     data-sort="time">Pred. Swim</th>
-                <th class="sortable time-col"     data-sort="time">Pred. Bike</th>
-                <th class="sortable time-col"     data-sort="time">Pred. Run</th>
-                <th class="sortable time-col overall-col" data-sort="time">Pred. Overall</th>
+                <th class="sortable position-col" data-sort="number">Pos</th>
+                <th class="sortable time-col"     data-sort="time">Swim</th>
+                <th class="sortable time-col"     data-sort="time">Bike</th>
+                <th class="sortable time-col"     data-sort="time">Run</th>
+                <th class="sortable time-col overall-col" data-sort="time">Overall</th>
+                <th class="sortable pct-col"      data-sort="number">Win</th>
             </tr>
         </thead>
         <tbody>
@@ -334,6 +335,7 @@
                 <td class="race-col" data-value="{{ r.event_name }}">
                     <a href="/race/{{ r.race_id }}" class="link">{{ r.event_name }}</a>
                     {% if r.std_class %}<span class="std-pill std-pill--{{ r.std_class }}">{{ r.std_class|title }}</span>{% endif %}
+                    <span class="race-col-prog">{{ r.prog_name }}</span>
                 </td>
                 <td class="program-col muted-col" data-value="{{ r.prog_name }}">{{ r.prog_name }}</td>
                 <td class="position-col" data-value="{{ r.pred_pos if r.pred_pos else 9999 }}">
@@ -364,6 +366,16 @@
                 <td class="time-col overall-col" data-value="{{ r.pred_overall or '' }}">
                     <span class="overall-time">{{ r.pred_overall or '' }}</span>
                     {% if r.pred_overall_behind and r.pred_overall_behind != 'fastest' %}<span class="time-cell-gap">{{ r.pred_overall_behind }}</span>{% endif %}
+                </td>
+                <td class="split-col pct-col" data-value="{{ r.win_pct if r.win_pct is not none else -1 }}">
+                    <span class="time-disc-label">Win</span>
+                    {% if r.win_pct is none %}
+                    {% elif r.win_pct < 0.005 %}
+                    <span class="time-cell-main pct-low">&lt;1%</span>
+                    {% else %}
+                    <span class="time-cell-main">{{ "%.0f%%"|format(r.win_pct * 100) }}</span>
+                    <span class="pct-bar" style="--p: {{ (r.win_pct * 100) | round(1) }}%"></span>
+                    {% endif %}
                 </td>
                 <td class="splits-toggle-col" aria-hidden="true">
                     <button type="button" class="splits-toggle" aria-label="Show splits" aria-expanded="false">

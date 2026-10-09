@@ -1750,6 +1750,22 @@ table td a.link:hover   { color: var(--primary-color); }
     white-space: nowrap;
 }
 
+/* Win / Podium probability cells (race predictions, athlete upcoming races):
+   the value over a thin bar filled to the probability (--p) */
+.pct-col { width: 96px; }
+.pct-bar {
+    display: block;
+    width: 56px;
+    height: 4px;
+    margin-top: 4px;
+    border-radius: 2px;
+    background: linear-gradient(to right, var(--primary-color) var(--p), var(--border-color) 0);
+}
+.pct-col--podium .pct-bar {
+    background: linear-gradient(to right, rgba(232, 93, 4, 0.45) var(--p), var(--border-color) 0);
+}
+.time-cell-main.pct-low { font-weight: 400; color: var(--text-lighter); }
+
 .overall-col .overall-time {
     display: block;
     font-size: 0.875rem;
@@ -3766,10 +3782,12 @@ body.help-tour-open { overflow: hidden; }
         padding-top: 0.4rem;
         line-height: 1.2;
     }
-    /* Upcoming races: 3 splits (swim/bike/run, no transitions). */
+    /* Upcoming races: swim/bike/run plus the win chance. */
     .upcoming-races-table tr.expanded td.split-col {
-        flex: 0 0 calc((100% - 2 * 0.2rem) / 3);
+        flex: 0 0 calc((100% - 3 * 0.2rem) / 4);
     }
+    /* Win / Podium have no gap line, so centring would drop them below the splits' labels */
+    .results-table tr.expanded td.pct-col { align-self: flex-start; }
     /* Rating history: 4 splits (swim, bike, run, transition). */
     .rating-table tr.expanded td.split-col {
         flex: 0 0 calc((100% - 3 * 0.2rem) / 4);
