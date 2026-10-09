@@ -16,13 +16,6 @@
   .step .time { font-size: 44px; margin-top: 14px; }
   .step.s1 .time { font-size: 60px; }
   .step .behind { font-size: 30px; font-weight: 600; color: var(--fg-2); margin-top: 10px; }
-  /* Predicted cards: win chance under the gap, bar filled to the probability. */
-  .win { margin-top: 22px; }
-  .win .v { font-size: 34px; }
-  .step.s1 .win .v { font-size: 42px; }
-  .win .lbl { margin-left: 6px; }
-  .bar { width: 70%; height: 10px; margin: 12px auto 0; border-radius: 5px; background: var(--fg-3); overflow: hidden; }
-  .bar i { display: block; height: 100%; border-radius: 5px; background: var(--accent); }
   .legs { display: flex; gap: 40px; margin-top: 60px; padding-top: 40px; border-top: 2px solid var(--rule); }
   .legs div { flex: 1; }
   .legs .lbl { display: block; margin-bottom: 10px; }
@@ -41,10 +34,6 @@
   .step .time { font-size: 38px; margin-top: 8px; }
   .step.s1 .time { font-size: 50px; }
   .step .behind { font-size: 26px; margin-top: 6px; }
-  .win { margin-top: 14px; }
-  .win .v { font-size: 30px; }
-  .step.s1 .win .v { font-size: 36px; }
-  .bar { height: 8px; margin-top: 8px; }
   .legs { margin-top: 30px; padding-top: 26px; gap: 30px; }
   .legs .who, .legs .t { font-size: 27px; }
   {% endif %}
@@ -59,10 +48,6 @@
       <div class="name">{{ a.first }}<br>{{ a.last }}{{ flag(a) }}</div>
       <div class="time num">{{ a.time }}</div>
       <div class="behind">{{ a.behind or '&nbsp;'|safe }}</div>
-      {% if predicted %}
-      <div class="win"><span class="v num">{{ a.win }}</span><span class="lbl">to win</span>
-        <div class="bar"><i style="width: {{ a.win_pct | round(1) }}%"></i></div></div>
-      {% endif %}
     </div>
     {% endfor %}
   </div>

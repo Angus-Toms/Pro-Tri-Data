@@ -14,13 +14,17 @@
   .r .s.f { color: var(--accent); font-weight: 700; }
   .r .t { font-size: 36px; font-weight: 700; text-align: right; letter-spacing: -0.02em; }
   .r.w .t, .r.w .p { color: var(--accent); }
-  /* Predicted cards add a win-chance column: value over a bar filled to it. */
+  /* Predicted cards add a win-chance column: a bar filled to it, centred on the
+     line, then the value. */
   {% if predicted %}
-  .r { grid-template-columns: 56px 1fr 115px 115px 115px 165px 104px; }
+  .r { grid-template-columns: 56px 1fr 110px 110px 110px 160px 145px; }
   .r .n { font-size: 32px; }
   .r .wn { text-align: right; font-size: 28px; font-weight: 700; }
+  /* Fixed-width value so every bar starts at the same x down the column. */
+  .r .wn .v { display: inline-block; width: 62px; }
   .r .wn.low { font-weight: 600; color: var(--fg-2); }
-  .bar { width: 80px; height: 8px; margin: 8px 0 0 auto; border-radius: 4px; background: var(--fg-3); overflow: hidden; }
+  .bar { display: inline-block; vertical-align: middle; width: 52px; height: 8px; margin: 0 10px 0 0;
+    border-radius: 4px; background: var(--fg-3); overflow: hidden; }
   .bar i { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
   {% endif %}
 {% endblock %}
@@ -37,7 +41,7 @@
       <div class="s{% if a.run_fastest %} f{% endif %}">{{ a.run }}</div>
       <div class="t">{{ a.time }}</div>
       {% if predicted %}
-      <div class="wn{% if a.win_pct < 0.5 %} low{% endif %}">{{ a.win }}{% if a.win_pct >= 0.5 %}<div class="bar"><i style="width: {{ a.win_pct | round(1) }}%"></i></div>{% endif %}</div>
+      <div class="wn{% if a.win_pct < 0.5 %} low{% endif %}">{% if a.win_pct >= 0.5 %}<span class="bar"><i style="width: {{ a.win_pct | round(1) }}%"></i></span>{% endif %}<span class="v">{{ a.win }}</span></div>
       {% endif %}
     </div>
     {% endfor %}
