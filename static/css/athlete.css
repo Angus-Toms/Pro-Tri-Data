@@ -593,14 +593,6 @@ tr.sub-race-row .link:hover {
 .upcoming-races-table .program-col  { width: 120px; }
 .upcoming-races-table .position-col { width: 72px; }
 .upcoming-races-table .time-col     { width: 90px; }
-.race-col-prog { display: none; }
-/* Tablets: the program drops under the race name to give the race column room */
-@media (min-width: 769px) and (max-width: 1024px) {
-    .upcoming-races-table .program-col  { display: none; }
-    .upcoming-races-table .race-col-prog { display: block; font-size: 0.75rem; color: var(--text-lighter); }
-    .upcoming-races-table .time-col     { width: 80px; }
-    .upcoming-races-table .pct-col      { width: 84px; }
-}
 
 /* Mirror the results-table pattern so declared widths sum to exactly 100%
    (no proportional rescaling). Fixed total = 135+247+95+80+110 = 667; the
@@ -609,6 +601,24 @@ tr.sub-race-row .link:hover {
    apply to the overall <th> (it has both classes) - last-in-source wins. */
 .rating-table .rating-col   { width: calc((100% - 667px) / 4); }
 .rating-table .overall-col  { width: 110px; }
+
+/* Tablets: date and program move under the race name (.race-col-meta) so the
+   tables fit without scrolling, and the race column takes what the fixed
+   splits leave. Comes after the width rules above so it wins. */
+.race-col-meta { display: none; }
+@media (min-width: 769px) and (max-width: 1024px) {
+    .results-table .date-col, .results-table .program-col,
+    .rating-table  .date-col, .rating-table  .program-col { display: none; }
+    .race-col-meta { display: block; margin-top: 2px; font-size: 0.75rem; color: var(--text-lighter); }
+    .results-table table, .rating-table table { min-width: 0; }
+    .results-table .race-col, .rating-table .race-col { width: auto; }
+    .results-table .position-col, .rating-table .position-col { width: 60px; }
+    .results-table .time-col    { width: 72px; }
+    .rating-table  .rating-col  { width: 80px; }
+    .results-table .overall-col, .rating-table .overall-col { width: 100px; }
+    .upcoming-races-table .time-col { width: 80px; }
+    .upcoming-races-table .pct-col  { width: 84px; }
+}
 
 /* (Moved to base.css so the race-page rating tables also keep the
    value + change pill side-by-side.) */

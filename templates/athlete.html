@@ -335,7 +335,7 @@
                 <td class="race-col" data-value="{{ r.event_name }}">
                     <a href="/race/{{ r.race_id }}" class="link">{{ r.event_name }}</a>
                     {% if r.std_class %}<span class="std-pill std-pill--{{ r.std_class }}">{{ r.std_class|title }}</span>{% endif %}
-                    <span class="race-col-prog">{{ r.prog_name }}</span>
+                    <span class="race-col-meta">{{ r.race_date.strftime('%d %b %Y') }} · {{ r.prog_name }}</span>
                 </td>
                 <td class="program-col muted-col" data-value="{{ r.prog_name }}">{{ r.prog_name }}</td>
                 <td class="position-col" data-value="{{ r.pred_pos if r.pred_pos else 9999 }}">
@@ -457,6 +457,8 @@
                 <td class="race-col" data-value="{{ race.race_title }}">
                     <a href="/race/{{ race.race_id }}" class="link">{{ race.race_title }}</a>
                     {% if race.standard_class %}<span class="std-pill std-pill--{{ race.standard_class }}">{{ race.standard_class|title }}</span>{% endif %}
+                    <span class="race-col-meta">{{ race.race_date.strftime('%d %b %Y') }} · {{ race.program }}
+                        {%- if race.sub_races %}<button class="sub-race-toggle" data-parent="{{ race.race_id }}" aria-label="Show sub-races"><svg class="sub-race-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></button>{% endif %}</span>
                 </td>
                 <td class="program-col muted-col" data-value="{{ race.program }}">{{ race.program }}</td>
                 <td class="position-col" data-value="{{ race.position or 9999 }}">
@@ -515,6 +517,7 @@
                 <td class="race-col" data-value="{{ sub.race_title }}">
                     <a href="/race/{{ sub.race_id }}" class="link">{{ sub.race_title }}</a>
                     <span class="std-pill std-pill--{{ sub.standard_class }}">{{ sub.standard_class|title }}</span>
+                    <span class="race-col-meta">{{ sub.race_date.strftime('%d %b %Y') }} · {{ sub.program }}</span>
                 </td>
                 <td class="program-col muted-col">{{ sub.program }}</td>
                 <td class="position-col" data-value="{{ sub.position or 9999 }}">
@@ -603,6 +606,7 @@
                 <td class="race-col" data-value="{{ rating.race_title }}">
                     <a href="/race/{{ rating.race_id }}" class="link">{{ rating.race_title }}</a>
                     <span class="std-pill std-pill--{{ rating.standard_class }}">{{ rating.standard_class|title }}</span>
+                    <span class="race-col-meta">{{ rating.race_date.strftime('%d %b %Y') }} · {{ rating.race_program }}</span>
                 </td>
                 <td class="program-col muted-col" data-value="{{ rating.race_program }}">{{ rating.race_program }}</td>
                 <td class="position-col" data-value="{{ rating.position or 9999 }}">

@@ -907,11 +907,15 @@ function _restripeTable(tbody) {
     }
 }
 
-// Sub-race expand/collapse toggles
+// Sub-race expand/collapse toggles. Each parent row has two (the date cell's,
+// and one under the race name for tablets, where the date column is hidden),
+// so they flip together.
 document.querySelectorAll('.sub-race-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
         const parentId = btn.dataset.parent;
-        const expanded = btn.classList.toggle('expanded');
+        const expanded = !btn.classList.contains('expanded');
+        document.querySelectorAll(`.sub-race-toggle[data-parent="${parentId}"]`)
+                .forEach(b => b.classList.toggle('expanded', expanded));
         document.querySelectorAll(`.sub-race-row[data-parent="${parentId}"]`)
                 .forEach(row => row.classList.toggle('visible', expanded));
     });
