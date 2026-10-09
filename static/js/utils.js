@@ -391,7 +391,7 @@ const HELP_TOURS = {
         { sel: '.race-view-toggle', title: 'Views',
           text: 'Each view shows the same athletes. Times has the splits, Positions where each athlete was after every leg, Ratings what this race did to each rating (beating expectation earns points, underperforming costs them), and Predictions what the model expected before the race, with the places each athlete gained or lost against it.' },
         { sel: '.race-find', title: 'Find an athlete',
-          text: 'The table shows the top 20. Search by name or three-letter country code, or show the whole field below the table.' },
+          text: 'The table shows the top 20. Search by name or country, filter to U23 or junior athletes, or show the whole field below the table.' },
         { sel: '#add-prediction-btn', title: 'Add an athlete',
           text: 'Search for any athlete who wasn\'t in this race and the model predicts where they would have finished, calibrated to this race\'s course and conditions.' },
     ],

@@ -2844,7 +2844,7 @@ def get_race_results(race_id):
     cols = [
         "athlete_id", "position", "status",
         "overall_s", "swim_s", "bike_s", "run_s", "t1_s", "t2_s",
-        "name", "year_of_birth", "profile_img", "country_alpha3",
+        "name", "year_of_birth", "profile_img", "country_alpha3", "country_full",
         "overall_behind_s", "swim_behind_s", "bike_behind_s", "run_behind_s",
         "t1_behind_s", "t2_behind_s",
     ]
@@ -2887,7 +2887,7 @@ def get_race_results(race_id):
             cr.status,
             cr.overall_s, cr.swim_s, cr.bike_s, cr.run_s, cr.t1_s, cr.t2_s,
             a.name, a.year_of_birth, a.profile_img,
-            n.alpha3 AS country_alpha3,
+            n.alpha3 AS country_alpha3, a.country_full,
             -- behind times computed on corrected splits
             CASE WHEN cr.overall_s > 0 THEN
                 cr.overall_s - MIN(CASE WHEN cr.overall_s > 0 THEN cr.overall_s END) OVER ()
@@ -4225,7 +4225,7 @@ def get_upcoming_race_entries(race_id, course='short'):
     conn = _get_conn()
     course_in = _course_in(course)
     cols = ["athlete_id", "start_num", "name", "year_of_birth", "profile_img",
-            "country_alpha3",
+            "country_alpha3", "country_full",
             "overall_rating", "swim_rating", "bike_rating", "run_rating", "transition_rating"]
     return _dicts(cols, conn.execute(f"""
         SELECT
@@ -4235,6 +4235,7 @@ def get_upcoming_race_entries(race_id, course='short'):
             a.year_of_birth,
             a.profile_img,
             n.alpha3 AS country_alpha3,
+            a.country_full,
             ra.overall    AS overall_rating,
             ra.swim       AS swim_rating,
             ra.bike       AS bike_rating,

@@ -69,11 +69,11 @@
 {% if not predictions %}
 <p class="page-section-sub" style="margin-bottom:0.75rem">{% if race.category == 'ag' %}We don't yet have prediction models for AG races, please stay tuned.{% else %}Predictions unavailable - no model for this race format.{% endif %}</p>
 {% endif %}
-{{ toolbar(views, dv) }}
+{{ toolbar(views, dv, rows) }}
 {% if predictions %}
-<p class="page-section-sub race-view-sub" data-view-sub="predictions">Predicted splits and finishing order based on pre-race ratings, using a global model trained on {{ "women's" if race.gender == "female" else "men's" }} {{ "standard distance" if race_distance == "standard" else race_distance }} races. These don't account for this specific course or conditions. Athletes marked {{ low_conf_badge('low-conf-inline') }} have few career starts, so their ratings haven't settled - we're less confident in their predictions.</p>
+<p class="page-section-sub race-view-sub" data-view-sub="predictions">Pre-race predictions from current ratings; {{ low_conf_badge('low-conf-inline') }} marks athletes with few career starts.</p>
 {% endif %}
-<p class="page-section-sub race-view-sub" data-view-sub="ratings"{% if dv != 'ratings' %} hidden{% endif %}>Current ratings. Athletes in italics are making their debut, so they have no rating yet and are listed at the 1500 starting rating.</p>
+<p class="page-section-sub race-view-sub" data-view-sub="ratings"{% if dv != 'ratings' %} hidden{% endif %}>Current ratings. Debuts, in italics, start at 1500.</p>
 <div class="race-table-chips" aria-label="Sort"></div>
 <div class="race-table-section race-table-wrap">
     <table class="race-table" id="race-table" data-view="{{ dv }}">
@@ -100,7 +100,7 @@
             {% for a in rows %}
             {% set p = a.pred %}
             {% set pos = p.predicted_position if p else loop.index %}
-            <tr class="{{ 'debut-row' if a.is_debut }}{{ ' low-conf-row' if p and p.is_low_confidence }}" data-name="{{ a.name }}" data-country="{{ a.country_alpha3 }}">
+            <tr class="{{ 'debut-row' if a.is_debut }}{{ ' low-conf-row' if p and p.is_low_confidence }}" data-name="{{ a.name }}" data-country="{{ a.country_alpha3 }}" data-country-name="{{ a.country_search }}" data-age="{{ a.age or '' }}">
                 <td class="position-col" data-value="{{ pos }}">{% if p %}{{ pos_marker(pos) }}{% else %}<span class="pos-other">{{ pos }}</span>{% endif %}</td>
                 {% set extra %}{% if p and p.is_low_confidence %} {{ low_conf_badge('low-conf-mark only-predictions') }}{% endif %}{% if a.is_debut %} <span class="debut-label only-ratings">(debut)</span>{% endif %}{% endset %}
                 {{ athlete(a, extra) }}

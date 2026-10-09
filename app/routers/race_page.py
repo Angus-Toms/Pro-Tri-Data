@@ -1,5 +1,6 @@
 
 import numpy as np
+import pycountry
 
 from datetime import date
 
@@ -22,6 +23,16 @@ templates.env.globals["title_words"]   = title_words
 router = APIRouter()
 
 DNF_STATUSES = {"DNF", "DNS", "DQ", "LAP", "NC"}
+
+
+def _country_search(alpha3, country_full):
+    """Country names the race table's find box matches on, lowercased: the
+    athlete's stored name plus the standard ones for the code, so "Great
+    Britain", "United Kingdom" and "USA", "United States" all find the same
+    athletes whichever spelling the source used."""
+    c = pycountry.countries.get(alpha_3=alpha3)
+    names = [country_full] + ([c.name, getattr(c, "official_name", "")] if c else [])
+    return " ".join(n for n in names if n).lower()
 
 
 def _race_cache_headers(race_date):
@@ -342,7 +353,8 @@ def get_race(request: Request, race_id: int, partial: bool = False):
     # and Predictions views are columns of the same rows.
     rating_rows = {r["athlete_id"]: r for r in ratings_data}
     pred_rows = {r["athlete_id"]: r for r in predictions} if predictions else {}
-    rows = [{**r, "rating": rating_rows.get(r["athlete_id"]), "pred": pred_rows.get(r["athlete_id"])}
+    rows = [{**r, "rating": rating_rows.get(r["athlete_id"]), "pred": pred_rows.get(r["athlete_id"]),
+             "country_search": _country_search(r["country_alpha3"], r["country_full"])}
             for r in splits_data]
     views = [("times", "Times")]
     if has_splits:
@@ -352,24 +364,30 @@ def get_race(request: Request, race_id: int, partial: bool = False):
     if predictions:
         views.append(("predictions", "Predictions"))
 
-    # Charts under the table, drawn by race.js from this. Finishers only. Bike
-    # groups only for draft-legal elite racing, where the group an athlete makes
-    # on the bike largely decides their race; gaps are to whoever led out of T2.
+    # Charts under the table, drawn by race.js from this. Finishers only, so
+    # bike groups (elite only) measure the gap off the bike, at the start of T2,
+    # from the first finisher there rather than from someone who later dropped out.
     change_by_id = {r["athlete_id"]: r["overall_change"] for r in ratings} if ratings and not ignored_info else {}
-    t2_lead = min((r["cum"][3] for r in results if r["cum"][3] is not None), default=None)
+    finishers = [r for r in results if r["status"] not in DNF_STATUSES and r["position"] is not None]
+    bike_lead = min((r["cum"][2] for r in finishers if r["cum"][2] is not None), default=None)
     chart_athletes = [{
-        "name":   r["name"],
-        "pos":    r["position"],
-        "splits": [r["swim_s"] or 0, r["bike_s"] or 0, r["run_s"] or 0, r["overall_s"] or 0],
-        "t2_gap": r["cum"][3] - t2_lead if r["cum"][3] is not None else None,
-        "chg":    change_by_id.get(r["athlete_id"]),
-        "pred":   pred_rows[r["athlete_id"]]["predicted_position"] if r["athlete_id"] in pred_rows else None,
-    } for r in results if r["status"] not in DNF_STATUSES and r["position"] is not None]
+        "id":       r["athlete_id"],
+        "name":     r["name"],
+        "country":  r["country_alpha3"],
+        "img":      bool(r["profile_img"]),
+        "pos":      r["position"],
+        "splits":   [r["swim_s"] or 0, r["bike_s"] or 0, r["run_s"] or 0, r["overall_s"] or 0],
+        "bike_gap": r["cum"][2] - bike_lead if r["cum"][2] is not None else None,
+        "chg":      change_by_id.get(r["athlete_id"]),
+        "pred":     pred_rows[r["athlete_id"]]["predicted_position"] if r["athlete_id"] in pred_rows else None,
+    } for r in finishers]
     chart_data = {
         "athletes": chart_athletes,
+        # Riders this close together off the bike count as one group; long
+        # course fields string out more, so the gap is wider there
+        "group_gap": 10 if race["distance"] in ("sprint", "standard") else 15,
         "show": {
-            "groups":  is_elite and race["distance"] in ("sprint", "standard")
-                       and sum(a["t2_gap"] is not None for a in chart_athletes) >= 6,
+            "groups":  is_elite and sum(a["bike_gap"] is not None for a in chart_athletes) >= 6,
             "splits":  sum(a["splits"][0] > 0 for a in chart_athletes) >= 3,
             "ratings": sum(a["chg"] is not None for a in chart_athletes) >= 3,
         },
@@ -706,7 +724,9 @@ def _get_upcoming_race(request: Request, race, partial: bool):
     # One row per entry for the start-list table: Predictions and Ratings views
     # are columns of the same rows.
     pred_rows = {r['athlete_id']: r for r in predictions} if predictions else {}
-    rows = [{**e, 'pred': pred_rows.get(e['athlete_id'])} for e in upcoming_ratings_data]
+    rows = [{**e, 'pred': pred_rows.get(e['athlete_id']),
+             'country_search': _country_search(e['country_alpha3'], e['country_full'])}
+            for e in upcoming_ratings_data]
     views = ([('predictions', 'Predictions')] if predictions else []) + [('ratings', 'Ratings')]
 
     race_standards = {d: format_rating(v) for d, v in standards.items()}

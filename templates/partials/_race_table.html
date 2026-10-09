@@ -8,7 +8,14 @@
    width and below; `drawer` still lists such a column in the phone row's
    drawer. `mid` / `mid-wide` are fixed-width columns on wide screens. #}
 
-{% macro toolbar(views, default_view) -%}
+{# Age filters use World Triathlon category age (race year minus birth year):
+   U23 up to 23, junior up to 19. Each shows only when it narrows the field, so
+   not on a race that's all juniors already. #}
+{% macro toolbar(views, default_view, rows) -%}
+{% set n_u23 = rows | selectattr('age') | selectattr('age', 'le', 23) | list | length %}
+{% set n_junior = rows | selectattr('age') | selectattr('age', 'le', 19) | list | length %}
+{% set has_u23 = 0 < n_u23 < rows | length %}
+{% set has_junior = 0 < n_junior < rows | length %}
 <div class="race-table-toolbar">
     {% if views | length > 1 %}
     <div class="race-view-toggle" role="group" aria-label="Table view">
@@ -17,10 +24,19 @@
         {% endfor %}
     </div>
     {% endif %}
-    <label class="race-find" for="race-find-input">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input id="race-find-input" type="search" placeholder="Find athlete or country" autocomplete="off" aria-label="Find athlete or country">
-    </label>
+    <div class="race-table-tools">
+        {% if has_u23 or has_junior %}
+        <div class="race-view-toggle race-age-filter" role="group" aria-label="Age group">
+            <button type="button" class="race-view-btn race-age-btn active" data-max-age="" aria-pressed="true">All</button>
+            {% if has_u23 %}<button type="button" class="race-view-btn race-age-btn" data-max-age="23" aria-pressed="false">U23</button>{% endif %}
+            {% if has_junior %}<button type="button" class="race-view-btn race-age-btn" data-max-age="19" aria-pressed="false">Junior</button>{% endif %}
+        </div>
+        {% endif %}
+        <label class="race-find" for="race-find-input">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input id="race-find-input" type="search" placeholder="Find athlete or country" autocomplete="off" aria-label="Find athlete or country">
+        </label>
+    </div>
 </div>
 {%- endmacro %}
 

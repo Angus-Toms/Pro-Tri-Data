@@ -132,17 +132,16 @@
     This race result likely combined multiple finals - listed positions reflect overall standings, but finish times may not be strictly increasing.
 </p>
 {% endif %}
-{{ toolbar(views, dv) }}
-<p class="page-section-sub race-view-sub" data-view-sub="times">Split times. The gap under each split is to the fastest split of the race; under Overall, to the winner.</p>
+{{ toolbar(views, dv, rows) }}
+<p class="page-section-sub race-view-sub" data-view-sub="times">Gaps are to the fastest split.</p>
 {% if 'positions' in view_keys %}
-<p class="page-section-sub race-view-sub" data-view-sub="positions" hidden>Place and gap to the leader after each leg, from cumulative times. Run gain is places made up between the start of the run and the finish.</p>
+<p class="page-section-sub race-view-sub" data-view-sub="positions" hidden>Place and gap to the leader after each leg.</p>
 {% endif %}
 {% if 'ratings' in view_keys %}
-<p class="page-section-sub race-view-sub" data-view-sub="ratings" hidden>Each rating after this race, with the change this race made. Disciplines have their own scales, so compare down a column rather than across.</p>
+<p class="page-section-sub race-view-sub" data-view-sub="ratings" hidden>Ratings after the race, with the change.</p>
 {% endif %}
 {% if 'predictions' in view_keys %}
-{% set _dist_label = {'sprint':'sprint','standard':'standard distance','middle':'middle distance','t100':'T100','long':'long course'}.get(race_distance, race_distance) %}
-<p class="page-section-sub race-view-sub" data-view-sub="predictions" hidden>Predicted splits and finishing order from pre-race ratings, using a global model trained on {{ "women's" if race.gender == "female" else "men's" }} {{ _dist_label }} races, so they don't account for this course or conditions. Pos is where each athlete finished, with the places gained or lost against the prediction. Athletes marked {{ low_conf_badge('low-conf-inline') }} have few career starts, so their ratings haven't settled - we're less confident in their predictions.</p>
+<p class="page-section-sub race-view-sub" data-view-sub="predictions" hidden>Pre-race predictions. Arrows show places gained or lost against them; {{ low_conf_badge('low-conf-inline') }} marks athletes with few career starts.</p>
 {% endif %}
 <div class="race-table-chips" aria-label="Sort"></div>
 <div class="race-table-section race-table-wrap">
@@ -186,7 +185,7 @@
         <tbody>
             {% for a in rows %}
             {% set fin = a.status not in ['DNF', 'DNS', 'DQ', 'LAP', 'NC'] and a.position is not none %}
-            <tr data-name="{{ a.name }}" data-country="{{ a.country_alpha3 }}">
+            <tr data-name="{{ a.name }}" data-country="{{ a.country_alpha3 }}" data-country-name="{{ a.country_search }}" data-age="{{ a.age or '' }}">
                 <td class="position-col" data-value="{{ a.position if a.position is not none else a.status }}">
                     {% if fin %}{{ pos_marker(a.position) }}{% else %}<span class="pos-dnf">{{ a.status }}</span>{% endif %}
                     {% if a.pos_diff is not none %}
@@ -314,16 +313,16 @@
 {%- endmacro %}
 {% if chart_data.show.groups %}
 <div class="page-section-head">Bike Groups</div>
-<p class="page-section-sub race-chart-sub">Where each finisher started the run, grouped where they were 10 seconds or less apart. In draft-legal racing the group an athlete makes on the bike usually decides their race.</p>
-<div class="race-chart" data-chart="groups">
+<p class="page-section-sub race-chart-sub">Gaps off the bike, grouped within {{ chart_data.group_gap }} seconds.</p>
+<div class="race-chart" data-chart="groups" data-group-gap="{{ chart_data.group_gap }}">
     {{ podium_legend() }}
     <div class="race-chart-plot"></div>
-    <ul class="race-chart-notes"></ul>
+    <div class="race-group-table"></div>
 </div>
 {% endif %}
 {% if chart_data.show.splits %}
 <div class="page-section-head">Split Times</div>
-<p class="page-section-sub race-chart-sub">One dot per finisher on each leg's own time scale, faster to the left. The tick marks the median.</p>
+<p class="page-section-sub race-chart-sub">Faster to the left; the tick marks the median.</p>
 <div class="race-chart" data-chart="splits">
     {{ podium_legend() }}
     <div class="race-chart-plot"></div>
@@ -331,7 +330,7 @@
 {% endif %}
 {% if chart_data.show.ratings %}
 <div class="page-section-head">Rating Changes</div>
-<p class="page-section-sub race-chart-sub">Each finisher's overall rating change against where they finished. Ratings move on how an athlete did against expectation, not on place alone, so the outliers are the stories: the three biggest gains and losses are marked.</p>
+<p class="page-section-sub race-chart-sub">Overall rating change by finishing position.</p>
 <div class="race-chart" data-chart="ratings">
     <div class="race-chart-legend">
         <span class="race-chart-key"><i class="key-dot up"></i>Gained</span>
