@@ -14,11 +14,20 @@
   .r .s.f { color: var(--accent); font-weight: 700; }
   .r .t { font-size: 36px; font-weight: 700; text-align: right; letter-spacing: -0.02em; }
   .r.w .t, .r.w .p { color: var(--accent); }
+  /* Predicted cards add a win-chance column: value over a bar filled to it. */
+  {% if predicted %}
+  .r { grid-template-columns: 56px 1fr 115px 115px 115px 165px 104px; }
+  .r .n { font-size: 32px; }
+  .r .wn { text-align: right; font-size: 28px; font-weight: 700; }
+  .r .wn.low { font-weight: 600; color: var(--fg-2); }
+  .bar { width: 80px; height: 8px; margin: 8px 0 0 auto; border-radius: 4px; background: var(--fg-3); overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
+  {% endif %}
 {% endblock %}
 {% block body %}
   <div class="race">{{ race_title }}<span class="sub">{% if predicted %}Predicted top ten · {% endif %}{{ prog }} · {{ date }}</span></div>
   <div class="tbl">
-    <div class="r h"><span></span><span></span><span>Swim</span><span>Bike</span><span>Run</span><span>Total</span></div>
+    <div class="r h"><span></span><span></span><span>Swim</span><span>Bike</span><span>Run</span><span>Total</span>{% if predicted %}<span>Win</span>{% endif %}</div>
     {% for a in top10 %}
     <div class="r{% if loop.first %} w{% endif %}">
       <div class="p">{{ a.position }}</div>
@@ -27,6 +36,9 @@
       <div class="s{% if a.bike_fastest %} f{% endif %}">{{ a.bike }}</div>
       <div class="s{% if a.run_fastest %} f{% endif %}">{{ a.run }}</div>
       <div class="t">{{ a.time }}</div>
+      {% if predicted %}
+      <div class="wn{% if a.win_pct < 0.5 %} low{% endif %}">{{ a.win }}{% if a.win_pct >= 0.5 %}<div class="bar"><i style="width: {{ a.win_pct | round(1) }}%"></i></div>{% endif %}</div>
+      {% endif %}
     </div>
     {% endfor %}
   </div>

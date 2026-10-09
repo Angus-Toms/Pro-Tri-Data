@@ -182,7 +182,10 @@ def predicted_race_context(race_id: int) -> dict:
         return {**person(r),
                 "time":   format_time(r["overall_s"]), "behind": format_time_behind(r["overall_s"] - best["overall_s"]),
                 "swim": format_time(r["swim_s"]), "bike": format_time(r["bike_s"]), "run": format_time(r["run_s"]),
-                **{f"{k}_fastest": r[f"{k}_s"] == best[f"{k}_s"] for k in ("swim", "bike", "run")}}
+                **{f"{k}_fastest": r[f"{k}_s"] == best[f"{k}_s"] for k in ("swim", "bike", "run")},
+                # Percent for the bar width, label for the text; under 1% has no bar.
+                "win_pct": r["win_pct"] * 100,
+                "win": "<1%" if r["win_pct"] < 0.005 else f"{r['win_pct']:.0%}"}
     legs = []
     for label, key in (("Swim", "swim_s"), ("Bike", "bike_s"), ("Run", "run_s")):
         ranked = sorted([r for r in stored if r[key]], key=lambda r: r[key])
