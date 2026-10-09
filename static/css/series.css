@@ -359,6 +359,7 @@
     white-space: nowrap;
 }
 .record-value .std-pill {
+    top: 0.05em;  /* the flex row centres on a line box that sits a touch above the figures */
     font-size: 0.55rem;
     padding: 1px 6px;
     font-weight: 700;
@@ -734,6 +735,8 @@
     padding: 0 1.05rem;
     min-width: 70px;
 }
+/* Stacked under the value here, so it keeps the gap it had as an inline pill */
+.ch-std .std-pill { margin-top: 0.4rem; }
 .ch-std-d {
     font-size: 0.54rem;
     text-transform: uppercase;
@@ -1280,6 +1283,7 @@
     font-variant-numeric: tabular-nums;
 }
 .ct-row span { color: rgba(255, 255, 255, 0.55); }
+.ct-row .std-pill { top: 0; }  /* centred by the flex row, see .record-value */
 .ct-row b { font-weight: 700; color: #fff; }
 
 /* ── /recurring index ──────────────────────────────────────────────────── */

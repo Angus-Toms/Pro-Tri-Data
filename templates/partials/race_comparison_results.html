@@ -46,13 +46,13 @@
   <div class="h2h-stat-row">
     <div class="h2h-stat-cell {{ 'is-winner' if w1 else 'is-loser' if w2 else '' }}">
       <span class="h2h-stat-val">{{ v1 if v1 not in (none, '') else '—' }}</span>
-      {% if pill1 %}<span class="h2h-stat-delta">{{ pill1 | safe }}</span>{% endif %}
+      {{ pill1 | safe }}
       {% if ctx1 %}<span class="rc-stat-ctx">{{ ctx1 | safe }}</span>{% endif %}
     </div>
     <div class="h2h-stat-label">{{ label }}</div>
     <div class="h2h-stat-cell {{ 'is-winner' if w2 else 'is-loser' if w1 else '' }}">
       <span class="h2h-stat-val">{{ v2 if v2 not in (none, '') else '—' }}</span>
-      {% if pill2 %}<span class="h2h-stat-delta">{{ pill2 | safe }}</span>{% endif %}
+      {{ pill2 | safe }}
       {% if ctx2 %}<span class="rc-stat-ctx">{{ ctx2 | safe }}</span>{% endif %}
     </div>
   </div>

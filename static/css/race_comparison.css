@@ -216,6 +216,9 @@
 
 /* Context line under a value in the h2h stats card (e.g. best-performance
    athlete name beneath the +rating-change number). */
+/* The flex cell already centres the tier pill; base.css's inline nudge would lift it */
+.h2h-stat-cell .std-pill { top: 0; }
+
 .rc-stat-ctx {
     display: block;
     width: 100%;

@@ -2071,7 +2071,8 @@ sup.ordinal-suffix {
     line-height: 1;
     white-space: nowrap;
 }
-.ratings-table td.rt-rating .std-pill { vertical-align: middle; margin-left: 0.4em; }
+/* Beside a 22px rating the base nudge falls short of the figures' centre */
+.ratings-table td.rt-rating .std-pill { margin-left: 0.4em; top: -0.27em; }
 
 /* 1y change cell — number on the left, sparkline on the right. Colour
    on the sparkline is driven off the sign class set on the number span. */
@@ -2253,7 +2254,6 @@ body.help-tour-open { overflow: hidden; }
 .help-card-close:hover { color: var(--text-color); }
 .help-card-title { font-weight: 700; font-size: 1rem; margin-bottom: 0.35rem; padding-right: 1.25rem; }
 .help-card-text { font-size: 0.85rem; line-height: 1.5; color: var(--text-light, var(--text-color)); }
-.help-card-text .std-pill { margin-top: 0; }
 .help-card-footer {
     display: flex;
     align-items: center;
@@ -2281,6 +2281,9 @@ body.help-tour-open { overflow: hidden; }
 .help-btn-primary:hover { background: var(--primary-color); filter: brightness(1.1); }
 
 /* ── Standard classification pill ── */
+/* Centred on the text beside it (race name, rating, value): `middle` centres on
+   the x-height, and the nudge lifts it to the centre of capitals and figures.
+   align-self does the same job in the flex rows that line items up by baseline. */
 .std-pill {
     display: inline-block;
     padding: 2px 8px;
@@ -2289,7 +2292,10 @@ body.help-tour-open { overflow: hidden; }
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    margin-top: 0.4rem;
+    vertical-align: middle;
+    align-self: center;
+    position: relative;
+    top: -0.1em;
 }
 
 .std-pill--beginner  { background: rgba(34,  197, 94,  0.12); color: #15803d; }
@@ -2724,11 +2730,7 @@ body.help-tour-open { overflow: hidden; }
 /* Pill trails the race name as a plain inline element. The whitespace between
    </a> and <span> in the template acts as the gap; when it wraps, HTML collapses
    that trailing space so the pill starts flush at the left edge - no indent. */
-.race-col .std-pill {
-    font-size: 0.78em;
-    margin: 0;
-    vertical-align: middle;
-}
+.race-col .std-pill { font-size: 0.78em; }
 
 .program-col {
     width: 90px;
