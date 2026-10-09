@@ -306,10 +306,52 @@ def get_race_comparison_html(request: Request, race1_id: int, race2_id: int):
             "label":  label,
             "change1": format_rating_change(b1[f"{d}_change"]) if b1[f"{d}_change"] else None,
             "change2": format_rating_change(b2[f"{d}_change"]) if b2[f"{d}_change"] else None,
+            "raw1":    b1[f"{d}_change"] or None,
+            "raw2":    b2[f"{d}_change"] or None,
             "name1":   b1[f"{d}_athlete_name"],
             "name2":   b2[f"{d}_athlete_name"],
             "athlete1_id": b1[f"{d}_athlete_id"],
             "athlete2_id": b2[f"{d}_athlete_id"],
+        })
+
+    # ---- Times & splits ----
+    # Raw seconds feed the winner highlight, which only makes sense when both
+    # races are the same distance (short course pairs sprint with standard).
+    def _times(results):
+        fin = sorted((r for r in results if r["status"] not in DNF_STATUSES and r["overall_s"]),
+                     key=lambda r: r["overall_s"])
+        out = {
+            "winning":  fin[0]["overall_s"] if fin else None,
+            "margin":   fin[1]["overall_s"] - fin[0]["overall_s"] if len(fin) >= 2 else None,
+            "gap10":    fin[9]["overall_s"] - fin[0]["overall_s"] if len(fin) >= 10 else None,
+            "median":   round(float(np.median([r["overall_s"] for r in fin]))) if fin else None,
+        }
+        # Fastest recorded split, finisher or not, as on the race page.
+        for k in ("swim", "t1", "bike", "t2", "run"):
+            best = min((r for r in results if (r[f"{k}_s"] or 0) > 0), key=lambda r: r[f"{k}_s"], default=None)
+            out[k] = (best[f"{k}_s"], best) if best else (None, None)
+        return out
+
+    t1, t2 = _times(c1["results"]), _times(c2["results"])
+    same_distance = c1["distance"] == c2["distance"]
+    # A dead heat is a real 0s margin; format_time blanks 0 as "no time".
+    def _fmt(v):
+        return None if v is None else (format_time(v) or "00:00")
+
+    time_rows = [
+        {"label": label, "v1": _fmt(t1[k]), "v2": _fmt(t2[k]),
+         "raw1": t1[k], "raw2": t2[k], "compare": same_distance and compare}
+        for k, label, compare in [("winning", "Winning time", True), ("margin", "Winning margin", False),
+                                  ("gap10", "Gap to 10th", False), ("median", "Median finish", True)]
+    ]
+    split_rows = []
+    for k, label in [("swim", "Swim"), ("t1", "T1"), ("bike", "Bike"), ("t2", "T2"), ("run", "Run")]:
+        (s1, a1), (s2, a2) = t1[k], t2[k]
+        split_rows.append({
+            "label": f"Fastest {label}",
+            "v1": format_time(s1) if s1 else None, "v2": format_time(s2) if s2 else None,
+            "raw1": s1, "raw2": s2, "compare": same_distance,
+            "athlete1": a1, "athlete2": a2,
         })
 
     # ---- Distribution charts (Chart.js JSON) ----
@@ -400,6 +442,9 @@ def get_race_comparison_html(request: Request, race1_id: int, race2_id: int):
         "course_condition_rows": cc_rows,
         "has_course_conditions": has_course_conditions,
         "best_perf_rows":     bp_rows,
+        "time_rows":          time_rows,
+        "split_rows":         split_rows,
+        "same_distance":      same_distance,
         "common_athletes":    common_athletes,
         "common_total":       len(common_athletes),
         "disc_summary":       disc_summary,

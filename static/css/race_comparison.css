@@ -84,54 +84,6 @@
     gap: 0.5rem;
 }
 
-/* Best Performances row — 5-column grid:
-     [name1 (1fr)] [val1 (auto)] [label (160px)] [val2 (auto)] [name2 (1fr)]
-   Value columns sit immediately next to the centre label so their inner
-   edges line up across rows; names fill the outer flex space and anchor to
-   the value side (right-aligned for left, left-aligned for right) so each
-   reads as if pulled in toward its value. */
-.rc-bp-row {
-    display: grid;
-    grid-template-columns: 1fr auto 160px auto 1fr;
-    align-items: baseline;
-    column-gap: 0.6rem;
-    padding: 0.55rem 1.5rem;
-}
-.rc-bp-val {
-    font-size: 1.4rem;
-    font-weight: 800;
-    font-variant-numeric: tabular-nums;
-    line-height: 1.1;
-}
-.rc-bp-val--left  { text-align: right; }
-.rc-bp-val--right { text-align: left; }
-.rc-bp-val .chg-arrow { margin-right: 0.15em; }
-.rc-bp-name {
-    font-size: 0.82rem;
-    color: var(--text-light);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0;
-    /* Extra padding on the outer edge keeps long names from butting up
-       against the table border before they ellipsise. */
-}
-.rc-bp-name--left  { text-align: right; padding-left:  0.5rem; }
-.rc-bp-name--right { text-align: left;  padding-right: 0.5rem; }
-.rc-bp-label {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-lighter);
-    text-align: center;
-    white-space: nowrap;
-}
-/* Name links here shouldn't flip orange after a click. */
-.rc-bp-name.link,
-.rc-bp-name.link:visited { color: var(--text-light); }
-.rc-bp-name.link:hover   { color: var(--primary-color); }
-
 /* Common athletes table — multi-discipline rendering. Each cell carries one
    span per discipline; only the active one is visible. .h2h-winner (from
    comparison.css) colours the faster split; the slower side gets a small
@@ -214,28 +166,41 @@
     .rc-header-row { grid-template-columns: 1fr; }
 }
 
-/* Context line under a value in the h2h stats card (e.g. best-performance
-   athlete name beneath the +rating-change number). */
+/* Stats cards: comparison.css sizes the grid to max-content so many athlete
+   columns scroll; two races always fit, so let the columns shrink and long
+   race titles wrap instead. */
+.h2h-stat-grid { min-width: 0; grid-template-columns: 120px repeat(2, minmax(0, 1fr)); }
+@media (max-width: 480px) {
+    .h2h-stat-grid { grid-template-columns: 72px repeat(2, minmax(0, 1fr)); column-gap: 0.5rem; }
+    .h2h-stat-label { white-space: normal; line-height: 1.2; }
+    .h2h-stat-val { font-size: 0.95rem; }
+}
+
+/* Stats card header: race title with its program and date beneath. */
+.rc-stats-race { text-align: center; line-height: 1.25; }
+.rc-stats-race-sub {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.6);
+}
+
 /* The flex cell already centres the tier pill; base.css's inline nudge would lift it */
 .h2h-stat-cell .std-pill { top: 0; }
 
+/* Context line under a value (best-performance or fastest-split athlete):
+   wraps onto its own line, centred under the value. */
+.h2h-stat-cell { flex-wrap: wrap; }
 .rc-stat-ctx {
-    display: block;
     width: 100%;
     font-size: 0.72rem;
     color: var(--text-light);
+    text-align: center;
     margin-top: 2px;
     line-height: 1.2;
 }
 .rc-stat-ctx .link { color: inherit; }
 .rc-stat-ctx .link:hover { color: var(--primary-color); }
-
-/* The left-cell of an h2h row is row-reversed in comparison.css; force the
-   context line to span the full width so it sits *under* the value (not
-   beside it). */
-.h2h-stat-row > .h2h-stat-cell:first-child  .rc-stat-ctx { text-align: right; }
-.h2h-stat-row > .h2h-stat-cell:last-child   .rc-stat-ctx { text-align: left; }
-.h2h-stat-cell { flex-wrap: wrap; }
 
 /* ---- Distribution chart card ---- */
 .rc-dist-card {
