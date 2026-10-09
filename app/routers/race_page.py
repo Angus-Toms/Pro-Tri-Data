@@ -367,7 +367,9 @@ def get_race(request: Request, race_id: int, partial: bool = False):
     # Charts under the table, drawn by race.js from this. Finishers only, so
     # bike groups (elite only) measure the gap off the bike, at the start of T2,
     # from the first finisher there rather than from someone who later dropped out.
-    change_by_id = {r["athlete_id"]: r["overall_change"] for r in ratings} if ratings and not ignored_info else {}
+    # Rating changes are per discipline, for the chart's discipline switch.
+    changes_by_id = ({r["athlete_id"]: [r[f"{d}_change"] for d in ("overall", "swim", "bike", "run", "transition")]
+                      for r in ratings} if ratings and not ignored_info else {})
     finishers = [r for r in results if r["status"] not in DNF_STATUSES and r["position"] is not None]
     bike_lead = min((r["cum"][2] for r in finishers if r["cum"][2] is not None), default=None)
     chart_athletes = [{
@@ -378,18 +380,57 @@ def get_race(request: Request, race_id: int, partial: bool = False):
         "pos":      r["position"],
         "splits":   [r["swim_s"] or 0, r["bike_s"] or 0, r["run_s"] or 0, r["overall_s"] or 0],
         "bike_gap": r["cum"][2] - bike_lead if r["cum"][2] is not None else None,
-        "chg":      change_by_id.get(r["athlete_id"]),
+        "chg":      changes_by_id.get(r["athlete_id"]),
         "pred":     pred_rows[r["athlete_id"]]["predicted_position"] if r["athlete_id"] in pred_rows else None,
     } for r in finishers]
+
+    # Prediction scorecard, beside the predicted vs actual chart. Biggest beat and
+    # miss use places as published, to match the arrows in the table; accuracy
+    # re-ranks the predictions among finishers, so non-finishers predicted ahead
+    # don't count as misses for everyone behind them.
+    scorecard = None
+    called = [r for r in finishers if r["athlete_id"] in pred_rows]
+    if len(called) >= 3:
+        pred_of = lambda r: pred_rows[r["athlete_id"]]["predicted_position"]
+        gained  = lambda r: pred_of(r) - r["position"]
+        result_of = {r["athlete_id"]: r for r in results}
+        top_n = min(10, len(predictions))
+        top_pred = [result_of[p["athlete_id"]] for p in predictions if p["predicted_position"] <= top_n]
+        podium = [r for r in called if r["position"] <= 3]
+        pred_rank = {r["athlete_id"]: i for i, r in enumerate(sorted(called, key=pred_of))}
+        misses = sorted(abs(pred_rank[r["athlete_id"]] - i) for i, r in enumerate(sorted(called, key=lambda r: r["position"])))
+        winner = next((r for r in called if r["position"] == 1), None)
+        beat, miss = max(called, key=gained), min(called, key=gained)
+        mover = lambda r: {"name": r["name"], "id": r["athlete_id"], "pred": pred_of(r), "pos": r["position"]}
+        scorecard = {
+            "winner":       winner and {**mover(winner), "win": pred_rows[winner["athlete_id"]]["win_pct"]},
+            "podium_hits":  sum(pred_of(r) <= 3 for r in podium),
+            "podium_order": len(podium) == 3 and all(gained(r) == 0 for r in podium),
+            "top_n":        top_n,
+            "field":        len(predictions),
+            "top_hits":     sum(r["status"] not in DNF_STATUSES and r["position"] is not None and r["position"] <= top_n
+                                for r in top_pred),
+            "top_dnf":      sum(r["status"] in DNF_STATUSES for r in top_pred),
+            "within5":      sum(m <= 5 for m in misses),
+            "called":       len(called),
+            "median_miss":  misses[len(misses) // 2],
+            "beat":         mover(beat) if gained(beat) > 0 else None,
+            "miss":         mover(miss) if gained(miss) < 0 else None,
+        }
+
     chart_data = {
         "athletes": chart_athletes,
+        # Predicted non-finishers, for the predicted vs actual chart's DNF band
+        "dnf": [{"name": r["name"], "pred": pred_rows[r["athlete_id"]]["predicted_position"], "status": r["status"]}
+                for r in results if r["status"] in DNF_STATUSES and r["athlete_id"] in pred_rows],
         # Riders this close together off the bike count as one group; long
         # course fields string out more, so the gap is wider there
         "group_gap": 10 if race["distance"] in ("sprint", "standard") else 15,
         "show": {
-            "groups":  is_elite and sum(a["bike_gap"] is not None for a in chart_athletes) >= 6,
-            "splits":  sum(a["splits"][0] > 0 for a in chart_athletes) >= 3,
-            "ratings": sum(a["chg"] is not None for a in chart_athletes) >= 3,
+            "groups":      is_elite and sum(a["bike_gap"] is not None for a in chart_athletes) >= 6,
+            "splits":      sum(a["splits"][0] > 0 for a in chart_athletes) >= 3,
+            "ratings":     sum(a["chg"] is not None for a in chart_athletes) >= 3,
+            "predictions": scorecard is not None,
         },
     }
 
@@ -531,6 +572,7 @@ def get_race(request: Request, race_id: int, partial: bool = False):
         "rows":           rows,
         "views":          views,
         "chart_data":     chart_data,
+        "scorecard":      scorecard,
         "prediction_data":         prediction_data,
         "race_distance":           race_distance,
         "course_conditions":       course_conditions if not ignored_info else None,

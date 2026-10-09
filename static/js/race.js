@@ -428,6 +428,7 @@ function initRaceTable() {
             b.classList.toggle('active', b.dataset.view === view);
             b.setAttribute('aria-pressed', b.dataset.view === view ? 'true' : 'false');
         });
+        // Start lists keep a one-line note per view
         document.querySelectorAll('.race-view-sub').forEach(p => { p.hidden = p.dataset.viewSub !== view; });
         buildChips();
         // Each view opens in its natural order: predicted order for a finished
@@ -668,7 +669,7 @@ function _drawSplits(chart, athletes) {
     const W = plot.clientWidth;
     const narrow = W < 560;
     const R = narrow ? 3 : 3.6, step = 2 * R + 1;
-    const x0 = narrow ? 56 : 72, x1 = W - (narrow ? 10 : 110);
+    const x0 = narrow ? 56 : 72, x1 = W - 10;
     const rows = [['Swim', 0], ['Bike', 1], ['Run', 2], ['Overall', 3]].map(([label, i]) => {
         const all = athletes.filter(a => a.splits[i] > 0).map(a => ({ a, v: a.splits[i] }));
         const far = _farOutliers(all.map(p => p.v));
@@ -701,9 +702,14 @@ function _drawSplits(chart, athletes) {
         _svg('text', { x: 0, y: cy + 4, class: 'rc-label' }, svg, row.label);
         _svg('line', { x1: x0, x2: x1, y1: axisY, y2: axisY, class: 'rc-base' }, svg);
         _svg('line', { x1: x(med), x2: x(med), y1: y, y2: axisY, class: 'rc-median' }, svg);
-        _svg('text', { x: x0, y: axisY + 14, class: 'rc-axis' }, svg, formatTime(lo));
-        _svg('text', { x: x1, y: axisY + 14, 'text-anchor': 'end', class: 'rc-axis' }, svg, formatTime(hi));
-        if (!narrow) _svg('text', { x: x1 + 14, y: cy + 4, class: 'rc-axis' }, svg, 'median ' + formatTime(med));
+        // Median labelled under its tick; the min / max end labels give way
+        // when it would run into them
+        const medText = 'median ' + formatTime(med), medW = medText.length * 6;
+        const medX = Math.min(Math.max(x(med), x0 + medW / 2), x1 - medW / 2);
+        const endW = formatTime(hi).length * 6.5 + 8;
+        _svg('text', { x: medX, y: axisY + 14, 'text-anchor': 'middle', class: 'rc-axis rc-median-label' }, svg, medText);
+        if (medX - medW / 2 > x0 + endW) _svg('text', { x: x0, y: axisY + 14, class: 'rc-axis' }, svg, formatTime(lo));
+        if (medX + medW / 2 < x1 - endW) _svg('text', { x: x1, y: axisY + 14, 'text-anchor': 'end', class: 'rc-axis' }, svg, formatTime(hi));
         for (const p of [...placed].sort((p, q) => (p.a.pos <= 3) - (q.a.pos <= 3))) {
             const rank = row.all.indexOf(p.v) + 1;
             _finisherDot(svg, p.a, p.x, cy + off(p.k), R,
@@ -715,19 +721,65 @@ function _drawSplits(chart, athletes) {
     svg.setAttribute('viewBox', `0 0 ${W} ${y - 6}`);
 }
 
+// Names chosen points where there's room: tries spots around each point and
+// keeps the first inside `bounds` that clears every dot and the labels already
+// placed. A point with no room stays unlabelled (each chart lists them too).
+function _placeLabels(svg, items, dots, bounds, R) {
+    const boxes = dots.map(([cx, cy]) => ({ l: cx - R - 3, r: cx + R + 3, t: cy - R - 3, b: cy + R + 3 }));
+    for (const { text, cx, cy } of items) {
+        const w = text.length * 6.4, h = 13;
+        const spots = [[cx + R + 7, cy + 4, 'start'], [cx - R - 7, cy + 4, 'end'],
+                       [cx + 4, cy - R - 8, 'start'], [cx - 4, cy - R - 8, 'end'],
+                       [cx + 4, cy + R + 16, 'start'], [cx - 4, cy + R + 16, 'end'],
+                       [cx + 4, cy - R - 22, 'start'], [cx - 4, cy - R - 22, 'end'],
+                       [cx + 4, cy + R + 30, 'start'], [cx - 4, cy + R + 30, 'end'],
+                       [cx + R + 7, cy - 10, 'start'], [cx - R - 7, cy - 10, 'end'],
+                       [cx + R + 7, cy + 18, 'start'], [cx - R - 7, cy + 18, 'end']];
+        for (const [tx, ty, anchor] of spots) {
+            const left = anchor === 'start' ? tx : tx - w;
+            const box = { l: left, r: left + w, t: ty - h + 2, b: ty + 3 };
+            const inside = box.l >= bounds.l && box.r <= bounds.r && box.t >= bounds.t && box.b <= bounds.b;
+            if (!inside || boxes.some(o => box.l < o.r && box.r > o.l && box.t < o.b && box.b > o.t)) continue;
+            boxes.push(box);
+            _svg('text', { x: tx, y: ty, 'text-anchor': anchor, class: 'rc-name' }, svg, text);
+            break;
+        }
+    }
+}
+
+// Ticks for a 1..max position axis
+function _positionTicks(max) {
+    const step = max <= 12 ? 1 : max <= 30 ? 5 : 10;
+    const ticks = [1];
+    for (let p = step; p <= max; p += step) if (p > 1) ticks.push(p);
+    return ticks;
+}
+
+const _DISCS = ['Overall', 'Swim', 'Bike', 'Run', 'Transition'];
+
 function _drawRatings(chart, athletes) {
     const plot = chart.querySelector('.race-chart-plot');
     const W = plot.clientWidth;
     const narrow = W < 560;
-    const all = athletes.filter(a => a.chg !== null);
-    const far = _farOutliers(all.map(a => a.chg));
-    const pts = all.filter(a => !far.has(a.chg));
-    _offScaleNote(chart, all.filter(a => far.has(a.chg)).map(a => `${escapeHtml(a.name)} ${_change(a.chg)} (${_ordinal(a.pos)})`));
+    // The discipline switch above the chart picks which change to plot
+    const d = +chart.dataset.disc;
+    const disc = _DISCS[d];
+    const all = athletes.filter(a => a.chg && a.chg[d] !== null).map(a => ({ ...a, c: a.chg[d] }));
+    const standoutsEl = chart.querySelector('.race-chart-standouts');
+    if (all.length < 3) {
+        plot.innerHTML = `<p class="race-chart-empty">No ${disc.toLowerCase()} rating changes for this race.</p>`;
+        standoutsEl.innerHTML = '';
+        _offScaleNote(chart, []);
+        return;
+    }
+    const far = _farOutliers(all.map(a => a.c));
+    const pts = all.filter(a => !far.has(a.c));
+    _offScaleNote(chart, all.filter(a => far.has(a.c)).map(a => `${escapeHtml(a.name)} ${_change(a.c)} (${_ordinal(a.pos)})`));
     const m = { l: 40, r: 12, t: 22, b: 38 };
     const H = narrow ? 260 : 340;
     const R = narrow ? 3.5 : 4.5;
     const maxPos = Math.max(...all.map(a => a.pos));
-    const lo = Math.min(0, ...pts.map(a => a.chg)), hi = Math.max(0, ...pts.map(a => a.chg));
+    const lo = Math.min(0, ...pts.map(a => a.c)), hi = Math.max(0, ...pts.map(a => a.c));
     const tick = [5, 10, 25, 50, 100, 250, 500, 1000].find(s => (hi - lo) / s <= 8) || 1000;
     const yLo = Math.floor(lo / tick) * tick, yHi = Math.ceil(hi / tick) * tick;
     const x = p => m.l + (p - 1) / Math.max(maxPos - 1, 1) * (W - m.l - m.r);
@@ -735,74 +787,106 @@ function _drawRatings(chart, athletes) {
 
     plot.innerHTML = '';
     const svg = _svg('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'img',
-                              'aria-label': 'Overall rating change against finishing position' }, plot);
+                              'aria-label': `${disc} rating change against finishing position` }, plot);
     for (let v = yLo; v <= yHi; v += tick) {
         _svg('line', { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), class: v === 0 ? 'rc-zero' : 'rc-grid' }, svg);
         _svg('text', { x: m.l - 8, y: y(v) + 4, 'text-anchor': 'end', class: 'rc-axis' }, svg, _signed(v) || '0');
     }
-    const xStep = maxPos <= 12 ? 1 : maxPos <= 30 ? 5 : 10;
-    const xTicks = [1];
-    for (let p = xStep; p <= maxPos; p += xStep) if (p > 1) xTicks.push(p);
-    for (const p of xTicks)
+    for (const p of _positionTicks(maxPos))
         _svg('text', { x: x(p), y: H - m.b + 16, 'text-anchor': 'middle', class: 'rc-axis' }, svg, p);
     _svg('text', { x: (m.l + W - m.r) / 2, y: H - 4, 'text-anchor': 'middle', class: 'rc-axis' }, svg, 'Finishing position');
 
     // Stand-out performances: the three biggest gains and losses, whether or
     // not they fit on the scale (the list below always names them)
-    const byChange = [...all].sort((a, b) => b.chg - a.chg);
-    const best = byChange.filter(a => a.chg > 0).slice(0, 3);
-    const worst = byChange.filter(a => a.chg < 0).slice(-3).reverse();
+    const byChange = [...all].sort((a, b) => b.c - a.c);
+    const best = byChange.filter(a => a.c > 0).slice(0, 3);
+    const worst = byChange.filter(a => a.c < 0).slice(-3).reverse();
     const standouts = new Set([...best, ...worst]);
 
     const tipHtml = a => () => `<b>${escapeHtml(a.name)}</b><br>Finished ${_ordinal(a.pos)}` +
-        (a.pred ? `, predicted ${_ordinal(a.pred)}` : '') + `<br>Rating change ${_change(a.chg)}`;
+        (a.pred ? `, predicted ${_ordinal(a.pred)}` : '') + `<br>${disc} rating change ${_change(a.c)}`;
     for (const a of pts) {
-        const cx = x(a.pos), cy = y(a.chg);
-        _svg('circle', { cx, cy, r: R, class: a.chg >= 0 ? 'rc-up' : 'rc-down' }, svg);
+        const cx = x(a.pos), cy = y(a.c);
+        _svg('circle', { cx, cy, r: R, class: a.c >= 0 ? 'rc-up' : 'rc-down' }, svg);
         if (standouts.has(a)) _svg('circle', { cx, cy, r: R + 3.5, class: 'rc-ring' }, svg);
         _chartTip(_svg('circle', { cx, cy, r: R + 5, class: 'rc-hit' }, svg), tipHtml(a));
     }
-
-    // Name the stand-outs on the chart where there's room: try spots around
-    // the dot and keep the first inside the plot that clears every dot and the
-    // labels already placed. The list under the chart names them either way.
-    if (!narrow) {
-        const boxes = pts.map(a => ({ l: x(a.pos) - R - 3, r: x(a.pos) + R + 3, t: y(a.chg) - R - 3, b: y(a.chg) + R + 3 }));
-        for (const a of [...best, ...worst].filter(a => !far.has(a.chg))) {
-            const text = a.name;
-            const w = text.length * 6.4, h = 13, cx = x(a.pos), cy = y(a.chg);
-            const spots = [[cx + R + 7, cy + 4, 'start'], [cx - R - 7, cy + 4, 'end'],
-                           [cx + 4, cy - R - 8, 'start'], [cx - 4, cy - R - 8, 'end'],
-                           [cx + 4, cy + R + 16, 'start'], [cx - 4, cy + R + 16, 'end'],
-                           [cx + 4, cy - R - 22, 'start'], [cx - 4, cy - R - 22, 'end'],
-                           [cx + 4, cy + R + 30, 'start'], [cx - 4, cy + R + 30, 'end'],
-                           [cx + R + 7, cy - 10, 'start'], [cx - R - 7, cy - 10, 'end'],
-                           [cx + R + 7, cy + 18, 'start'], [cx - R - 7, cy + 18, 'end']];
-            for (const [tx, ty, anchor] of spots) {
-                const left = anchor === 'start' ? tx : tx - w;
-                const box = { l: left, r: left + w, t: ty - h + 2, b: ty + 3 };
-                // Labels may use the top and right margins, not the axis labels
-                const inside = box.l >= m.l && box.r <= W && box.t >= 0 && box.b <= H - m.b + 2;
-                if (!inside || boxes.some(o => box.l < o.r && box.r > o.l && box.t < o.b && box.b > o.t)) continue;
-                boxes.push(box);
-                _svg('text', { x: tx, y: ty, 'text-anchor': anchor, class: 'rc-name' }, svg, text);
-                break;
-            }
-        }
-    }
+    // Labels may use the top and right margins, not the axis labels
+    if (!narrow) _placeLabels(svg,
+        [...best, ...worst].filter(a => !far.has(a.c)).map(a => ({ text: a.name, cx: x(a.pos), cy: y(a.c) })),
+        pts.map(a => [x(a.pos), y(a.c)]), { l: m.l, r: W, t: 0, b: H - m.b + 2 }, R);
 
     const imgBase = window.STATIC_BASE_URL || '/static/';
     const item = a => `<li class="standout-item">` +
         `<img class="profile-img standout-img" src="${imgBase}${a.img ? `athlete_imgs/128/${a.id}.webp` : 'imgs/default_user_64.webp'}" alt="" loading="lazy">` +
         `<span class="standout-who"><a class="link" href="/athlete/${a.id}">${escapeHtml(a.name)}</a>${flagImg(a.country)}` +
         `<span class="standout-meta">Finished ${_ordinal(a.pos)}${a.pred ? `, predicted ${_ordinal(a.pred)}` : ''}</span></span>` +
-        `${_change(a.chg)}</li>`;
-    chart.querySelector('.race-chart-standouts').innerHTML =
+        `${_change(a.c)}</li>`;
+    standoutsEl.innerHTML =
         (best.length ? `<div><h5>Biggest gains</h5><ul class="standout-list">${best.map(item).join('')}</ul></div>` : '') +
         (worst.length ? `<div><h5>Biggest losses</h5><ul class="standout-list">${worst.map(item).join('')}</ul></div>` : '');
 }
 
-const _RESULT_CHARTS = { groups: _drawGroups, splits: _drawSplits, ratings: _drawRatings };
+// Predicted against finishing position. Above the diagonal beat the
+// prediction; predicted athletes who didn't finish sit in a band underneath.
+// The two biggest beats and misses are ringed and named.
+function _drawPredictions(chart, athletes, data) {
+    const plot = chart.querySelector('.race-chart-plot');
+    const W = plot.clientWidth;
+    const narrow = W < 480;
+    const pts = athletes.filter(a => a.pred);
+    const dnf = data.dnf;
+    const R = narrow ? 3.5 : 4.5;
+    const m = { l: 44, r: 12, t: 12, b: 40 };
+    const H = narrow ? 320 : 400;
+    const band = dnf.length ? 34 : 0;
+    const plotB = H - m.b - band;
+    const maxPred = Math.max(...pts.map(a => a.pred), ...dnf.map(a => a.pred));
+    const maxPos = Math.max(...pts.map(a => a.pos));
+    const x = p => m.l + (p - 1) / Math.max(maxPred - 1, 1) * (W - m.l - m.r);
+    const y = p => m.t + (p - 1) / Math.max(maxPos - 1, 1) * (plotB - m.t);
+    const diag = Math.min(maxPred, maxPos);
+
+    plot.innerHTML = '';
+    const svg = _svg('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'img',
+                              'aria-label': 'Predicted position against finishing position' }, plot);
+    _svg('path', { d: `M${x(1)},${y(1)} L${x(diag)},${y(diag)} L${x(maxPred)},${y(diag)} L${x(maxPred)},${y(1)} Z`, class: 'rc-beat' }, svg);
+    for (const p of _positionTicks(maxPos)) {
+        _svg('line', { x1: m.l, x2: W - m.r, y1: y(p), y2: y(p), class: 'rc-grid' }, svg);
+        _svg('text', { x: m.l - 8, y: y(p) + 4, 'text-anchor': 'end', class: 'rc-axis' }, svg, p);
+    }
+    for (const p of _positionTicks(maxPred))
+        _svg('text', { x: x(p), y: H - m.b + 16, 'text-anchor': 'middle', class: 'rc-axis' }, svg, p);
+    _svg('line', { x1: x(1), y1: y(1), x2: x(diag), y2: y(diag), class: 'rc-median' }, svg);
+    _svg('text', { x: W - m.r - 4, y: m.t + 12, 'text-anchor': 'end', class: 'rc-group' }, svg, 'Beat prediction');
+    _svg('text', { x: m.l + 6, y: plotB - 6, class: 'rc-group' }, svg, 'Off the pace');
+    _svg('text', { x: (m.l + W - m.r) / 2, y: H - 4, 'text-anchor': 'middle', class: 'rc-axis' }, svg, 'Predicted');
+    _svg('text', { x: 10, y: (m.t + plotB) / 2, 'text-anchor': 'middle', class: 'rc-axis',
+                   transform: `rotate(-90 10 ${(m.t + plotB) / 2})` }, svg, 'Finished');
+    if (dnf.length) {
+        const bandY = plotB + band / 2 + 4;
+        _svg('rect', { x: m.l, y: bandY - 10, width: W - m.l - m.r, height: 20, rx: 4, class: 'rc-band' }, svg);
+        _svg('text', { x: m.l - 8, y: bandY + 4, 'text-anchor': 'end', class: 'rc-axis' }, svg, 'DNF');
+        for (const a of dnf) {
+            const cx = x(a.pred);
+            _svg('circle', { cx, cy: bandY, r: R, class: 'rc-dot' }, svg);
+            _chartTip(_svg('circle', { cx, cy: bandY, r: R + 5, class: 'rc-hit' }, svg),
+                () => `<b>${escapeHtml(a.name)}</b><br>Predicted ${_ordinal(a.pred)}, ${a.status}`);
+        }
+    }
+
+    const byGain = [...pts].sort((a, b) => (b.pred - b.pos) - (a.pred - a.pos));
+    const movers = [...byGain.slice(0, 2).filter(a => a.pred > a.pos), ...byGain.slice(-2).filter(a => a.pred < a.pos)];
+    for (const a of [...pts].sort((p, q) => (p.pos <= 3) - (q.pos <= 3))) {
+        const cx = x(a.pred), cy = y(a.pos);
+        _finisherDot(svg, a, cx, cy, R, () => `<b>${escapeHtml(a.name)}</b><br>Predicted ${_ordinal(a.pred)}, finished ${_ordinal(a.pos)}`);
+        if (movers.includes(a)) _svg('circle', { cx, cy, r: R + 4, class: 'rc-ring' }, svg);
+    }
+    _placeLabels(svg, movers.map(a => ({ text: a.name, cx: x(a.pred), cy: y(a.pos) })),
+        pts.map(a => [x(a.pred), y(a.pos)]), { l: m.l, r: W, t: 0, b: plotB }, R);
+}
+
+const _RESULT_CHARTS = { groups: _drawGroups, splits: _drawSplits, ratings: _drawRatings, predictions: _drawPredictions };
 let _resultChartsResize = false;
 
 function initResultCharts() {
@@ -814,7 +898,23 @@ function initResultCharts() {
         const plot = chart.querySelector('.race-chart-plot');
         if (plot.clientWidth === plot._drawnWidth) return;
         plot._drawnWidth = plot.clientWidth;
-        _RESULT_CHARTS[chart.dataset.chart](chart, data.athletes);
+        _RESULT_CHARTS[chart.dataset.chart](chart, data.athletes, data);
+    });
+    // Rating changes' discipline switch (bound once per chart element; a race
+    // swap brings new elements)
+    document.querySelectorAll('.race-chart-discs:not([data-bound])').forEach(group => {
+        group.dataset.bound = '1';
+        group.addEventListener('click', e => {
+            const btn = e.target.closest('[data-disc]');
+            if (!btn) return;
+            const chart = group.closest('.race-chart');
+            chart.dataset.disc = btn.dataset.disc;
+            group.querySelectorAll('[data-disc]').forEach(b => {
+                b.classList.toggle('active', b === btn);
+                b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+            });
+            _drawRatings(chart, getJSON('race-chart-data').athletes);
+        });
     });
     if (!_resultChartsResize) {
         _resultChartsResize = true;

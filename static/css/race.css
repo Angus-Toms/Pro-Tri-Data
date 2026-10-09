@@ -766,8 +766,7 @@
 .race-table .pct-bar { max-width: 100%; }
 
 /* Predictions view: places gained or lost against the prediction, under the
-   finishing position. Orange for beating it, grey for missing it - green and
-   red stay reserved for rating changes. */
+   finishing position. Green for beating it, red for missing it. */
 .race-table .pred-diff { display: none; }
 .race-table[data-view="predictions"] .pred-diff {
     display: flex;
@@ -782,7 +781,8 @@
     font-variant-numeric: tabular-nums;
     color: var(--text-lighter);
 }
-.race-table .pred-diff.up { color: var(--primary-color); }
+.race-table .pred-diff.up { color: var(--success-color); }
+.race-table .pred-diff.down { color: var(--error-color); }
 .race-table .pred-diff .chg-arrow { width: 0.75em; height: 0.75em; }
 
 /* Labels and row styles that belong to one view */
@@ -956,6 +956,59 @@
     margin-bottom: 2rem;
 }
 .race-chart svg { display: block; font-family: inherit; overflow: visible; }
+.race-chart-empty { margin: 1.5rem 0; font-size: 0.85rem; color: var(--text-lighter); text-align: center; }
+
+/* Legend on the left, a chart's own switch (rating discipline) on the right */
+.race-chart-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    margin-bottom: 0.6rem;
+}
+.race-chart-head .race-chart-legend { margin-bottom: 0; }
+.race-chart-discs .race-view-btn { padding: 0.25rem 0.7rem; font-size: 0.78rem; }
+
+/* Predicted vs actual: chart and scorecard side by side */
+.race-chart-pair {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+    margin-bottom: 2rem;
+}
+.race-chart-pair .race-chart { margin-bottom: 0; }
+.race-scorecard {
+    margin: 0;
+    padding: 0.5rem 1.25rem;
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 0.85rem;
+}
+.sc-row {
+    display: grid;
+    grid-template-columns: 8.5rem minmax(0, 1fr);
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-top: 1px solid var(--border-color);
+}
+.sc-row:first-child { border-top: 0; }
+.sc-row dt {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-lighter);
+    padding-top: 0.15rem;
+}
+.sc-row dd { margin: 0; font-weight: 600; color: var(--text-color); min-width: 0; }
+.sc-row dd .link { color: var(--text-color); text-decoration: none; }
+.sc-row dd .link:hover { color: var(--primary-color); }
+.sc-sub { display: block; font-size: 0.75rem; font-weight: 400; color: var(--text-lighter); }
+.rc-beat { fill: var(--highlight); }
+.rc-band { fill: #f2f4f6; }
 .race-chart-legend {
     display: flex;
     flex-wrap: wrap;
@@ -987,6 +1040,7 @@
 .rc-base    { stroke: #d1d5db; stroke-width: 1; }
 .rc-zero    { stroke: var(--text-lighter); stroke-width: 1; }
 .rc-median  { stroke: var(--text-lighter); stroke-width: 1; }
+.rc-median-label { fill: var(--text-light); font-weight: 600; }
 .rc-bracket { stroke: var(--text-lighter); stroke-width: 1.2; fill: none; }
 .rc-axis    { fill: var(--text-lighter); font-size: 11px; }
 .rc-label   { fill: var(--text-color); font-size: 12px; font-weight: 600; }
@@ -1080,6 +1134,7 @@
 .standout-item .rating-change { font-size: 0.85rem; font-weight: 600; }
 
 @media (max-width: 768px) {
+    .race-chart-pair { grid-template-columns: minmax(0, 1fr); }
     .rg-row { display: flex; flex-wrap: wrap; gap: 0.15rem 0.75rem; }
     .rg-row.rg-head { display: none; }
     .rg-lbl { display: inline; }
@@ -1088,6 +1143,10 @@
 }
 @media (max-width: 480px) {
     .race-chart { padding: 0.75rem; }
+    .race-chart-discs { width: 100%; }
+    .race-chart-discs .race-view-btn { flex: 1; padding: 0.25rem 0.2rem; font-size: 0.72rem; }
+    .race-scorecard { padding: 0.25rem 0.75rem; }
+    .sc-row { grid-template-columns: 6.5rem minmax(0, 1fr); }
     .race-chart-standouts { grid-template-columns: minmax(0, 1fr); }
 }
 

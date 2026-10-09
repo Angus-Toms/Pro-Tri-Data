@@ -133,16 +133,6 @@
 </p>
 {% endif %}
 {{ toolbar(views, dv, rows) }}
-<p class="page-section-sub race-view-sub" data-view-sub="times">Gaps are to the fastest split.</p>
-{% if 'positions' in view_keys %}
-<p class="page-section-sub race-view-sub" data-view-sub="positions" hidden>Place and gap to the leader after each leg.</p>
-{% endif %}
-{% if 'ratings' in view_keys %}
-<p class="page-section-sub race-view-sub" data-view-sub="ratings" hidden>Ratings after the race, with the change.</p>
-{% endif %}
-{% if 'predictions' in view_keys %}
-<p class="page-section-sub race-view-sub" data-view-sub="predictions" hidden>Pre-race predictions. Arrows show places gained or lost against them; {{ low_conf_badge('low-conf-inline') }} marks athletes with few career starts.</p>
-{% endif %}
 <div class="race-table-chips" aria-label="Sort"></div>
 <div class="race-table-section race-table-wrap">
     <table class="race-table" id="race-table" data-view="{{ dv }}">
@@ -308,7 +298,6 @@
     {% for a in chart_data.athletes if a.pos <= 3 %}
     <span class="race-chart-key"><i class="key-dot pod-{{ a.pos }}"></i>{{ ordinal(a.pos) }} {{ a.name }}</span>
     {% endfor %}
-    <span class="race-chart-key"><i class="key-dot"></i>Other finishers</span>
 </div>
 {%- endmacro %}
 {% if chart_data.show.groups %}
@@ -322,7 +311,6 @@
 {% endif %}
 {% if chart_data.show.splits %}
 <div class="page-section-head">Split Times</div>
-<p class="page-section-sub race-chart-sub">Faster to the left; the tick marks the median.</p>
 <div class="race-chart" data-chart="splits">
     {{ podium_legend() }}
     <div class="race-chart-plot"></div>
@@ -330,15 +318,53 @@
 {% endif %}
 {% if chart_data.show.ratings %}
 <div class="page-section-head">Rating Changes</div>
-<p class="page-section-sub race-chart-sub">Overall rating change by finishing position.</p>
-<div class="race-chart" data-chart="ratings">
-    <div class="race-chart-legend">
-        <span class="race-chart-key"><i class="key-dot up"></i>Gained</span>
-        <span class="race-chart-key"><i class="key-dot down"></i>Lost</span>
-        <span class="race-chart-key"><i class="key-dot standout"></i>Biggest gains and losses</span>
+<p class="page-section-sub race-chart-sub">Rating change by finishing position.</p>
+<div class="race-chart" data-chart="ratings" data-disc="0">
+    <div class="race-chart-head">
+        <div class="race-chart-legend">
+            <span class="race-chart-key"><i class="key-dot up"></i>Gained</span>
+            <span class="race-chart-key"><i class="key-dot down"></i>Lost</span>
+        </div>
+        <div class="race-view-toggle race-chart-discs" role="group" aria-label="Discipline">
+            {% for label in ['Overall', 'Swim', 'Bike', 'Run', 'Transition'] %}
+            <button type="button" class="race-view-btn{{ ' active' if loop.first }}" data-disc="{{ loop.index0 }}" aria-pressed="{{ 'true' if loop.first else 'false' }}">{{ label }}</button>
+            {% endfor %}
+        </div>
     </div>
     <div class="race-chart-plot"></div>
     <div class="race-chart-standouts"></div>
+</div>
+{% endif %}
+{% if chart_data.show.predictions %}
+{% set sc = scorecard %}
+<div class="page-section-head">Predicted vs Actual</div>
+<p class="page-section-sub race-chart-sub">Finishing position against the pre-race prediction.</p>
+<div class="race-chart-pair">
+    <div class="race-chart" data-chart="predictions">
+        <div class="race-chart-legend">
+            {% for a in chart_data.athletes if a.pos <= 3 %}
+            <span class="race-chart-key"><i class="key-dot pod-{{ a.pos }}"></i>{{ ordinal(a.pos) }}</span>
+            {% endfor %}
+        </div>
+        <div class="race-chart-plot"></div>
+    </div>
+    <dl class="race-scorecard">
+        {% if sc.winner %}
+        <div class="sc-row"><dt>Winner</dt><dd><a href="/athlete/{{ sc.winner.id }}" class="link">{{ sc.winner.name }}</a>, predicted {{ ordinal(sc.winner.pred) }}<span class="sc-sub">{% if sc.winner.win < 0.005 %}&lt;1%{% else %}{{ (sc.winner.win * 100) | round | int }}%{% endif %} pre-race win chance</span></dd></div>
+        {% endif %}
+        <div class="sc-row"><dt>Podium</dt><dd>{{ sc.podium_hits }} of 3 predicted{{ ', in order' if sc.podium_order }}</dd></div>
+        {% if sc.top_n < sc.field %}
+        <div class="sc-row"><dt>Predicted top {{ sc.top_n }}</dt><dd>{{ sc.top_hits }} finished there{% if sc.top_dnf %}<span class="sc-sub">{{ sc.top_dnf }} did not finish</span>{% endif %}</dd></div>
+        {% endif %}
+        <div class="sc-row"><dt>Within 5 places</dt><dd>{{ sc.within5 }} of {{ sc.called }} finishers</dd></div>
+        <div class="sc-row"><dt>Typical miss</dt><dd>{{ sc.median_miss }} place{{ 's' if sc.median_miss != 1 }}</dd></div>
+        {% if sc.beat %}
+        <div class="sc-row"><dt>Biggest beat</dt><dd><a href="/athlete/{{ sc.beat.id }}" class="link">{{ sc.beat.name }}</a><span class="sc-sub">Predicted {{ ordinal(sc.beat.pred) }}, finished {{ ordinal(sc.beat.pos) }}</span></dd></div>
+        {% endif %}
+        {% if sc.miss %}
+        <div class="sc-row"><dt>Biggest miss</dt><dd><a href="/athlete/{{ sc.miss.id }}" class="link">{{ sc.miss.name }}</a><span class="sc-sub">Predicted {{ ordinal(sc.miss.pred) }}, finished {{ ordinal(sc.miss.pos) }}</span></dd></div>
+        {% endif %}
+    </dl>
 </div>
 {% endif %}
 
