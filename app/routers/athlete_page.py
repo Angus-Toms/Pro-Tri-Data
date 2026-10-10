@@ -479,7 +479,13 @@ def get_athlete(request: Request, athlete_id: int,
     race_starts = stats["race_starts"]
     wins        = stats["wins"]
     podiums     = stats["podiums"]
-    active      = _active  # category-specific 18-month window, consistent with rankings
+    # The Retired chip and greyed photo describe the athlete, not the selected
+    # course: an elite racing long course is not retired from short course.
+    # Category still matters, so an ex-pro now racing AG reads as retired on
+    # elite modes. No results yet (only entries) means no chip either.
+    last_any = max((d for d in (queries.get_athlete_stats(athlete_id, category, course=c)["last_race_date"]
+                                for c in ('short', 'long')) if d), default=None)
+    active = last_any is None or last_any >= date.today() - timedelta(days=int(18 * 30.44))
     athlete_dict = {
         **info,
         "race_starts":   race_starts,

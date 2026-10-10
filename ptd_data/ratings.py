@@ -617,25 +617,18 @@ class _RankingState:
         """Boolean mask of athletes whose last race is on or after cutoff_ordinal."""
         return self.last_ordinals >= cutoff_ordinal
 
-    def national_rank(self, athlete_id, disc_idx):
-        """Count of same-country athletes with strictly higher rating + 1."""
-        idx = self.id_to_idx[athlete_id]
-        val = self.ratings[idx, disc_idx]
-        country = self.countries[idx]
-        # Build country mask
-        mask = np.array([c == country for c in self.countries], dtype=bool)
-        return int((self.ratings[mask, disc_idx] > val).sum()) + 1
-
 
 def _flush_rankings(race_id, race_date, participants, gender_state, ranking_rows, category):
     """Compute and append ranking rows for all participants in a race."""
     cutoff_ordinal = (race_date - timedelta(days=ACTIVE_WINDOW_DAYS)).toordinal()
     # Precompute active mask and sliced active-ratings matrix once per gender
     active_ratings_by_gender = {}
+    active_countries_by_gender = {}
     for gender, state in gender_state.items():
         if state.ratings is not None:
             mask = state.active_mask(cutoff_ordinal)
             active_ratings_by_gender[gender] = state.ratings[mask]
+            active_countries_by_gender[gender] = np.array(state.countries, dtype=object)[mask]
 
     for athlete_id, gender in participants:
         state = gender_state[gender]
@@ -643,7 +636,12 @@ def _flush_rankings(race_id, race_date, participants, gender_state, ranking_rows
         my_ratings = state.ratings[idx]  # shape (5,)
 
         world = [int((state.ratings[:, k] > my_ratings[k]).sum()) + 1 for k in range(N_DISCIPLINES)]
-        national = [state.national_rank(athlete_id, k) for k in range(N_DISCIPLINES)]
+        # National rank uses the same active pool as active_world and the live
+        # rank on the Ratings table; an all-time pool kept retired compatriots
+        # ahead (Charles-Barclay #2 behind Wellington, last race 2011).
+        same = active_countries_by_gender[gender] == state.countries[idx]
+        national = [int((active_ratings_by_gender[gender][same, k] > my_ratings[k]).sum()) + 1
+                    for k in range(N_DISCIPLINES)]
 
         active_r = active_ratings_by_gender.get(gender)
         if active_r is not None and len(active_r):

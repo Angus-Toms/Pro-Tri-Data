@@ -1952,9 +1952,10 @@ def get_athlete_notable_results(athlete_id):
     `get_athlete_long_course_notable_results`.
     """
     conn = _get_conn()
-    # Exclude ignored_races so multi-stage events only contribute their combined
-    # Elite Men/Women rollup row — winning a semifinal AND the final must count
-    # as a single win, not two.
+    # Exclude stage heats so multi-stage events only contribute their combined
+    # rollup row (winning a semifinal AND the final is one win, not two). The
+    # rollup itself may be ignored for ratings (Montreal 2022: semi times merged
+    # in) but its placings are real, so it stays.
     rows = conn.execute("""
         SELECT res.race_id, res.position, r.race_title, r.race_handle, r.cat_ids, r.race_date, r.prog_name
         FROM results res
@@ -1967,7 +1968,8 @@ def get_athlete_notable_results(athlete_id):
           -- not cat 483: that flag is event-level, so combined elite + AG
           -- events (e.g. 2026 Pontevedra) carry it on their elite races too.
           AND r.category = 'elite'
-          AND NOT EXISTS (SELECT 1 FROM ignored_races ig WHERE ig.race_id = r.race_id)
+          AND NOT EXISTS (SELECT 1 FROM ignored_races ig WHERE ig.race_id = r.race_id
+                          AND (ig.parent_race_id IS NOT NULL OR NOT r.is_multi_stage))
         ORDER BY res.position
     """, [athlete_id]).fetchall()
 
@@ -2169,6 +2171,9 @@ def get_athlete_stats(athlete_id, category=None, course='short'):
         WHERE res.athlete_id = ?
           AND r.distance IN {course_in}
           {cat_filter}
+          -- Heats nested under a final are not separate starts.
+          AND NOT EXISTS (SELECT 1 FROM ignored_races ig
+                          WHERE ig.race_id = res.race_id AND ig.parent_race_id IS NOT NULL)
     """, params).fetchone()
     return {"race_starts": row[0], "podiums": row[1], "wins": row[2], "last_race_date": row[3]}
 
@@ -2240,13 +2245,15 @@ def get_athlete_race_history(athlete_id, category='elite', course='short'):
             res.run_s,
             res.t1_s,
             res.t2_s,
-            -- behind times: subtract per-race winner time computed across ALL athletes (corrected)
-            CASE WHEN res.overall_s > 0 THEN res.overall_s - w.min_overall END AS overall_behind_s,
-            CASE WHEN res.swim_s    > 0 THEN res.swim_s    - w.min_swim    END AS swim_behind_s,
-            CASE WHEN res.bike_s    > 0 THEN res.bike_s    - w.min_bike    END AS bike_behind_s,
-            CASE WHEN res.run_s     > 0 THEN res.run_s     - w.min_run     END AS run_behind_s,
-            CASE WHEN res.t1_s      > 0 THEN res.t1_s      - w.min_t1      END AS t1_behind_s,
-            CASE WHEN res.t2_s      > 0 THEN res.t2_s      - w.min_t2      END AS t2_behind_s,
+            -- Overall gap is to the fastest finisher (an NC or partial row can be
+            -- faster than the winner). Multi-stage rollups mix heat and final
+            -- times, so they measure from the winner and show no split gaps.
+            CASE WHEN res.overall_s > 0 THEN res.overall_s - CASE WHEN r.is_multi_stage THEN w.winner_overall ELSE w.min_overall END END AS overall_behind_s,
+            CASE WHEN res.swim_s    > 0 AND NOT r.is_multi_stage THEN res.swim_s - w.min_swim END AS swim_behind_s,
+            CASE WHEN res.bike_s    > 0 AND NOT r.is_multi_stage THEN res.bike_s - w.min_bike END AS bike_behind_s,
+            CASE WHEN res.run_s     > 0 AND NOT r.is_multi_stage THEN res.run_s  - w.min_run  END AS run_behind_s,
+            CASE WHEN res.t1_s      > 0 AND NOT r.is_multi_stage THEN res.t1_s   - w.min_t1   END AS t1_behind_s,
+            CASE WHEN res.t2_s      > 0 AND NOT r.is_multi_stage THEN res.t2_s   - w.min_t2   END AS t2_behind_s,
             std.overall_std,
             ig.race_id IS NOT NULL AS is_ignored,
             ig.parent_race_id,
@@ -2256,7 +2263,8 @@ def get_athlete_race_history(athlete_id, category='elite', course='short'):
         JOIN races r ON res.race_id = r.race_id
         JOIN (
             SELECT race_id,
-                   MIN(CASE WHEN overall_s > 0 THEN overall_s END) AS min_overall,
+                   MIN(CASE WHEN overall_s > 0 AND status = 'Finished' THEN overall_s END) AS min_overall,
+                   MIN(CASE WHEN overall_s > 0 AND position = 1 THEN overall_s END) AS winner_overall,
                    MIN(CASE WHEN swim_s    > 0 THEN swim_s    END) AS min_swim,
                    MIN(CASE WHEN bike_s    > 0 THEN bike_s    END) AS min_bike,
                    MIN(CASE WHEN run_s     > 0 THEN run_s     END) AS min_run,
@@ -2405,7 +2413,7 @@ def get_athlete_times_data(athlete_id, category='elite', course='short'):
             FROM corr GROUP BY race_id, athlete_id
         ),
         corrected AS (
-            SELECT res.race_id, res.athlete_id,
+            SELECT res.race_id, res.athlete_id, res.status,
                    COALESCE(cw.overall, res.overall_s) AS overall_s,
                    COALESCE(cw.swim,    res.swim_s)    AS swim_s,
                    COALESCE(cw.bike,    res.bike_s)    AS bike_s,
@@ -2431,7 +2439,7 @@ def get_athlete_times_data(athlete_id, category='elite', course='short'):
         JOIN races r ON res.race_id = r.race_id
         JOIN (
             SELECT race_id,
-                   MIN(CASE WHEN overall_s > 0 THEN overall_s END) AS min_overall,
+                   MIN(CASE WHEN overall_s > 0 AND status = 'Finished' THEN overall_s END) AS min_overall,
                    MIN(CASE WHEN swim_s    > 0 THEN swim_s    END) AS min_swim,
                    MIN(CASE WHEN bike_s    > 0 THEN bike_s    END) AS min_bike,
                    MIN(CASE WHEN run_s     > 0 THEN run_s     END) AS min_run
@@ -2439,6 +2447,8 @@ def get_athlete_times_data(athlete_id, category='elite', course='short'):
             GROUP BY race_id
         ) w ON res.race_id = w.race_id
         WHERE res.athlete_id = ? AND r.category = ? AND r.distance IN {course_in}
+          -- Same races as the rating chart: no heats, no rollups with merged heat times.
+          AND NOT EXISTS (SELECT 1 FROM ignored_races ig WHERE ig.race_id = res.race_id)
         ORDER BY r.race_date ASC, res.race_id ASC
     """, [athlete_id, category]))
 
@@ -4115,6 +4125,8 @@ def get_athlete_rivals(athlete_id, category='elite', course='short', limit=6):
               AND r.category = ?
               AND r.distance IN {course_in}
               AND r.race_date >= CURRENT_DATE - INTERVAL 5 YEAR
+              AND NOT EXISTS (SELECT 1 FROM ignored_races ig
+                              WHERE ig.race_id = res.race_id AND ig.parent_race_id IS NOT NULL)
         ),
         shared AS (
             SELECT my.race_id, my.my_pos, op.athlete_id AS opp_id, op.position AS opp_pos

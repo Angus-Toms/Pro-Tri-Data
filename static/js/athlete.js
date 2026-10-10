@@ -28,6 +28,9 @@ if (!window._ptdAthleteNavBound) {
             }
             currHero.replaceWith(newHero);
             currContent.replaceWith(newContent);
+            // The Follow button lives in the swapped hero; it needs its click
+            // handler and the user's following state again.
+            initFollowButtons(newHero);
             document.title = doc.title;
             history.pushState({}, '', url);
             const currScript = document.querySelector('script[src*="js/athlete.js"]');
