@@ -2232,6 +2232,7 @@ body.help-tour-open { overflow: hidden; }
 }
 .help-card {
     position: absolute;
+    box-sizing: border-box;   /* max-width must include the padding on phones */
     width: 340px;
     max-width: calc(100vw - 24px);
     background: var(--card-bg, #fff);

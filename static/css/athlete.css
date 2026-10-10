@@ -145,6 +145,7 @@
     color: rgba(255, 255, 255, 0.4);
     font-size: 0.8rem;
 }
+.hero-stat { white-space: nowrap; }
 
 /* Actions row above the form table: the mode switcher (when an athlete has
    more than one mode) on the left, the follow button pinned right so its
@@ -880,6 +881,10 @@ tr.sub-race-row .link:hover {
     color: var(--text-light);
     font-variant-numeric: tabular-nums;
 }
+.rival-window {
+    font-size: 0.7rem;
+    color: var(--text-light);
+}
 .rival-wins   { color: #16a34a; font-weight: 600; }
 .rival-losses { color: #dc2626; font-weight: 600; }
 .rival-compare {
@@ -904,7 +909,7 @@ tr.sub-race-row .link:hover {
     background: rgba(232, 93, 4, 0.08);
 }
 
-@media (max-width: 500px) {
+@media (max-width: 480px) {
     .rival-card { width: 120px; padding: 0.5rem 0.4rem; }
     .rival-img  { width: 56px; height: 56px; }
     .rival-name { font-size: 0.74rem; }

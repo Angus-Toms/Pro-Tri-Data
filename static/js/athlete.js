@@ -116,15 +116,11 @@ function _makeRankTooltipEl(id) {
 const worldRankTooltipEl = _makeRankTooltipEl('world-ranking-tooltip');
 const natRankTooltipEl   = _makeRankTooltipEl('national-ranking-tooltip');
 
-let _worldRankHovered = false;
-let _natRankHovered   = false;
-
-worldRankTooltipEl.addEventListener('mouseenter', () => { _worldRankHovered = true; });
-worldRankTooltipEl.addEventListener('mouseleave', () => { _worldRankHovered = false; worldRankTooltipEl.style.opacity = '0'; worldRankTooltipEl.style.pointerEvents = 'none'; });
-natRankTooltipEl.addEventListener('mouseenter',   () => { _natRankHovered = true; });
-natRankTooltipEl.addEventListener('mouseleave',   () => { _natRankHovered = false; natRankTooltipEl.style.opacity = '0'; natRankTooltipEl.style.pointerEvents = 'none'; });
-
+// Tooltips never take the pointer: a tooltip that did sat over the next points
+// and froze on its race. Clicking a point opens the race instead (onClick).
+// They stay clear of the sticky site header and hide on scroll (bound below).
 function _positionTooltip(tooltipEl, chart, tooltip) {
+    const minTop = (document.querySelector('.site-header')?.getBoundingClientRect().bottom || 0) + 8;
     const rect   = chart.canvas.getBoundingClientRect();
     const tipW   = tooltipEl.offsetWidth || 230;
     const caretX = rect.left + tooltip.caretX;
@@ -132,17 +128,24 @@ function _positionTooltip(tooltipEl, chart, tooltip) {
     if (caretX + tipW + 16 <= window.innerWidth) {
         // Fits to the right of the cursor - tooltip is outside the canvas, no blocking
         tooltipEl.style.left = (caretX + 16) + 'px';
-        tooltipEl.style.top  = (caretY - 50) + 'px';
+        tooltipEl.style.top  = Math.max(minTop, caretY - 50) + 'px';
     } else {
         // Near right edge: go above the point so we don't sit over the canvas
         const tipH = tooltipEl.offsetHeight || 150;
         let left = Math.max(8, caretX - tipW / 2);
         if (left + tipW > window.innerWidth - 8) left = window.innerWidth - tipW - 8;
         tooltipEl.style.left = left + 'px';
-        tooltipEl.style.top  = Math.max(8, caretY - tipH - 12) + 'px';
+        tooltipEl.style.top  = Math.max(minTop, caretY - tipH - 12) + 'px';
     }
-    tooltipEl.style.pointerEvents = 'auto';
     tooltipEl.style.opacity = '1';
+}
+
+if (!window._ptdChartTipScrollBound) {
+    window._ptdChartTipScrollBound = true;
+    window.addEventListener('scroll', () => {
+        ['ratings-chart-tooltip', 'world-ranking-tooltip', 'national-ranking-tooltip', 'pct-behind-tooltip']
+            .forEach(id => { const el = document.getElementById(id); if (el) el.style.opacity = '0'; });
+    }, { passive: true });
 }
 
 function _fillRankTooltip(tooltipEl, d, disc, rankLabel) {
@@ -151,7 +154,7 @@ function _fillRankTooltip(tooltipEl, d, disc, rankLabel) {
     const date   = new Date(d.x).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
     const isDNF  = d.status && DNF_STATUSES.has(d.status);
 
-    const raceLink   = `<a href="/race/${d.race_id}" style="color:#fff;text-decoration:none;font-weight:700;font-size:13px;line-height:1.2;display:block" onmouseover="this.style.color='#E87722'" onmouseout="this.style.color='#fff'">${d.race_name}</a>`;
+    const raceLink   = `<a href="/race/${d.race_id}" style="color:#fff;text-decoration:none;font-weight:700;font-size:13px;line-height:1.2;display:block" onmouseover="this.style.color='#E87722'" onmouseout="this.style.color='#fff'">${escapeHtml(d.race_name)}</a>`;
     const statusBadge = isDNF
         ? `<span style="display:inline-block;background:rgba(220,38,38,0.2);color:#f87171;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;margin-left:6px">${d.status}</span>`
         : '';
@@ -197,14 +200,14 @@ function _fillRankTooltip(tooltipEl, d, disc, rankLabel) {
 
 function worldRankingTooltip(context) {
     const { chart, tooltip } = context;
-    if (tooltip.opacity === 0) { if (!_worldRankHovered) { worldRankTooltipEl.style.opacity = '0'; worldRankTooltipEl.style.pointerEvents = 'none'; } return; }
+    if (tooltip.opacity === 0) { worldRankTooltipEl.style.opacity = '0'; return; }
     _fillRankTooltip(worldRankTooltipEl, tooltip.dataPoints[0].raw, activeWorldDisc, 'world ranking');
     _positionTooltip(worldRankTooltipEl, chart, tooltip);
 }
 
 function natRankingTooltip(context) {
     const { chart, tooltip } = context;
-    if (tooltip.opacity === 0) { if (!_natRankHovered) { natRankTooltipEl.style.opacity = '0'; natRankTooltipEl.style.pointerEvents = 'none'; } return; }
+    if (tooltip.opacity === 0) { natRankTooltipEl.style.opacity = '0'; return; }
     _fillRankTooltip(natRankTooltipEl, tooltip.dataPoints[0].raw, activeNatDisc, 'national ranking');
     _positionTooltip(natRankTooltipEl, chart, tooltip);
 }
@@ -233,12 +236,13 @@ function buildMainRankingChart(disc, type) {
                 pointBackgroundColor: hex, pointHoverBackgroundColor: '#fff',
                 pointHoverBorderColor: hex, pointHoverBorderWidth: 2,
                 borderWidth: 2, pointRadius: 3, pointHoverRadius: 5,
-                fill: false, tension: 0.3, clip: false,
+                fill: false, stepped: true, clip: false,
             }]
         },
         options: {
             responsive: true, maintainAspectRatio: false,
-            interaction: { mode: 'nearest', intersect: false },
+            interaction: { mode: 'nearest', axis: 'x', intersect: false },
+            onClick: (e, els) => { if (els.length) location.href = '/race/' + data[els[0].index].race_id; },
             animation: {
                 x: { type: 'number', easing: 'linear', duration: delayPerPoint, from: NaN,
                      delay: (ctx) => { if (ctx.type !== 'data' || ctx.xStarted) return 0; ctx.xStarted = true; return ctx.index * delayPerPoint; } },
@@ -254,7 +258,7 @@ function buildMainRankingChart(disc, type) {
                 y: {
                     reverse: true, min: 1, beginAtZero: false,
                     grid: { color: 'rgba(0,0,0,0.05)' },
-                    afterBuildTicks: s => applyNiceTicks(s, { includeMin: true }),
+                    afterBuildTicks: s => applyNiceTicks(s, { includeMin: true, integer: true }),
                     ticks: { color: '#999', autoSkip: false, callback: v => '#' + v },
                 }
             }
@@ -274,7 +278,7 @@ function buildMiniRankingChart(disc, type) {
         data: {
             datasets: [{
                 data, borderColor: DISC_COLORS[disc], borderWidth: 1.5,
-                pointRadius: 0, tension: 0.3, fill: false, backgroundColor: 'transparent', clip: false,
+                pointRadius: 0, stepped: true, fill: false, backgroundColor: 'transparent', clip: false,
             }]
         },
         options: {
@@ -512,7 +516,7 @@ function fmtRankChange(n) {
 }
 const DNF_STATUSES = new Set(['DNF', 'LAP', 'NC', 'DNS', 'DQ']);
 
-// Shared HTML tooltip element - pointerEvents: auto for sticky hover
+// Shared HTML tooltip element
 const ratingsTooltipEl = (() => {
     const existing = document.getElementById('ratings-chart-tooltip');
     if (existing) return existing;
@@ -531,21 +535,9 @@ const ratingsTooltipEl = (() => {
     return el;
 })();
 
-// Track whether cursor is over the tooltip so we don't hide it prematurely
-let _tooltipHovered = false;
-ratingsTooltipEl.addEventListener('mouseenter', () => { _tooltipHovered = true; });
-ratingsTooltipEl.addEventListener('mouseleave', () => {
-    _tooltipHovered = false;
-    ratingsTooltipEl.style.opacity = '0';
-    ratingsTooltipEl.style.pointerEvents = 'none';
-});
-
 function ratingsExternalTooltip(context) {
     const { chart, tooltip } = context;
-    if (tooltip.opacity === 0) {
-        if (!_tooltipHovered) { ratingsTooltipEl.style.opacity = '0'; ratingsTooltipEl.style.pointerEvents = 'none'; }
-        return;
-    }
+    if (tooltip.opacity === 0) { ratingsTooltipEl.style.opacity = '0'; return; }
 
     const d      = tooltip.dataPoints[0].raw;
     const disc   = activeDisc;
@@ -595,7 +587,7 @@ function ratingsExternalTooltip(context) {
         </div>` : '';
 
     // Race name as link
-    const raceLink = `<a href="/race/${d.race_id}" style="color:#fff;text-decoration:none;font-weight:700;font-size:13px;line-height:1.2;display:block" onmouseover="this.style.color='#E87722'" onmouseout="this.style.color='#fff'">${d.race_name}</a>`;
+    const raceLink = `<a href="/race/${d.race_id}" style="color:#fff;text-decoration:none;font-weight:700;font-size:13px;line-height:1.2;display:block" onmouseover="this.style.color='#E87722'" onmouseout="this.style.color='#fff'">${escapeHtml(d.race_name)}</a>`;
 
     ratingsTooltipEl.innerHTML = `
         <div style="padding:7px 12px;border-bottom:1px solid rgba(255,255,255,0.08)">
@@ -644,14 +636,15 @@ function buildMainChart(disc) {
                 pointRadius: 3,
                 pointHoverRadius: 5,
                 fill: false,
-                tension: 0.3,
+                stepped: true,
                 clip: false,
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            interaction: { mode: 'nearest', intersect: false },
+            interaction: { mode: 'nearest', axis: 'x', intersect: false },
+            onClick: (e, els) => { if (els.length) location.href = '/race/' + data[els[0].index].race_id; },
             animation: {
                 x: { type: 'number', easing: 'linear', duration: delayPerPoint, from: NaN,
                      delay: (ctx) => { if (ctx.type !== 'data' || ctx.xStarted) return 0; ctx.xStarted = true; return ctx.index * delayPerPoint; } },
@@ -682,7 +675,7 @@ function buildMiniChart(disc) {
                 borderColor: DISC_COLORS[disc],
                 borderWidth: 1.5,
                 pointRadius: 0,
-                tension: 0.3,
+                stepped: true,
                 fill: false,
                 backgroundColor: 'transparent',
                 clip: false,
@@ -719,8 +712,9 @@ function switchRatingDisc(disc) {
         if (existing) existing.destroy();
     });
 
-    document.querySelectorAll('.ratings-mini').forEach(el => el.classList.remove('active'));
-    document.querySelector(`.ratings-mini[data-disc="${disc}"]`).classList.add('active');
+    const card = document.getElementById('ratings-mini-overall').closest('.collapsible-card');
+    card.querySelectorAll('.ratings-mini').forEach(el => el.classList.remove('active'));
+    card.querySelector(`.ratings-mini[data-disc="${disc}"]`).classList.add('active');
 
     activeDisc = disc;
     updateRatingTitle(disc);
@@ -758,18 +752,14 @@ const pctTooltipEl = (() => {
     return el;
 })();
 
-let _pctHovered = false;
-pctTooltipEl.addEventListener('mouseenter', () => { _pctHovered = true; });
-pctTooltipEl.addEventListener('mouseleave', () => { _pctHovered = false; pctTooltipEl.style.opacity = '0'; pctTooltipEl.style.pointerEvents = 'none'; });
-
 function pctExternalTooltip(context) {
     const { chart, tooltip } = context;
-    if (tooltip.opacity === 0) { if (!_pctHovered) { pctTooltipEl.style.opacity = '0'; pctTooltipEl.style.pointerEvents = 'none'; } return; }
+    if (tooltip.opacity === 0) { pctTooltipEl.style.opacity = '0'; return; }
     const d     = tooltip.dataPoints[0].raw;
     const color = DISC_COLORS[activePctDisc];
     const label = DISC_LABELS[activePctDisc];
     const date  = new Date(d.x).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-    const raceLink = `<a href="/race/${d.race_id}" style="color:#fff;text-decoration:none;font-weight:700;font-size:13px;line-height:1.2;display:block" onmouseover="this.style.color='#E87722'" onmouseout="this.style.color='#fff'">${d.race_name}</a>`;
+    const raceLink = `<a href="/race/${d.race_id}" style="color:#fff;text-decoration:none;font-weight:700;font-size:13px;line-height:1.2;display:block" onmouseover="this.style.color='#E87722'" onmouseout="this.style.color='#fff'">${escapeHtml(d.race_name)}</a>`;
     const pctDisplay = d.y === 0
         ? `<span style="color:#5eead4;font-size:22px;font-weight:800;line-height:1">Leader</span>`
         : `<span style="color:${color};font-size:22px;font-weight:800;line-height:1">+${d.y.toFixed(1)}%</span>`;
@@ -804,12 +794,13 @@ function buildMainPctBehindChart(disc) {
                 pointBackgroundColor: hex,
                 pointHoverBackgroundColor: '#fff', pointHoverBorderColor: hex, pointHoverBorderWidth: 2,
                 borderWidth: 2, pointRadius: 3, pointHoverRadius: 5,
-                fill: false, tension: 0.3, clip: false,
+                fill: false, showLine: false, clip: false,
             }]
         },
         options: {
             responsive: true, maintainAspectRatio: false,
-            interaction: { mode: 'nearest', intersect: false },
+            interaction: { mode: 'nearest', axis: 'x', intersect: false },
+            onClick: (e, els) => { if (els.length) location.href = '/race/' + data[els[0].index].race_id; },
             animation: {
                 x: { type: 'number', easing: 'linear', duration: delayPerPoint, from: NaN,
                      delay: (ctx) => { if (ctx.type !== 'data' || ctx.xStarted) return 0; ctx.xStarted = true; return ctx.index * delayPerPoint; } },
@@ -826,7 +817,7 @@ function buildMainPctBehindChart(disc) {
                     min: 0,
                     grid: { color: 'rgba(0,0,0,0.05)' },
                     afterBuildTicks: s => applyNiceTicks(s),
-                    ticks: { color: '#999', autoSkip: false, callback: v => v.toFixed(1) + '%' },
+                    ticks: { color: '#999', autoSkip: false, callback: v => +v.toFixed(2) + '%' },
                 }
             }
         }
@@ -842,7 +833,7 @@ function buildMiniPctBehindChart(disc) {
             datasets: [{
                 data: pctBehindData[disc],
                 borderColor: DISC_COLORS[disc], borderWidth: 1.5,
-                pointRadius: 0, tension: 0.3, fill: false, backgroundColor: 'transparent', clip: false,
+                pointRadius: 0, tension: 0, fill: false, backgroundColor: 'transparent', clip: false,
             }]
         },
         options: {

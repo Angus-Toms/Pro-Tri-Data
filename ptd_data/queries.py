@@ -1806,18 +1806,19 @@ def get_athlete_peak_rankings(athlete_id, category='elite', course='short'):
     """
     Best (lowest-number) world ranking the athlete ever held in each discipline,
     based on per-race rankings rows. Used for retired athletes where current
-    active-rankings would return None. Course-scoped.
+    active-rankings would return None. Course-scoped. Uses the active pool,
+    like the World Rankings chart, so the two agree.
 
     Returns None if the athlete has no ranking history.
     """
     conn = _get_conn()
     course_in = _course_in(course)
     row = conn.execute(f"""
-        SELECT MIN(rk.world_overall)    AS world_overall,
-               MIN(rk.world_swim)       AS world_swim,
-               MIN(rk.world_bike)       AS world_bike,
-               MIN(rk.world_run)        AS world_run,
-               MIN(rk.world_transition) AS world_transition
+        SELECT MIN(rk.active_world_overall)    AS world_overall,
+               MIN(rk.active_world_swim)       AS world_swim,
+               MIN(rk.active_world_bike)       AS world_bike,
+               MIN(rk.active_world_run)        AS world_run,
+               MIN(rk.active_world_transition) AS world_transition
         FROM rankings rk
         JOIN races r ON rk.race_id = r.race_id
         WHERE rk.athlete_id = ? AND rk.category = ? AND r.distance IN {course_in}
@@ -1895,8 +1896,8 @@ def get_athlete_peak_ratings(athlete_id, category='elite', course='short'):
 def get_athlete_best_performances(athlete_id, category='elite', course='short'):
     """
     Best rating change per discipline + the race handle. Course-scoped.
-    Prefers the largest positive change; falls back to the least negative
-    change if the athlete has never had a positive one for that discipline.
+    Largest positive change only: a race that lost rating is never the best,
+    so a discipline with no gain returns None.
 
     Excludes races where the athlete had no recorded time for the relevant
     discipline - a missing split can't be a "best performance" even if the
@@ -1923,7 +1924,7 @@ def get_athlete_best_performances(athlete_id, category='elite', course='short'):
             JOIN results res ON res.race_id = ra.race_id AND res.athlete_id = ra.athlete_id
             WHERE ra.athlete_id = ? AND ra.category = ? AND r.distance IN {course_in}
               AND ra.{disc}_change IS NOT NULL
-              AND ra.{disc}_change <> 0
+              AND ra.{disc}_change > 0
               AND {gate}
             ORDER BY ra.{disc}_change DESC
             LIMIT 1

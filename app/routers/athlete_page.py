@@ -200,7 +200,7 @@ def _build_ratings_chart(ratings_data):
             prev_wr = wr
             points.append({
                 "x":          str(r["race_date"])[:10],
-                "y":          int(r[f"{disc}_rating"]),
+                "y":          round(r[f"{disc}_rating"]),  # round, as the tables do
                 "change":     round(r[f"{disc}_change"]) if r[f"{disc}_change"] is not None else None,
                 "race_name":  r["race_title"],
                 "race_id":    r["race_id"],

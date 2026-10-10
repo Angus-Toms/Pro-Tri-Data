@@ -2,6 +2,9 @@
 // the /athlete-compare/athlete/{id} response (rating, rank, wins, programs).
 let selectedAthletes = [];
 let selectedProgram = null;   // one of 'elite-short' | 'elite-long' | 'ag', once chosen
+// Program asked for in the URL (athlete page Compare links). It stays the
+// default while only one athlete is picked and once a second one shares it.
+let preferredProgram = null;
 let comparisonGraphsLoaded = false;
 
 const slotsEl      = document.getElementById('athleteSlots');
@@ -301,7 +304,7 @@ function refreshProgramPicker() {
     // Keep a previously-picked program if still valid, else default to first.
     const prevSelected = selectedProgram;
     if (!selectedProgram || !shared.includes(selectedProgram)) {
-        selectedProgram = shared[0];
+        selectedProgram = shared.includes(preferredProgram) ? preferredProgram : shared[0];
     }
     if (selectedProgram !== prevSelected) refreshAllStats(selectedProgram);
 
@@ -341,6 +344,7 @@ async function prefillFromUrl() {
     ids = [...new Set(ids)].slice(0, MAX_ATHLETES);
     if (!ids.length) return;
     const urlProgram = params.get('program');
+    preferredProgram = urlProgram;
 
     try {
         const fulls = (await Promise.all(ids.map(id => fetchAthleteFull(id, null)))).filter(Boolean);
@@ -348,6 +352,10 @@ async function prefillFromUrl() {
         // Honour ?program= when everyone shares it, otherwise renderSlots picks a default.
         if (urlProgram && sharedPrograms().includes(urlProgram)) selectedProgram = urlProgram;
         renderSlots();
+        // A single prefilled athlete shows stats for the requested program.
+        if (selectedAthletes.length === 1 && urlProgram && athletePrograms(selectedAthletes[0]).includes(urlProgram)) {
+            await refreshAllStats(urlProgram);
+        }
         if (selectedAthletes.length >= 2 && selectedProgram) await performComparison(/* pushState= */ false);
     } catch (error) {
         console.error('Prefill error:', error);

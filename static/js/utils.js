@@ -321,13 +321,14 @@ Chart.register(yearBandsPlugin);
 // Generate up to ~maxCount "nice" round tick values spanning [min, max].
 // Steps snap to 1 / 2 / 2.5 / 5 x 10^n so axis labels read as round numbers
 // (e.g. #20, #40, #60) instead of chart.js's data-fitted values (#19, #50, #81).
-function niceTickValues(min, max, maxCount = 6) {
+// integer: steps are whole numbers and skip 2.5 (ranks: no #1.2 or #7.5).
+function niceTickValues(min, max, maxCount = 6, integer = false) {
     if (!isFinite(min) || !isFinite(max) || max <= min) return null;
     const rawStep = (max - min) / maxCount;
     const base = Math.pow(10, Math.floor(Math.log10(rawStep)));
     const f = rawStep / base;
-    const nf = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10;
-    const step = nf * base;
+    const nf = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 && !integer ? 2.5 : f <= 5 ? 5 : 10;
+    const step = integer ? Math.max(1, nf * base) : nf * base;
     const out = [];
     for (let v = Math.ceil(min / step) * step; v <= max + step * 1e-6; v += step) {
         out.push(Math.round(v * 1e6) / 1e6);
@@ -338,7 +339,7 @@ function niceTickValues(min, max, maxCount = 6) {
 // chart.js afterBuildTicks handler: replace auto ticks with nice round values.
 // opts.includeMin forces the axis min (e.g. rank #1) to appear as a tick.
 function applyNiceTicks(scale, opts = {}) {
-    const vals = niceTickValues(scale.min, scale.max, opts.maxCount || 6);
+    const vals = niceTickValues(scale.min, scale.max, opts.maxCount || 6, opts.integer);
     if (!vals) return;
     if (opts.includeMin && vals[0] !== scale.min) vals.unshift(scale.min);
     scale.ticks = vals.map(value => ({ value }));
@@ -359,11 +360,11 @@ const HELP_TOURS = {
         { sel: '.ratings-table th.rt-rating', column: true, title: 'Rating',
           text: _ratingBasics },
         { sel: '.ratings-table th.rt-rank', column: true, title: 'Rankings',
-          text: 'Where this rating places the athlete among all rated athletes - world and national rank. Click through to see the full leaderboard.' },
+          text: 'Where this rating places the athlete among athletes of the same gender who raced this course in the last 18 months - world and national rank. For retired athletes, the best world rank they held. Click through to see the full leaderboard.' },
         { sel: '.ratings-table th.rt-peak', column: true, title: 'Peak rating',
           text: 'The highest rating the athlete has ever held in each discipline, and the race where they hit it.' },
         { sel: '.ratings-table th.rt-best', column: true, title: 'Best race',
-          text: 'The single race that earned the biggest rating gain - the athlete\'s standout performance in each discipline.' },
+          text: 'The single race that earned the biggest rating gain in each discipline. Blank if no race gained rating.' },
         { sel: '.ratings-table th.rt-change', column: true, title: '1y change',
           text: 'Rating change over the last 12 months, with a sparkline of the trajectory. Green means improving, red means declining.' },
     ],
@@ -372,12 +373,14 @@ const HELP_TOURS = {
           text: 'Races this athlete is entered in, with the finishing position and splits the model expects from their current rating. These are estimates made before the race - they don\'t know the course or the conditions on the day, so actual results will differ.' },
     ],
     'athlete-results': [
-        { sel: '.table-section.results-table', title: 'Race results',
-          text: 'Every recorded pro result with full splits. The fastest split of the race is highlighted; every other time shows the gap behind it.' },
-        { sel: '.table-section.results-table .std-pill', title: 'Race tiers',
+        { sel: '.table-section.results-table:not(.upcoming-races-table)', title: 'Race results',
+          text: 'Every recorded result with full splits. The fastest split of the race is highlighted; every other time shows the gap behind it.' },
+        { sel: '.table-section.results-table:not(.upcoming-races-table) .std-pill', title: 'Race tiers',
           text: _tierText },
-        { sel: '.table-section.results-table th.sortable', title: 'Sorting',
+        { sel: '.table-section.results-table:not(.upcoming-races-table) th.sortable', title: 'Sorting',
           text: 'Click any column header to sort the table - by date, position, or any split.' },
+        { sel: '.results-sort-chips', title: 'Sorting',
+          text: 'Tap a chip to sort the table - by date, overall time or any split. Tap it again to reverse.' },
     ],
     'athlete-rating-history': [
         { sel: '.table-section.rating-table', title: 'Rating history',
@@ -420,7 +423,9 @@ const HELP_TOURS = {
 function openHelpTour(key) {
     const steps = (HELP_TOURS[key] || [])
         .map(s => ({ ...s, el: document.querySelector(s.sel) }))
-        .filter(s => s.el);
+        // Hidden targets (table headers on phones, sort chips on desktop) have
+        // no box to spotlight, so they drop out like missing ones.
+        .filter(s => s.el && s.el.getClientRects().length);
     if (!steps.length) return;
 
     const tour = document.createElement('div');

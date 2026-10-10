@@ -62,8 +62,10 @@ def format_rating_change(change: float) -> dict:
     if change is None or change == float('-inf'):
         return {"formatted_str": "", "css_class": "no-data",     "raw": None}
 
-    if change == 0:
-        return {"formatted_str": "",                              "css_class": "rating-neutral",  "raw": 0}
+    # Round before the sign test: a -0.3 change prints as 0 and must not get a
+    # red down chevron.
+    if round(change) == 0:
+        return {"formatted_str": "",                              "css_class": "rating-neutral",  "raw": change}
 
     if change > 0:
         return {"formatted_str": f"{_SVG_UP}{int(round(change))}", "css_class": "rating-increase", "raw": change}
@@ -77,7 +79,7 @@ def format_1yr_rating_change(change: float) -> dict:
     if change is None:
         return {"formatted_str": "", "css_class": ""}
 
-    if change == 0:
+    if round(change) == 0:
         return {
             "formatted_str": "",
             "css_class": ""
