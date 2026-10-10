@@ -103,8 +103,8 @@ _GENDER_WORD = {"male": "Men", "female": "Women", "mixed": "Mixed"}
 
 def _display_program(prog_name, gender=None):
     """Results-table program label. Division-tagged programs (French Grand Prix
-    'Elite Men (D1)') render as "{Division} {Gender}" ("D1 Men") — matching the
-    series-page tabs — while everything else shows its prog_name unchanged. The
+    'Elite Men (D1)') render as "{Division} {Gender}" ("D1 Men"), matching the
+    series-page tabs, while everything else shows its prog_name unchanged. The
     stored prog_name keeps "Elite" so sub_category derivation is unaffected.
     Gender falls back to the word already in the prog_name when not supplied."""
     div = queries.program_division(prog_name)
@@ -554,8 +554,9 @@ def get_athlete(request: Request, athlete_id: int,
     _std_map = {r["race_id"]: r.get("overall_std") for r in race_hist}
 
     def _std_class(std, disc="overall"):
+        # No standard (relay legs, unrated rollups) means no pill, not Beginner.
         if std is None:
-            return "beginner"
+            return None
         t = _thresholds[disc]
         if std >= t["p95"]: return "expert"
         if std >= t["p85"]: return "advanced"
@@ -666,14 +667,24 @@ def get_athlete(request: Request, athlete_id: int,
     upcoming_raw = queries.get_athlete_upcoming_races(athlete_id)
     upcoming_races = []
     if upcoming_raw:
+        # Grade each race on its own course, as the race page does: the field is
+        # scored on ratings from the race's course (short-course ratings
+        # understate a Kona field), and the thresholds come from that course's
+        # bucket, with AG races in their own bucket.
         _upcoming_ids = [r['race_id'] for r in upcoming_raw]
-        _standards_by_race = queries.get_upcoming_race_standards_bulk(_upcoming_ids)
+        _distances = {rid: queries.get_upcoming_race_distance_type(rid) for rid in _upcoming_ids}
+        _rating_course = {rid: queries.course_for_distance(d) or 'short' for rid, d in _distances.items()}
+        _standards_by_race = {}
+        for c in set(_rating_course.values()):
+            _standards_by_race.update(queries.get_upcoming_race_standards_bulk(
+                [rid for rid in _upcoming_ids if _rating_course[rid] == c], course=c))
         for race in upcoming_raw:
             # Standard pill classification
             std_class = None
             standards = _standards_by_race.get(race['race_id'], {})
             if standards and standards.get('overall'):
-                t = queries.get_race_standard_thresholds(race['gender'])['overall']
+                bucket = 'ag' if race['category'] == 'ag' else _rating_course[race['race_id']]
+                t = queries.get_race_standard_thresholds(race['gender'], course=bucket)['overall']
                 v = standards['overall']
                 if   v >= t['p95']: std_class = 'expert'
                 elif v >= t['p85']: std_class = 'advanced'

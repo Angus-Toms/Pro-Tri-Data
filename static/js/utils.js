@@ -202,6 +202,12 @@ function sortTable(table, column, asc = true) {
             const aMissing = !isFinite(aVal), bMissing = !isFinite(bVal);
             if (aMissing || bMissing) return aMissing - bMissing;
         }
+        // Non-finishers sink in either direction too, kept in status order
+        // (NC, LAP, DNF, DQ, DNS) so a descending sort opens on the last finisher.
+        if (sortType === 'position') {
+            const aOut = aVal >= 9995, bOut = bVal >= 9995;
+            if (aOut || bOut) return aOut && bOut ? aVal - bVal : aOut - bOut;
+        }
 
         if (aVal < bVal) return asc ? -1 : 1;
         if (aVal > bVal) return asc ? 1 : -1;
@@ -210,14 +216,18 @@ function sortTable(table, column, asc = true) {
     
     // Reappend sorted rows, then re-attach each sub-race row after its parent.
     // Parent rows are identified by the toggle button's data-parent matching the sub-row's data-parent.
+    // Each sub-row goes after the last one already placed for its parent, so
+    // heats keep their order however often the table is re-sorted.
     rows.forEach(row => tbody.appendChild(row));
+    const lastPlaced = {};
     subRows.forEach(sub => {
         const parentId = sub.dataset.parent;
-        const parentRow = parentId && Array.from(tbody.querySelectorAll('tr')).find(
+        const anchor = lastPlaced[parentId] || (parentId && Array.from(tbody.querySelectorAll('tr')).find(
             r => r.querySelector(`.sub-race-toggle[data-parent="${parentId}"]`)
-        );
-        if (parentRow) parentRow.after(sub);
+        ));
+        if (anchor) anchor.after(sub);
         else tbody.appendChild(sub);
+        lastPlaced[parentId] = sub;
     });
 }
 

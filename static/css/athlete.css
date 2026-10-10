@@ -606,10 +606,14 @@ tr.sub-race-row .link:hover {
    tables fit without scrolling, and the race column takes what the fixed
    splits leave. Comes after the width rules above so it wins. */
 .race-col-meta { display: none; }
+/* Phones and 768 hide the date and program cells too (base.css), so the meta
+   line is the only place the date shows; it must cover every width to 1024. */
+@media (max-width: 1024px) {
+    .race-col-meta { display: block; margin-top: 2px; font-size: 0.75rem; color: var(--text-lighter); }
+}
 @media (min-width: 769px) and (max-width: 1024px) {
     .results-table .date-col, .results-table .program-col,
     .rating-table  .date-col, .rating-table  .program-col { display: none; }
-    .race-col-meta { display: block; margin-top: 2px; font-size: 0.75rem; color: var(--text-lighter); }
     .results-table table, .rating-table table { min-width: 0; }
     .results-table .race-col, .rating-table .race-col { width: auto; }
     .results-table .position-col, .rating-table .position-col { width: 60px; }

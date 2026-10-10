@@ -4209,6 +4209,8 @@ def get_athlete_upcoming_races(athlete_id):
         JOIN upcoming_races ur ON sle.race_id = ur.race_id
         JOIN events e          ON ur.event_id = e.event_id
         WHERE sle.athlete_id = ?
+          -- Finished races leave upcoming_races only at the next ingest.
+          AND ur.race_date >= CURRENT_DATE
         ORDER BY ur.race_date ASC
     """, [athlete_id]))
 

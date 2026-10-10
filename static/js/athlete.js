@@ -1,7 +1,7 @@
 // Wrapped in an IIFE so re-executing this script (after turbo-lite partial
 // nav swaps the main content) doesn't collide with previous top-level `const`
-// bindings. Each re-run gets a fresh lexical scope; old Chart.js instances
-// whose canvases were detached become unreachable and get GC'd.
+// bindings. Each re-run gets a fresh lexical scope; the nav handler destroys
+// the old Chart.js instances before the swap.
 (function() {
 // ---------- Turbo-lite partial navigation for the mode switcher -------------
 // Bound FIRST so any later init error in this file doesn't leave the pills
@@ -26,11 +26,15 @@ if (!window._ptdAthleteNavBound) {
             if (!newHero || !newContent || !currHero || !currContent) {
                 throw new Error('ajax targets missing');
             }
+            // Chart.js keeps every chart in Chart.instances until destroy(), so
+            // swapping the canvases out would leak 23 instances per switch.
+            Object.values(Chart.instances).forEach(c => c.destroy());
             currHero.replaceWith(newHero);
             currContent.replaceWith(newContent);
             // The Follow button lives in the swapped hero; it needs its click
             // handler and the user's following state again.
             initFollowButtons(newHero);
+            initSortIcons();
             document.title = doc.title;
             history.pushState({}, '', url);
             const currScript = document.querySelector('script[src*="js/athlete.js"]');
@@ -387,6 +391,12 @@ function toggleNotableResults(button, targetId) {
 
     function sortRatings(col, axis, asc) {
         const tbody = table.querySelector('tbody');
+        // Position shares sortTable's status handling (non-finishers sink).
+        if (axis === 'position') {
+            sortTable(table, col, asc);
+            _restripeTable(tbody);
+            return;
+        }
         const rows  = Array.from(tbody.querySelectorAll('tr')).filter(
             r => !r.querySelector('.no-data')
         );

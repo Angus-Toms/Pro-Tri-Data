@@ -343,7 +343,7 @@
                     {% elif r.pred_pos == 2 %}<span class="pos-circle silver">2</span>
                     {% elif r.pred_pos == 3 %}<span class="pos-circle bronze">3</span>
                     {% elif r.pred_pos %}<span class="pos-other">{{ r.pred_pos }}</span>
-                    {% else %}<span class="pos-other">—</span>{% endif %}
+                    {% else %}<span class="pos-other">-</span>{% endif %}
                 </td>
                 <td class="time-col split-col" data-value="{{ r.pred_swim or '' }}">
                     <span class="time-disc-label">Swim</span>
@@ -461,7 +461,7 @@
                         {%- if race.sub_races %}<button class="sub-race-toggle" data-parent="{{ race.race_id }}" aria-label="Show sub-races"><svg class="sub-race-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></button>{% endif %}</span>
                 </td>
                 <td class="program-col muted-col" data-value="{{ race.program }}">{{ race.program }}</td>
-                <td class="position-col" data-value="{{ race.position or 9999 }}">
+                <td class="position-col" data-value="{{ race.position if race.status == 'Finished' and race.position else race.status }}">
                     {% if race.position == 1 %}<span class="pos-circle gold">1</span>
                     {% elif race.position == 2 %}<span class="pos-circle silver">2</span>
                     {% elif race.position == 3 %}<span class="pos-circle bronze">3</span>
@@ -469,37 +469,37 @@
                     {% else %}<span class="pos-other">{{ race.position }}</span>
                     {% endif %}
                 </td>
-                <td class="time-col split-col" data-value="{{ race.swim }}">
+                <td class="time-col split-col" data-value="{{ '' if race.is_relay else race.swim }}">
                     <span class="time-disc-label">Swim</span>
                     <span class="time-cell-main{{ ' fastest' if race.swim_fastest }}">{{ race.swim }}</span>
                     {% if race.swim_fastest %}<span class="time-cell-gap">fastest</span>
                     {% elif race.swim_behind %}<span class="time-cell-gap">{{ race.swim_behind }}</span>{% endif %}
                 </td>
-                <td class="time-col split-col" data-value="{{ race.t1 }}">
+                <td class="time-col split-col" data-value="{{ '' if race.is_relay else race.t1 }}">
                     <span class="time-disc-label">T1</span>
                     <span class="time-cell-main{{ ' fastest' if race.t1_fastest }}">{{ race.t1 }}</span>
                     {% if race.t1_fastest %}<span class="time-cell-gap">fastest</span>
                     {% elif race.t1_behind %}<span class="time-cell-gap">{{ race.t1_behind }}</span>{% endif %}
                 </td>
-                <td class="time-col split-col" data-value="{{ race.bike }}">
+                <td class="time-col split-col" data-value="{{ '' if race.is_relay else race.bike }}">
                     <span class="time-disc-label">Bike</span>
                     <span class="time-cell-main{{ ' fastest' if race.bike_fastest }}">{{ race.bike }}</span>
                     {% if race.bike_fastest %}<span class="time-cell-gap">fastest</span>
                     {% elif race.bike_behind %}<span class="time-cell-gap">{{ race.bike_behind }}</span>{% endif %}
                 </td>
-                <td class="time-col split-col" data-value="{{ race.t2 }}">
+                <td class="time-col split-col" data-value="{{ '' if race.is_relay else race.t2 }}">
                     <span class="time-disc-label">T2</span>
                     <span class="time-cell-main{{ ' fastest' if race.t2_fastest }}">{{ race.t2 }}</span>
                     {% if race.t2_fastest %}<span class="time-cell-gap">fastest</span>
                     {% elif race.t2_behind %}<span class="time-cell-gap">{{ race.t2_behind }}</span>{% endif %}
                 </td>
-                <td class="time-col split-col" data-value="{{ race.run }}">
+                <td class="time-col split-col" data-value="{{ '' if race.is_relay else race.run }}">
                     <span class="time-disc-label">Run</span>
                     <span class="time-cell-main{{ ' fastest' if race.run_fastest }}">{{ race.run }}</span>
                     {% if race.run_fastest %}<span class="time-cell-gap">fastest</span>
                     {% elif race.run_behind %}<span class="time-cell-gap">{{ race.run_behind }}</span>{% endif %}
                 </td>
-                <td class="time-col overall-col" data-value="{{ race.overall }}">
+                <td class="time-col overall-col" data-value="{{ '' if race.is_relay else race.overall }}">
                     <span class="overall-time">{{ race.overall }}</span>
                     {% if race.overall_behind %}<span class="time-cell-gap">{{ race.overall_behind }}</span>{% endif %}
                 </td>
@@ -516,11 +516,11 @@
                 </td>
                 <td class="race-col" data-value="{{ sub.race_title }}">
                     <a href="/race/{{ sub.race_id }}" class="link">{{ sub.race_title }}</a>
-                    <span class="std-pill std-pill--{{ sub.standard_class }}">{{ sub.standard_class|title }}</span>
+                    {% if sub.standard_class %}<span class="std-pill std-pill--{{ sub.standard_class }}">{{ sub.standard_class|title }}</span>{% endif %}
                     <span class="race-col-meta">{{ sub.race_date.strftime('%d %b %Y') }} · {{ sub.program }}</span>
                 </td>
                 <td class="program-col muted-col">{{ sub.program }}</td>
-                <td class="position-col" data-value="{{ sub.position or 9999 }}">
+                <td class="position-col" data-value="{{ sub.position if sub.status == 'Finished' and sub.position else sub.status }}">
                     {% if sub.position == 1 %}<span class="pos-circle gold">1</span>
                     {% elif sub.position == 2 %}<span class="pos-circle silver">2</span>
                     {% elif sub.position == 3 %}<span class="pos-circle bronze">3</span>
@@ -605,11 +605,11 @@
                 <td class="date-col muted-col" data-value="{{ rating.race_date }}">{{ rating.race_date.strftime('%d %b %Y') }}</td>
                 <td class="race-col" data-value="{{ rating.race_title }}">
                     <a href="/race/{{ rating.race_id }}" class="link">{{ rating.race_title }}</a>
-                    <span class="std-pill std-pill--{{ rating.standard_class }}">{{ rating.standard_class|title }}</span>
+                    {% if rating.standard_class %}<span class="std-pill std-pill--{{ rating.standard_class }}">{{ rating.standard_class|title }}</span>{% endif %}
                     <span class="race-col-meta">{{ rating.race_date.strftime('%d %b %Y') }} · {{ rating.race_program }}</span>
                 </td>
                 <td class="program-col muted-col" data-value="{{ rating.race_program }}">{{ rating.race_program }}</td>
-                <td class="position-col" data-value="{{ rating.position or 9999 }}">
+                <td class="position-col" data-value="{{ rating.position if rating.status == 'Finished' and rating.position else rating.status }}">
                     {% if rating.position == 1 %}<span class="pos-circle gold">1</span>
                     {% elif rating.position == 2 %}<span class="pos-circle silver">2</span>
                     {% elif rating.position == 3 %}<span class="pos-circle bronze">3</span>
