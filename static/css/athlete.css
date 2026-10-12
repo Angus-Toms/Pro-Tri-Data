@@ -152,7 +152,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 0.75rem;
-    margin: 1.25rem 0 0;
+    margin: 1.75rem 0 0;
 }
 .career-card {
     display: grid;
@@ -180,17 +180,57 @@
 .career-card-line { font-size: 0.8rem; color: var(--text-light); font-variant-numeric: tabular-nums; }
 
 
-/* Career header: the career's figures on the left, Current Form on the right
-   (stacked below 768). */
-.career-header {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 1.25rem 2.5rem;
-    margin: 1.5rem 0 0.75rem;
+/* Career panel: one card under the career cards with the career's figures
+   on the left and Current Form on the right, split by a rule (stacked
+   below 768). */
+.career-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1.25rem 2rem;
+    margin: 0.75rem 0 2rem;
+    padding: 1.25rem 1.5rem;
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
 }
-.career-header-main { min-width: 0; }
+.career-panel .career-form { border-left: 1px solid var(--border-color); padding-left: 2rem; }
+.career-header-main { min-width: 0; align-self: center; }
+
+/* Upcoming: one line per entry, athlete-level, above the career cards. */
+.upcoming-card {
+    margin: 1.75rem 0 0;
+    padding: 0.85rem 1.25rem;
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+}
+.upcoming-card-head {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-bottom: 0.35rem;
+}
+.upcoming-list { list-style: none; margin: 0; padding: 0; }
+.upcoming-item {
+    display: grid;
+    grid-template-columns: 7.5rem minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 0.25rem 1rem;
+    padding: 0.45rem 0;
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+}
+.upcoming-item + .upcoming-item { border-top: 1px solid var(--border-color); }
+.upcoming-date { color: var(--text-light); font-size: 0.85rem; }
+.upcoming-race a { color: var(--text-color); font-weight: 600; text-decoration: none; }
+.upcoming-race a:hover { color: var(--primary-color); }
+.upcoming-meta { display: flex; gap: 1.25rem; color: var(--text-light); font-size: 0.85rem; white-space: nowrap; }
+.upcoming-meta b { color: var(--text-color); }
 .career-header-title-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem 0.75rem; margin-bottom: 0.6rem; }
 .career-header-title { font-size: 1.35rem; font-weight: 800; margin: 0; }
 .career-provisional {
@@ -248,19 +288,27 @@
    standards table; these rules only apply here. World rank is the headline,
    the rating is secondary, and nothing needs a horizontal scroll. */
 .career-ratings { min-width: 0; }
-.career-ratings th.rt-rank, .career-ratings td.rt-rank { width: 9em; }
+/* Proportional columns that always fill the card, so no column hoards the
+   slack (Peak used to take half the table). */
+.career-ratings th.rt-disc   { width: 15%; }
+.career-ratings th.rt-rank   { width: 21%; }
+.career-ratings th.rt-rating { width: 13%; }
+.career-ratings th.rt-change { width: 12%; }
+.career-ratings th.rt-nat    { width: 12%; }
+.career-ratings th.rt-peak   { width: auto; }
+.career-ratings { table-layout: fixed; }
+.career-ratings td, .career-ratings td.rt-disc, .career-ratings td.rt-rank, .career-ratings td.rt-rating,
+.career-ratings td.rt-change, .career-ratings td.rt-peak { width: auto; padding-top: 0.75rem; padding-bottom: 0.75rem; }
 .career-ratings td.rt-rank a,
 .career-ratings td.rt-rank { font-size: 1.15rem; font-weight: 800; color: var(--text-color); text-decoration: none; }
 .career-ratings td.rt-rank a:hover { color: var(--primary-color); }
-.career-ratings td.rt-rank .rt-of { display: block; font-size: 0.72rem; font-weight: 500; color: var(--text-light); }
+.career-ratings td.rt-rank .rt-of { font-size: 0.75rem; font-weight: 500; color: var(--text-light); margin-left: 0.35rem; }
 .career-ratings td.rt-rating { font-size: 0.95rem; font-weight: 600; }
 .career-ratings td.rt-disc { font-size: 0.85rem; color: var(--text-light); }
 .career-ratings .rt-row--overall td.rt-disc { color: var(--text-color); font-weight: 700; }
-.career-ratings th.rt-change, .career-ratings td.rt-change { width: 6em; min-width: 0; }
-.career-ratings th.rt-nat, .career-ratings td.rt-nat { width: 7em; }
+.career-ratings td.rt-change { min-width: 0; }
 .career-ratings td.rt-nat a { font-weight: 700; color: var(--text-color); text-decoration: none; }
 .career-ratings td.rt-nat a:hover { color: var(--primary-color); }
-.career-ratings th.rt-peak, .career-ratings td.rt-peak { width: auto; }
 .career-ratings .rt-peak-main { display: inline; }
 .rt-peak-date { font-size: 0.8rem; color: var(--text-light); margin-left: 0.35rem; white-space: nowrap; }
 .rt-at-peak {
@@ -342,16 +390,6 @@
     border-radius: var(--border-radius-lg);
     overflow: hidden;
     margin-bottom: 2rem;
-}
-
-.palmares-card-header {
-    background: var(--navy);
-    color: #fff;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    padding: 0.6rem 1.25rem;
 }
 
 .palmares-grid {
@@ -648,7 +686,6 @@ tr.sub-race-row .link:hover {
    rows off the right edge. */
 @media (min-width: 769px) {
     .results-table table         { width: 100%; min-width: 988px; }
-    .upcoming-races-table table  { min-width: 680px; }
     .rating-table table          { min-width: 988px; }
 }
 
@@ -679,11 +716,6 @@ tr.sub-race-row .link:hover {
 
 /* Upcoming races table - wider pos col, 4 splits plus win chance. The race
    column takes what's left so the table fits without scrolling. */
-.upcoming-races-table .date-col     { width: 110px; }
-.upcoming-races-table .race-col     { width: auto; }
-.upcoming-races-table .program-col  { width: 120px; }
-.upcoming-races-table .position-col { width: 72px; }
-.upcoming-races-table .time-col     { width: 90px; }
 
 /* Mirror the results-table pattern so declared widths sum to exactly 100%
    (no proportional rescaling). Fixed total = 135+247+95+80+110 = 667; the
@@ -711,8 +743,6 @@ tr.sub-race-row .link:hover {
     .results-table .time-col    { width: 72px; }
     .rating-table  .rating-col  { width: 80px; }
     .results-table .overall-col, .rating-table .overall-col { width: 100px; }
-    .upcoming-races-table .time-col { width: 80px; }
-    .upcoming-races-table .pct-col  { width: 84px; }
 }
 
 /* (Moved to base.css so the race-page rating tables also keep the
@@ -755,7 +785,11 @@ tr.sub-race-row .link:hover {
         min-width: 0;
     }
 
+    .career-panel { grid-template-columns: minmax(0, 1fr); }
+    .career-panel .career-form { border-left: 0; padding-left: 0; border-top: 1px solid var(--border-color); padding-top: 1rem; }
     .career-form { width: 100%; min-width: 0; }
+    .upcoming-item { grid-template-columns: 6.5rem minmax(0, 1fr); }
+    .upcoming-meta { grid-column: 2; gap: 1rem; }
     .career-figures { gap: 0.75rem 1.5rem; }
     .career-figures dd { font-size: 1.35rem; }
 

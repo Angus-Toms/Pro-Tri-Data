@@ -680,6 +680,7 @@ def get_athlete(request: Request, athlete_id: int,
             upcoming_races.append({
                 'race_id':    race['race_id'],
                 'event_name': race['event_name'],
+                'race_handle': race['race_handle'] or race['event_name'],
                 'event_id':   race['event_id'],
                 'prog_name':  race['prog_name'],
                 'race_date':  race['race_date'],

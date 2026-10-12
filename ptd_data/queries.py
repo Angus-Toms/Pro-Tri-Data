@@ -4195,7 +4195,7 @@ def get_athlete_upcoming_races(athlete_id):
     """
     conn = _get_conn()
     cols = ["race_id", "prog_name", "race_date", "gender", "event_spec_ids",
-            "category", "event_name", "event_id", "country"]
+            "category", "event_name", "event_id", "country", "race_handle"]
     return _dicts(cols, conn.execute("""
         SELECT
             ur.race_id,
@@ -4206,7 +4206,8 @@ def get_athlete_upcoming_races(athlete_id):
             ur.category,
             e.name      AS event_name,
             e.event_id,
-            e.country
+            e.country,
+            ur.race_handle
         FROM start_list_entries sle
         JOIN upcoming_races ur ON sle.race_id = ur.race_id
         JOIN events e          ON ur.event_id = e.event_id
