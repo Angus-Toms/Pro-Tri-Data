@@ -477,23 +477,25 @@ def get_athlete(request: Request, athlete_id: int,
     # yet (only entries) means no chip either.
     last_any = max(queries.get_athlete_last_race_per_course(athlete_id).values(), default=None)
     active = last_any is None or last_any >= date.today() - timedelta(days=int(18 * 30.44))
+    no_relays = {"starts": 0, "wins": 0, "seconds": 0, "thirds": 0, "podiums": 0, "dnfs": 0}
+    relay = queries.get_athlete_relay_stats(athlete_id) if category == 'elite' and course == 'short' else no_relays
     athlete_dict = {
         **info,
         "race_starts":   race_starts,
         "wins":          wins,
         "podiums":       podiums,
-        "win_count":     wins,
-        "podium_count":  podiums,
+        "win_count":     wins + relay["wins"],
+        "podium_count":  podiums + relay["podiums"],
         "win_pct":       wins   / max(race_starts, 1),
         "podium_pct":    podiums / max(race_starts, 1),
         "active":        active,
         "is_low_confidence": race_starts < LOW_CONF_STARTS,
-        "dnfs":          stats["dnfs"],
-        "seconds":       stats["seconds"],
-        # Relay legs count as starts on screen (the Races table lists them);
-        # race_starts stays individual for the provisional gate.
-        "relay_starts":  queries.get_athlete_relay_starts(athlete_id) if category == 'elite' and course == 'short' else 0,
-        "thirds":        stats["thirds"],
+        "dnfs":          stats["dnfs"] + relay["dnfs"],
+        "seconds":       stats["seconds"] + relay["seconds"],
+        # Relays count on screen, scored on the team's result (the Races table
+        # lists them); race_starts stays individual for the provisional gate.
+        "relay_starts":  relay["starts"],
+        "thirds":        stats["thirds"] + relay["thirds"],
         "first_year":    stats["first_race_date"].year if stats["first_race_date"] else None,
         "last_year":     stats["last_race_date"].year if stats["last_race_date"] else None,
     }
@@ -756,6 +758,7 @@ def get_athlete(request: Request, athlete_id: int,
         st = queries.get_athlete_stats(athlete_id, cat, course=c)
         if not st["race_starts"]:
             return None
+        rl = queries.get_athlete_relay_stats(athlete_id) if key == 'elite-short' else no_relays
         world = "AG world" if cat == 'ag' else "World"
         last = st["last_race_date"]
         current = last >= cutoff_active
@@ -769,9 +772,9 @@ def get_athlete(request: Request, athlete_id: int,
             "category":  cat,
             "headline":  _headline(key, c, cat),
             "span":      str(y0) if y0 == y1 else f"{y0}-{y1}",
-            "starts":    st["race_starts"] + (queries.get_athlete_relay_starts(athlete_id) if key == 'elite-short' else 0),
-            "wins":      st["wins"],
-            "podiums":   st["podiums"],
+            "starts":    st["race_starts"] + rl["starts"],
+            "wins":      st["wins"] + rl["wins"],
+            "podiums":   st["podiums"] + rl["podiums"],
             "rank":      rank,
             "rank_label": world if current else f'Best {world.lower()}',
             "medal":     _headline_pos(key, c, cat),

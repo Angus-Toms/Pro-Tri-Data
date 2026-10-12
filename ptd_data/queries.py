@@ -2275,15 +2275,23 @@ def get_athlete_race_predictions(athlete_id):
 
 
 @lru_cache(maxsize=8192)
-def get_athlete_relay_starts(athlete_id):
-    """Elite mixed relay legs raced (one per relay). They sit in relay_legs,
-    not results, so get_athlete_stats never counts them."""
-    return _get_conn().execute("""
-        SELECT COUNT(DISTINCT l.race_id)
-        FROM relay_legs_corrected l
+def get_athlete_relay_stats(athlete_id):
+    """Elite mixed relays raced, scored on the team's result: starts, wins,
+    seconds, thirds, podiums, dnfs. Relay legs sit in relay_legs, not
+    results, so get_athlete_stats never counts them."""
+    row = _get_conn().execute("""
+        SELECT COUNT(*),
+               COUNT(CASE WHEN rt.position = 1  THEN 1 END),
+               COUNT(CASE WHEN rt.position = 2  THEN 1 END),
+               COUNT(CASE WHEN rt.position = 3  THEN 1 END),
+               COUNT(CASE WHEN rt.status <> 'Finished' THEN 1 END)
+        FROM (SELECT DISTINCT race_id, team_id FROM relay_legs_corrected WHERE athlete_id = ?) l
+        JOIN relay_teams rt ON rt.race_id = l.race_id AND rt.team_id = l.team_id
         JOIN races r ON r.race_id = l.race_id
-        WHERE l.athlete_id = ? AND r.category = 'elite'
-    """, [athlete_id]).fetchone()[0]
+        WHERE r.category = 'elite'
+    """, [athlete_id]).fetchone()
+    return {"starts": row[0], "wins": row[1], "seconds": row[2], "thirds": row[3],
+            "podiums": row[1] + row[2] + row[3], "dnfs": row[4]}
 
 
 def get_athlete_relay_history(athlete_id):
