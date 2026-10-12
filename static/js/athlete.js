@@ -126,7 +126,7 @@ function _positionTooltip(tooltipEl, chart, tooltip) {
 if (!window._ptdChartTipScrollBound) {
     window._ptdChartTipScrollBound = true;
     window.addEventListener('scroll', () => {
-        ['ratings-chart-tooltip', 'world-ranking-tooltip', 'national-ranking-tooltip', 'pct-behind-tooltip']
+        ['ratings-chart-tooltip', 'world-ranking-tooltip', 'national-ranking-tooltip', 'pct-behind-tooltip', 'vp-tooltip']
             .forEach(id => { const el = document.getElementById(id); if (el) el.style.opacity = '0'; });
     }, { passive: true });
 }
@@ -665,6 +665,94 @@ function rrRender() {
         activeDisc = b.dataset.disc; press(discBtns, b); rrRender();
     }));
     rrRender();
+})();
+
+// Versus prediction ---------------------------------------------------------
+// Predicted place (across) against finishing place (down, 1st at the top).
+// The diagonal is "as predicted"; the shaded side above it is beating the
+// prediction. Podium finishes take their medal colour.
+(function initVsPrediction() {
+    const pts = getJSON('vp-chart-data');
+    const canvas = document.getElementById('vp-canvas');
+    if (!pts || !canvas) return;
+    // Log scales on both axes, as for ranks: places 1 to 10 get room and the
+    // diagonal stays straight.
+    const max = Math.max(...pts.map(p => Math.max(p.x, p.y)));
+    const STEPS = [1, 2, 3, 5, 10, 20, 50, 100, 200];
+    const top = STEPS.find(v => v >= max) || max;
+    const MEDAL = { 1: '#f5c842', 2: '#c8d8e0', 3: '#d4a870' };
+    const tipEl = _makeRankTooltipEl('vp-tooltip');
+    const ord = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : { 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th');
+
+    const guide = {
+        id: 'vpGuide',
+        beforeDatasetsDraw(chart) {
+            const { ctx, scales: { x, y } } = chart;
+            const p = (a, b) => [x.getPixelForValue(a), y.getPixelForValue(b)];
+            ctx.save();
+            // Above the diagonal: finished ahead of the prediction.
+            ctx.fillStyle = 'rgba(5, 150, 105, 0.06)';
+            ctx.beginPath(); ctx.moveTo(...p(1, 1)); ctx.lineTo(...p(top, 1)); ctx.lineTo(...p(top, top)); ctx.closePath(); ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.setLineDash([4, 4]);
+            ctx.beginPath(); ctx.moveTo(...p(1, 1)); ctx.lineTo(...p(top, top)); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.font = "600 11px 'Plus Jakarta Sans', sans-serif";
+            ctx.fillStyle = 'rgba(4, 120, 87, 0.8)'; ctx.textAlign = 'right';
+            const area = chart.chartArea;
+            ctx.fillText('Beat prediction', area.right - 6, area.top + area.height * 0.45);
+            ctx.fillStyle = 'rgba(185, 28, 28, 0.7)'; ctx.textAlign = 'left';
+            ctx.fillText('Missed', area.left + 6, area.bottom - 8);
+            ctx.restore();
+        },
+    };
+
+    function tooltip(context) {
+        const { chart, tooltip: t } = context;
+        if (t.opacity === 0 || !t.dataPoints.length) { tipEl.style.opacity = '0'; return; }
+        const d = t.dataPoints[0].raw, diff = d.x - d.y;
+        const verdict = diff > 0 ? `<span style="color:#5eead4">${diff} place${diff === 1 ? '' : 's'} better</span>`
+                      : diff < 0 ? `<span style="color:#f87171">${-diff} place${diff === -1 ? '' : 's'} worse</span>`
+                      : '<span style="color:rgba(255,255,255,0.6)">As predicted</span>';
+        const row = (k, v) => `<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="color:rgba(255,255,255,0.5);font-size:11px">${k}</span><span style="color:#fff;font-size:13px;font-weight:600">${v}</span></div>`;
+        tipEl.innerHTML = `
+            <div style="padding:7px 12px;border-bottom:1px solid rgba(255,255,255,0.08)">
+                <div style="color:#fff;font-weight:700;font-size:13px;line-height:1.2">${escapeHtml(d.race)}</div>
+                <div style="font-size:11px;color:rgba(255,255,255,0.4)">${d.date}</div>
+            </div>
+            <div style="padding:8px 12px;display:flex;flex-direction:column;gap:4px">
+                ${row('Predicted', ord(d.x) + (d.win_pct != null ? ` · win ${(d.win_pct * 100).toFixed(0)}%` : ''))}
+                ${row('Finished', ord(d.y))}
+                <div style="font-size:12px;font-weight:600">${verdict}</div>
+            </div>`;
+        _positionTooltip(tipEl, chart, t);
+    }
+
+    const ticks = { color: '#999', autoSkip: false, callback: v => v };
+    const setTicks = sc => { sc.ticks = STEPS.filter(v => v <= top).map(v => ({ value: v })); };
+    new Chart(canvas, {
+        type: 'scatter',
+        data: { datasets: [{
+            data: pts,
+            pointRadius: ctx => (ctx.raw?.y <= 3 ? 5.5 : 4),
+            pointHoverRadius: ctx => (ctx.raw?.y <= 3 ? 7 : 5.5),
+            pointBackgroundColor: ctx => MEDAL[ctx.raw?.y] || 'rgba(107, 114, 128, 0.55)',
+            pointBorderColor: ctx => (ctx.raw?.y <= 3 ? 'rgba(0,0,0,0.25)' : 'transparent'),
+            pointBorderWidth: 1,
+        }] },
+        options: {
+            responsive: true, maintainAspectRatio: true, aspectRatio: 1,
+            animation: { duration: 500 },
+            onClick: (e, els) => { if (els.length) location.href = '/race/' + pts[els[0].index].race_id; },
+            plugins: { legend: { display: false }, yearBands: false, tooltip: { enabled: false, external: tooltip } },
+            scales: {
+                x: { type: 'logarithmic', min: 0.85, max: top * 1.12, grid: { color: 'rgba(0,0,0,0.05)' }, ticks, afterBuildTicks: setTicks,
+                     title: { display: true, text: 'Predicted place', color: '#6b7280', font: { size: 11, weight: '600' } } },
+                y: { type: 'logarithmic', min: 0.85, max: top * 1.12, reverse: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks, afterBuildTicks: setTicks,
+                     title: { display: true, text: 'Finished', color: '#6b7280', font: { size: 11, weight: '600' } } },
+            },
+        },
+        plugins: [guide],
+    });
 })();
 
 // % Behind Leader chart -------------------------------------------------------

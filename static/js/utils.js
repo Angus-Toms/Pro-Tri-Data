@@ -380,6 +380,10 @@ const HELP_TOURS = {
         { sel: '#rr-canvas', title: 'Rating and rank',
           text: 'The rating, world rank or national rank after each race, in any discipline. The line steps because a rating only changes at a race; it is dashed across breaks of more than a year. Ranks use a log scale so the top places get room, with the top 10 shaded. Click a point to open the race.' },
     ],
+    'athlete-vs-prediction': [
+        { sel: '#vp-canvas', title: 'Versus prediction',
+          text: 'Each dot is a race: the place the model predicted before it, against where the athlete finished. Dots on the dashed line went as predicted; dots in the shaded area above it beat the prediction. Only confident predictions count (enough races for a settled rating), and relay legs are left out.' },
+    ],
     'athlete-races': [
         { sel: '#races-table', title: 'Races',
           text: 'Every start in this career, newest first, with the date, distance and program under each race. Times shows the splits: the fastest split of the race is highlighted and every other time shows the gap behind it.' },

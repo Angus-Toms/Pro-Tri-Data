@@ -902,3 +902,25 @@
     .rr-controls .th-full { display: none; }
     .rr-controls .th-short { display: inline; }
 }
+
+/* Versus prediction: square scatter beside its scorecard (stacked below 768). */
+.vp-card { display: grid; grid-template-columns: minmax(0, 480px) minmax(0, 1fr); gap: 1.5rem 2rem; align-items: start; padding: 1rem 1.25rem; margin-bottom: 2rem; }
+.vp-chart { position: relative; width: 100%; }
+.vp-score { margin: 0; }
+.vp-score > div { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; padding: 0.5rem 0; border-top: 1px solid var(--border-color); font-size: 0.88rem; }
+.vp-score > div:first-child { border-top: 0; }
+.vp-score dt { color: var(--text-light); }
+.vp-score dd { margin: 0; font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; }
+.vp-score dd small { font-weight: 500; color: var(--text-light); }
+.vp-score .vp-swing { flex-direction: column; gap: 0.15rem; }
+.vp-score .vp-swing dd { text-align: left; font-weight: 600; }
+.vp-score .vp-swing a { color: var(--text-color); text-decoration: none; }
+.vp-score .vp-swing a:hover { color: var(--primary-color); }
+.vp-score .vp-swing small { display: block; }
+@media (max-width: 768px) {
+    .vp-card { grid-template-columns: minmax(0, 1fr); }
+    .vp-chart { max-width: 420px; margin: 0 auto; }
+}
+@media (max-width: 480px) {
+    .vp-card { padding: 0.75rem; }
+}

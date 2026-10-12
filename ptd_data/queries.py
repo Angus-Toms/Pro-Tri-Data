@@ -2510,13 +2510,14 @@ def get_athlete_race_history(athlete_id, category='elite', course='short'):
 
 def get_athlete_race_predictions(athlete_id):
     """Stored pre-race predictions for every race the athlete has one for:
-    {race_id: {"predicted_position", "overall_s"}}."""
+    {race_id: {"predicted_position", "overall_s", "win_pct", "is_low_confidence"}}."""
     rows = _get_conn().execute("""
-        SELECT race_id, predicted_position, overall_s
+        SELECT race_id, predicted_position, overall_s, win_pct, is_low_confidence
         FROM race_predictions
         WHERE athlete_id = ?
     """, [athlete_id]).fetchall()
-    return {r: {"predicted_position": p, "overall_s": o} for r, p, o in rows}
+    return {r: {"predicted_position": p, "overall_s": o, "win_pct": w, "is_low_confidence": lc}
+            for r, p, o, w, lc in rows}
 
 
 @lru_cache(maxsize=8192)

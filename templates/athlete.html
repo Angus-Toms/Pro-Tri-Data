@@ -472,6 +472,28 @@
     <div class="rr-chart"><canvas id="rr-canvas" aria-label="Rating and rank after each race"></canvas></div>
 </div>
 
+{% if vs_prediction %}
+{# Versus prediction: does this athlete beat the model? Predicted place
+   against finishing place for confident predictions; the diagonal is "as
+   predicted" and the shaded side is beating it. The scorecard counts it up. #}
+{% set vp = vs_prediction %}
+<div class="page-section-head"><span>Versus prediction {{ help_icon('athlete-vs-prediction') }}</span></div>
+<div class="collapsible-card vp-card">
+    <div class="vp-chart"><canvas id="vp-canvas" aria-label="Predicted against finishing place for {{ vp.finished }} races"></canvas></div>
+    <dl class="vp-score">
+        <div><dt>Beat the predicted place</dt><dd>{{ vp.beat }} <small>of {{ vp.finished }}</small></dd></div>
+        <div><dt>Matched it</dt><dd>{{ vp.matched }}</dd></div>
+        <div><dt>Missed it</dt><dd>{{ vp.missed }}</dd></div>
+        {% if vp.pred_wins %}<div><dt>Predicted wins converted</dt><dd>{{ vp.pred_wins_won }} <small>of {{ vp.pred_wins }}</small></dd></div>{% endif %}
+        <div><dt>Wins against expected</dt><dd>{{ vp.wins }} <small>vs {{ "%.1f"|format(vp.expected_wins) }}</small></dd></div>
+        {% if vp.dnf %}<div><dt>Did not finish</dt><dd>{{ vp.dnf }} <small>of {{ vp.starts }}</small></dd></div>{% endif %}
+        {% if vp.best.pos < vp.best.pred %}<div class="vp-swing"><dt>Biggest beat</dt><dd><a href="/race/{{ vp.best.race_id }}">{{ vp.best.race }}</a><small>{{ vp.best.pred|ordinal }} predicted, finished {{ vp.best.pos|ordinal }}</small></dd></div>{% endif %}
+        {% if vp.worst.pos > vp.worst.pred %}<div class="vp-swing"><dt>Biggest miss</dt><dd><a href="/race/{{ vp.worst.race_id }}">{{ vp.worst.race }}</a><small>{{ vp.worst.pred|ordinal }} predicted, finished {{ vp.worst.pos|ordinal }}</small></dd></div>{% endif %}
+    </dl>
+</div>
+<script id="vp-chart-data" type="application/json">{{ vp.points | tojson }}</script>
+{% endif %}
+
 <div class="page-section-head" id="pct-behind-section-title">% Behind Leader - Overall</div>
 <div class="collapsible-card ratings-history-section">
     <div class="ratings-main-chart">
