@@ -538,8 +538,8 @@ const rrDecor = {
             ctx.fillStyle = color; ctx.fillText(text, x, y);
         };
         const pp = meta.data[pi], lp = meta.data[li];
-        const when = new Date(peak.x).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
-        const peakText = `${rrMode === 'rating' ? 'Peak' : 'Best'} ${fmt(peak.y)} · ${when}`;
+        const month = x => new Date(x).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+        const peakText = rrMode === 'rating' ? `Peak ${fmt(peak.y)} · ${month(peak.x)}` : _rrBestText(data, peak.y);
         const above = rrMode === 'rating' ? -10 : 18;
         label(peakText, Math.max(chart.chartArea.left + 4, Math.min(pp.x, chart.chartArea.right - 4)), pp.y + above,
               pp.x > chart.chartArea.left + chart.chartArea.width * 0.6 ? 'right' : 'left', '#1a1a2e');
@@ -549,6 +549,34 @@ const rrDecor = {
         ctx.restore();
     },
 };
+
+// The best rank with how long it was held, from the step line: "#1 since
+// May 2024" (held now, "· first ..." if it was lost and regained), "#1 for
+// 8 months · from May 2023", or "#1 for 2.2 years in total · first May 2023"
+// when it was held in several spells.
+function _rrBestText(data, best) {
+    const month = x => new Date(x).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+    const spells = [];
+    data.forEach((p, i) => {
+        if (p.now || p.y !== best) return;
+        const end = data[i + 1] ? data[i + 1].x : p.x;
+        const last = spells[spells.length - 1];
+        if (last && last.endIdx === i - 1) { last.end = end; last.endIdx = i; }
+        else spells.push({ start: p.x, end, endIdx: i });
+    });
+    const days = spells.reduce((t, sp) => t + (new Date(sp.end) - new Date(sp.start)) / 864e5, 0);
+    const held = days < 60 ? `${Math.max(1, Math.round(days / 7))} weeks`
+               : days < 730 ? `${Math.round(days / 30.44)} months`
+               : `${(days / 365.25).toFixed(1)} years`;
+    const rank = '#' + best.toLocaleString('en-GB');
+    const current = data[data.length - 1].y === best;
+    const first = month(spells[0].start);
+    if (current) {
+        const since = month(spells[spells.length - 1].start);
+        return spells.length === 1 ? `${rank} since ${since}` : `${rank} since ${since} · first ${first}`;
+    }
+    return spells.length === 1 ? `${rank} for ${held} · from ${first}` : `${rank} for ${held} in total · first ${first}`;
+}
 
 function rrTooltip(context) {
     const { chart, tooltip } = context;

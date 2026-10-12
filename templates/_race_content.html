@@ -302,7 +302,6 @@
 {%- endmacro %}
 {% if chart_data.show.groups %}
 <div class="page-section-head">Bike Groups</div>
-<p class="page-section-sub race-chart-sub">Gaps off the bike, grouped within {{ chart_data.group_gap }} seconds.</p>
 <div class="race-chart" data-chart="groups" data-group-gap="{{ chart_data.group_gap }}">
     {{ podium_legend() }}
     <div class="race-chart-plot"></div>
