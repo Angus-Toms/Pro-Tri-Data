@@ -3858,6 +3858,8 @@ body.help-tour-open { overflow: hidden; }
 }
 
 .btn-download:hover,
+/* Its display would otherwise beat the hidden attribute. */
+.btn-table-action[hidden] { display: none; }
 .btn-table-action:hover {
     color: var(--primary-color);
     border-color: var(--primary-color);

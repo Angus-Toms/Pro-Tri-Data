@@ -348,7 +348,6 @@ function toggleNotableResults(button, targetId) {
     const find    = document.getElementById('races-find');
     const dist    = document.getElementById('races-dist');
     const result  = document.getElementById('races-result');
-    const count   = document.querySelector('.race-table-count');
     const more    = document.querySelector('.race-show-all');
     const norm    = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
     const chevron = '<svg class="chip-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
@@ -397,11 +396,8 @@ function toggleNotableResults(button, targetId) {
                 y.first.before(tr);
             }
         }
-        const limited = !filtered && !showAll && total > TOP;
         // "Latest" only while newest first; any other sort shows its top 20.
         const first = raceTh.classList.contains('desc') ? `the latest ${TOP}` : `the top ${TOP}`;
-        count.textContent = filtered ? `${matched} of ${plural(total, 'race')}`
-                          : limited ? `Showing ${first} of ${total} races` : plural(total, 'race');
         more.hidden = filtered || total <= TOP;
         more.textContent = showAll ? `Show ${first}` : `Show all ${total} races`;
         chipRow.querySelectorAll('.sort-chip').forEach(chip => {
