@@ -171,10 +171,17 @@
        rel="nofollow" data-ptd-nav="athlete"
        class="career-card{% if is_active %} active{% endif %}"
        {% if is_active %}aria-current="page"{% endif %}>
-        <span class="career-card-title">{{ cr.label }}</span>
-        {% if cr.headline %}<span class="career-card-line career-card-best">{{ cr.headline }}</span>{% endif %}
-        <span class="career-card-line career-card-span">{{ cr.span }} · {{ cr.starts }} start{{ '' if cr.starts == 1 else 's' }} · {{ cr.wins }} win{{ '' if cr.wins == 1 else 's' }}</span>
-        {% if cr.rank_line %}<span class="career-card-line">{{ cr.rank_line }}</span>{% endif %}
+        <span class="career-card-top">
+            <span class="career-card-title">{{ cr.label }}</span>
+            <span class="career-card-span">{{ cr.span if cr.current else 'Last raced ' ~ cr.last.strftime('%b %Y') }}</span>
+        </span>
+        {% if cr.headline %}<span class="career-card-best"><i class="pt-dot m{{ cr.medal }}" aria-hidden="true"></i>{{ cr.headline }}</span>{% endif %}
+        <span class="career-card-figs">
+            {% if cr.rank %}<span><b>#{{ "{:,}".format(cr.rank) }}</b>{{ cr.rank_label }}</span>{% endif %}
+            <span><b>{{ cr.starts }}</b>start{{ '' if cr.starts == 1 else 's' }}</span>
+            <span><b>{{ cr.wins }}</b>win{{ '' if cr.wins == 1 else 's' }}</span>
+            <span><b>{{ cr.podiums }}</b>podium{{ '' if cr.podiums == 1 else 's' }}</span>
+        </span>
     </a>
     {% endfor %}
 </nav>

@@ -718,21 +718,28 @@ def get_athlete(request: Request, athlete_id: int,
 
     def _headline(key, c, cat):
         # The top Palmares tier's best finish, with its year when it is a
-        # single race; otherwise the career's best finish.
+        # single race; otherwise the career's best podium. Placings outside
+        # the podium are not worth a headline, so those cards get none.
         top = palmares_by_key[key][:1]
-        if top:
+        if top and top[0]["best"] <= 3:
             t = top[0]
             races = [r for r in t["races"] if r["position"] == t["best"]]
             desc = _format_position(t["tier"], t["best"])
             if len(races) > 1:                                  # "7 x WTCS Wins"
                 return f'{len(races)} x {desc}{"s" if desc.endswith("Win") else ""}'
-            if ", " in desc:                                    # "WTCS, 5th" -> "5th, Yokohama WTCS 21"
-                return f'{desc.split(", ")[1]}, {races[0]["handle"]}'
             return f'{desc} {races[0]["year"]}'                 # "Olympic Champion 2021"
         best_finish = queries.get_athlete_best_finish(athlete_id, cat, course=c)
-        if best_finish:
+        if best_finish and best_finish["position"] <= 3:
             return f'Best: {format_ordinal(best_finish["position"])}, {best_finish["race_handle"]}'
         return None
+
+    def _headline_pos(key, c, cat):
+        # Finishing place behind the headline, for its medal dot.
+        top = palmares_by_key[key][:1]
+        if top and top[0]["best"] <= 3:
+            return top[0]["best"]
+        best_finish = queries.get_athlete_best_finish(athlete_id, cat, course=c)
+        return best_finish["position"] if best_finish else None
 
     def _career(c, cat, label, key):
         st = queries.get_athlete_stats(athlete_id, cat, course=c)
@@ -740,15 +747,9 @@ def get_athlete(request: Request, athlete_id: int,
             return None
         world = "AG world" if cat == 'ag' else "World"
         last = st["last_race_date"]
-        rank_line = None
-        if last >= cutoff_active:
-            ar = queries.get_athlete_active_rankings(athlete_id, cat, course=c)
-            if ar and ar.get("world_overall"):
-                rank_line = f'{world} #{int(ar["world_overall"])}'
-        else:
-            pk = queries.get_athlete_peak_rankings(athlete_id, cat, course=c)
-            best_rank = f'Best {world.lower()} #{int(pk["world_overall"])} · ' if pk and pk.get("world_overall") else ''
-            rank_line = f'{best_rank}last raced {last.strftime("%b %Y")}'
+        current = last >= cutoff_active
+        ranks = (queries.get_athlete_active_rankings if current else queries.get_athlete_peak_rankings)(athlete_id, cat, course=c)
+        rank = int(ranks["world_overall"]) if ranks and ranks.get("world_overall") else None
         y0, y1 = st["first_race_date"].year, last.year
         return {
             "key":       key,
@@ -759,7 +760,11 @@ def get_athlete(request: Request, athlete_id: int,
             "span":      str(y0) if y0 == y1 else f"{y0}-{y1}",
             "starts":    st["race_starts"],
             "wins":      st["wins"],
-            "rank_line": rank_line,
+            "podiums":   st["podiums"],
+            "rank":      rank,
+            "rank_label": world if current else f'Best {world.lower()}',
+            "medal":     _headline_pos(key, c, cat),
+            "current":   current,
             "last":      last,
         }
 
