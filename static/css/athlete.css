@@ -168,14 +168,8 @@
 }
 .career-card:hover { border-color: var(--primary-color); }
 .career-card.active { border-color: var(--primary-color); box-shadow: inset 0 0 0 1px var(--primary-color); }
-.career-card-label {
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text-light);
-}
-.career-card.active .career-card-label { color: var(--primary-color); }
+.career-card.active .career-card-title { color: var(--primary-color); }
+.career-card-best { color: var(--text-color); }
 .career-card-title { font-weight: 700; font-size: 0.98rem; }
 .career-card-line { font-size: 0.8rem; color: var(--text-light); font-variant-numeric: tabular-nums; }
 
@@ -385,6 +379,7 @@
     .career-ratings:not(.has-nat) td.rt-peak { grid-column: 1 / -1; }
     .career-ratings .rt-peak-main { font-size: 0.78rem; font-weight: 700; color: var(--text-color); }
     .career-ratings .rt-peak-sub, .career-ratings .rt-spark { display: none; }
+    .pt-years { display: none; }
     .rt-inline-label { display: inline; }
     .career-ratings td.rt-rank, .career-ratings td.rt-rank a { font-size: 1rem; }
 }

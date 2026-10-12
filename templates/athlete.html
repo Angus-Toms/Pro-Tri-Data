@@ -171,8 +171,8 @@
        rel="nofollow" data-ptd-nav="athlete"
        class="career-card{% if is_active %} active{% endif %}"
        {% if is_active %}aria-current="page"{% endif %}>
-        <span class="career-card-label">{{ cr.label }}</span>
-        {% if cr.headline %}<span class="career-card-title">{{ cr.headline }}</span>{% endif %}
+        <span class="career-card-title">{{ cr.label }}</span>
+        {% if cr.headline %}<span class="career-card-line career-card-best">{{ cr.headline }}</span>{% endif %}
         <span class="career-card-line career-card-span">{{ cr.span }} · {{ cr.starts }} start{{ '' if cr.starts == 1 else 's' }} · {{ cr.wins }} win{{ '' if cr.wins == 1 else 's' }}</span>
         {% if cr.rank_line %}<span class="career-card-line">{{ cr.rank_line }}</span>{% endif %}
     </a>
@@ -192,7 +192,7 @@
             {# Every race in the career, so it is not the sum of the tiers below. #}
             <div class="pt-total">
                 <span class="pt-name">All races
-                    <span class="pt-sub"><span>{{ athlete.race_starts }} start{{ '' if athlete.race_starts == 1 else 's' }}</span> · <span>{{ athlete.dnfs }} DNF</span>{% if athlete.first_year %} · <span>{{ athlete.first_year }}{% if athlete.last_year != athlete.first_year %}-{{ athlete.last_year }}{% endif %}</span>{% endif %}{% if athlete.is_low_confidence %} <span class="career-provisional" title="Ratings and predictions settle after {{ low_conf_starts }} starts">Provisional · {{ athlete.race_starts }} of {{ low_conf_starts }}</span>{% endif %}</span>
+                    <span class="pt-sub"><span>{{ athlete.race_starts }} start{{ '' if athlete.race_starts == 1 else 's' }}</span> · <span>{{ athlete.dnfs }} DNF</span>{% if athlete.first_year %}<span class="pt-years"> · {{ athlete.first_year }}{% if athlete.last_year != athlete.first_year %}-{{ athlete.last_year }}{% endif %}</span>{% endif %}{% if athlete.is_low_confidence %} <span class="career-provisional" title="Ratings and predictions settle after {{ low_conf_starts }} starts">Provisional · {{ athlete.race_starts }} of {{ low_conf_starts }}</span>{% endif %}</span>
                 </span>
                 {% for n, medal in [(athlete.win_count, 'wins'), (athlete.seconds, '2nds'), (athlete.thirds, '3rds')] %}<span class="pt-n{{ ' zero' if not n else '' }}" aria-label="{{ n }} {{ medal }}">{{ n }}</span>{% endfor %}
                 <span></span>
