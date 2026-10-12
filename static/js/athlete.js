@@ -80,15 +80,6 @@ const DISC_COLORS = {
 };
 const DISC_LABELS = { overall: 'Overall', swim: 'Swim', bike: 'Bike', run: 'Run', transition: 'Transition' };
 
-// --- Ranking charts ---
-const worldRankingsData    = getJSON('world-rankings-chart-data');
-const nationalRankingsData = getJSON('national-rankings-chart-data');
-
-let activeWorldDisc = 'overall';
-let activeNatDisc   = 'overall';
-let mainWorldChart  = null;
-let mainNatChart    = null;
-
 // One tooltip element per ranking type, same style as the ratings tooltip
 function _makeRankTooltipEl(id) {
     const existing = document.getElementById(id);
@@ -107,9 +98,6 @@ function _makeRankTooltipEl(id) {
     document.body.appendChild(el);
     return el;
 }
-
-const worldRankTooltipEl = _makeRankTooltipEl('world-ranking-tooltip');
-const natRankTooltipEl   = _makeRankTooltipEl('national-ranking-tooltip');
 
 // Tooltips never take the pointer: a tooltip that did sat over the next points
 // and froze on its race. Clicking a point opens the race instead (onClick).
@@ -191,134 +179,6 @@ function _fillRankTooltip(tooltipEl, d, disc, rankLabel) {
         </div>
         ${timeRows ? `<div style="padding:8px 12px;display:flex;flex-direction:column;gap:4px">${timeRows}</div>` : ''}
     `;
-}
-
-function worldRankingTooltip(context) {
-    const { chart, tooltip } = context;
-    if (tooltip.opacity === 0) { worldRankTooltipEl.style.opacity = '0'; return; }
-    _fillRankTooltip(worldRankTooltipEl, tooltip.dataPoints[0].raw, activeWorldDisc, 'world ranking');
-    _positionTooltip(worldRankTooltipEl, chart, tooltip);
-}
-
-function natRankingTooltip(context) {
-    const { chart, tooltip } = context;
-    if (tooltip.opacity === 0) { natRankTooltipEl.style.opacity = '0'; return; }
-    _fillRankTooltip(natRankTooltipEl, tooltip.dataPoints[0].raw, activeNatDisc, 'national ranking');
-    _positionTooltip(natRankTooltipEl, chart, tooltip);
-}
-
-function buildMainRankingChart(disc, type) {
-    const isWorld  = type === 'world';
-    const data     = isWorld ? worldRankingsData[disc] : nationalRankingsData[disc];
-    const canvasId = `${type}-rankings-main-canvas`;
-    const hex      = DISC_COLORS[disc];
-
-    if (isWorld) { if (mainWorldChart) mainWorldChart.destroy(); }
-    else         { if (mainNatChart)   mainNatChart.destroy();   }
-
-    const canvas        = document.getElementById(canvasId);
-    const delayPerPoint = Math.min(600 / Math.max(data.length, 1), 30);
-    const prevY = (ctx) => ctx.index === 0
-        ? ctx.chart.scales.y.getPixelForValue(data[0]?.y ?? 1)
-        : ctx.chart.getDatasetMeta(0).data[ctx.index - 1]?.getProps(['y'], true).y;
-
-    const chart = new Chart(canvas, {
-        type: 'line',
-        data: {
-            datasets: [{
-                data,
-                borderColor: hex, backgroundColor: 'transparent',
-                pointBackgroundColor: hex, pointHoverBackgroundColor: '#fff',
-                pointHoverBorderColor: hex, pointHoverBorderWidth: 2,
-                borderWidth: 2, pointRadius: 3, pointHoverRadius: 5,
-                fill: false, stepped: true, clip: false,
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            interaction: { mode: 'nearest', axis: 'x', intersect: false },
-            onClick: (e, els) => { if (els.length) location.href = '/race/' + data[els[0].index].race_id; },
-            animation: {
-                x: { type: 'number', easing: 'linear', duration: delayPerPoint, from: NaN,
-                     delay: (ctx) => { if (ctx.type !== 'data' || ctx.xStarted) return 0; ctx.xStarted = true; return ctx.index * delayPerPoint; } },
-                y: { type: 'number', easing: 'linear', duration: delayPerPoint, from: prevY,
-                     delay: (ctx) => { if (ctx.type !== 'data' || ctx.yStarted) return 0; ctx.yStarted = true; return ctx.index * delayPerPoint; } },
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: { enabled: false, external: isWorld ? worldRankingTooltip : natRankingTooltip },
-            },
-            scales: {
-                x: { type: 'time', grid: { display: false }, ticks: { display: false } },
-                y: {
-                    reverse: true, min: 1, beginAtZero: false,
-                    grid: { color: 'rgba(0,0,0,0.05)' },
-                    afterBuildTicks: s => applyNiceTicks(s, { includeMin: true, integer: true }),
-                    ticks: { color: '#999', autoSkip: false, callback: v => '#' + v },
-                }
-            }
-        }
-    });
-
-    if (isWorld) mainWorldChart = chart;
-    else         mainNatChart   = chart;
-}
-
-function buildMiniRankingChart(disc, type) {
-    const data   = type === 'world' ? worldRankingsData[disc] : nationalRankingsData[disc];
-    const canvas = document.getElementById(`${type}-rankings-mini-${disc}`);
-    if (!canvas) return;
-    new Chart(canvas, {
-        type: 'line',
-        data: {
-            datasets: [{
-                data, borderColor: DISC_COLORS[disc], borderWidth: 1.5,
-                pointRadius: 0, stepped: true, fill: false, backgroundColor: 'transparent', clip: false,
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false }, tooltip: { enabled: false }, yearBands: false },
-            scales: {
-                x: { type: 'time', display: false },
-                y: { reverse: true, display: false, grid: { display: false }, border: { display: false } }
-            },
-            animation: false,
-        }
-    });
-}
-
-function switchRankingDisc(disc, type) {
-    const isWorld = type === 'world';
-    if (disc === (isWorld ? activeWorldDisc : activeNatDisc)) return;
-
-    // Destroy existing mini charts for this type
-    ['overall', 'swim', 'bike', 'run', 'transition'].forEach(d => {
-        const existing = Chart.getChart(document.getElementById(`${type}-rankings-mini-${d}`));
-        if (existing) existing.destroy();
-    });
-
-    // Swap active class within the correct card
-    const card = document.getElementById(`${type}-rankings-main-canvas`).closest('.collapsible-card');
-    card.querySelectorAll('.ratings-mini').forEach(el => el.classList.remove('active'));
-    card.querySelector(`.ratings-mini[data-disc="${disc}"]`).classList.add('active');
-
-    if (isWorld) activeWorldDisc = disc;
-    else         activeNatDisc   = disc;
-
-    const heading = document.getElementById(`${type}-rankings-section-title`);
-    if (heading) heading.textContent = `${isWorld ? 'World' : 'National'} Rankings - ${DISC_LABELS[disc]}`;
-
-    buildMainRankingChart(disc, type);
-    ['overall', 'swim', 'bike', 'run', 'transition'].forEach(d => buildMiniRankingChart(d, type));
-}
-
-// Init ranking charts
-if (worldRankingsData) {
-    buildMainRankingChart('overall', 'world');
-    ['overall', 'swim', 'bike', 'run', 'transition'].forEach(d => buildMiniRankingChart(d, 'world'));
-    buildMainRankingChart('overall', 'national');
-    ['overall', 'swim', 'bike', 'run', 'transition'].forEach(d => buildMiniRankingChart(d, 'national'));
 }
 
 function toggleNotableResults(button, targetId) {
@@ -478,9 +338,7 @@ function toggleNotableResults(button, targetId) {
 })();
 
 // Ratings chart ---------------------------------------------------------------
-const ratingsData = getJSON('ratings-chart-data');
 let activeDisc = 'overall';
-let mainRatingsChart = null;
 
 // Helpers
 function fmtTime(s) {
@@ -607,124 +465,166 @@ function ratingsExternalTooltip(context) {
     _positionTooltip(ratingsTooltipEl, chart, tooltip);
 }
 
-function buildMainChart(disc) {
-    const canvas = document.getElementById('ratings-main-canvas');
-    if (mainRatingsChart) mainRatingsChart.destroy();
+// Rating and rank ---------------------------------------------------------------
+// One chart for the rating, world rank or national rank in any discipline.
+// Switching swaps the data and the y scale on the same Chart instance, so the
+// line animates to its new shape. Ranks use a reversed log scale with the top
+// 10 shaded. The peak (best rank) and current value are labelled.
+const rankTooltipEl = _makeRankTooltipEl('world-ranking-tooltip');
+const RR_STEPS = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000];
+const rrSeries = {
+    rating:   getJSON('ratings-chart-data'),
+    world:    getJSON('world-rankings-chart-data'),
+    national: getJSON('national-rankings-chart-data'),
+};
+let rrMode = 'rating', rrChart = null;
 
-    const hex  = DISC_COLORS[disc];
-    const data = ratingsData[disc];
-    const delayPerPoint = Math.min(600 / Math.max(data.length, 1), 30);
-    const prevY = (ctx) => ctx.index === 0
-        ? ctx.chart.scales.y.getPixelForValue(data[0]?.y ?? 0)
-        : ctx.chart.getDatasetMeta(0).data[ctx.index - 1]?.getProps(['y'], true).y;
+function _rrData(mode, disc) {
+    const pts = (rrSeries[mode]?.[disc] || []).filter(p => p.y != null);
+    if (!pts.length) return [];
+    // Hold the last value to today, as the step line does between races.
+    const today = new Date().toISOString().slice(0, 10);
+    return [...pts, { ...pts[pts.length - 1], x: today, now: true }];
+}
 
-    mainRatingsChart = new Chart(canvas, {
-        type: 'line',
-        data: {
-            datasets: [{
-                data,
-                borderColor: hex,
-                backgroundColor: 'transparent',
-                pointBackgroundColor: hex,
-                pointHoverBackgroundColor: '#fff',
-                pointHoverBorderColor: hex,
-                pointHoverBorderWidth: 2,
-                borderWidth: 2,
-                pointRadius: 3,
-                pointHoverRadius: 5,
-                fill: false,
-                stepped: true,
-                clip: false,
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'nearest', axis: 'x', intersect: false },
-            onClick: (e, els) => { if (els.length) location.href = '/race/' + data[els[0].index].race_id; },
-            animation: {
-                x: { type: 'number', easing: 'linear', duration: delayPerPoint, from: NaN,
-                     delay: (ctx) => { if (ctx.type !== 'data' || ctx.xStarted) return 0; ctx.xStarted = true; return ctx.index * delayPerPoint; } },
-                y: { type: 'number', easing: 'linear', duration: delayPerPoint, from: prevY,
-                     delay: (ctx) => { if (ctx.type !== 'data' || ctx.yStarted) return 0; ctx.yStarted = true; return ctx.index * delayPerPoint; } },
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: { enabled: false, external: ratingsExternalTooltip },
-            },
-            scales: {
-                x: { type: 'time', grid: { display: false }, ticks: { display: false } },
-                y: { beginAtZero: false, grid: { color: 'rgba(0,0,0,0.05)' },
-                     afterBuildTicks: s => applyNiceTicks(s),
-                     ticks: { color: '#999', autoSkip: false } }
-            }
+function _rrScale(mode, data) {
+    if (mode === 'rating') {
+        return { type: 'linear', reverse: false, min: undefined, max: undefined, beginAtZero: false,
+                 grid: { color: 'rgba(0,0,0,0.05)' },
+                 afterBuildTicks: s => applyNiceTicks(s),
+                 ticks: { color: '#999', autoSkip: false, callback: v => v.toLocaleString('en-GB') } };
+    }
+    const ys = data.map(p => p.y);
+    const best = Math.min(...ys), worst = Math.max(...ys);
+    const top = best <= 2 ? 1 : [...RR_STEPS].reverse().find(v => v <= best);
+    const bot = RR_STEPS.find(v => v >= worst * 1.15) || worst * 1.5;
+    return { type: 'logarithmic', reverse: true, min: top, max: bot,
+             grid: { color: 'rgba(0,0,0,0.05)' },
+             afterBuildTicks: s => { s.ticks = RR_STEPS.filter(v => v >= top && v <= bot).map(v => ({ value: v })); },
+             ticks: { color: '#999', autoSkip: false, callback: v => '#' + v.toLocaleString('en-GB') } };
+}
+
+// Top-10 band on rank scales, plus the peak / best and "now" labels.
+const rrDecor = {
+    id: 'rrDecor',
+    beforeDatasetsDraw(chart) {
+        const y = chart.scales.y, area = chart.chartArea, ctx = chart.ctx;
+        if (rrMode === 'rating' || y.min > 10) return;
+        const y10 = y.getPixelForValue(10);
+        ctx.save();
+        ctx.fillStyle = 'rgba(232, 93, 4, 0.07)';
+        ctx.fillRect(area.left, area.top, area.right - area.left, y10 - area.top);
+        ctx.fillStyle = 'rgba(196, 77, 3, 0.75)';
+        ctx.font = "600 11px 'Plus Jakarta Sans', sans-serif";
+        ctx.fillText('Top 10', area.left + 6, y10 - 6);
+        ctx.restore();
+    },
+    afterDatasetsDraw(chart) {
+        if (chart.width < 480) return;
+        const meta = chart.getDatasetMeta(0), data = chart.data.datasets[0].data;
+        if (!data.length || !meta.data.length) return;
+        const real = data.filter(p => !p.now);
+        const better = rrMode === 'rating' ? (a, b) => b.y > a.y : (a, b) => b.y < a.y;
+        const peak = real.reduce((a, b) => (better(a, b) ? b : a));
+        const pi = data.indexOf(peak), li = data.length - 1;
+        const fmt = v => rrMode === 'rating' ? v.toLocaleString('en-GB') : '#' + v.toLocaleString('en-GB');
+        const ctx = chart.ctx;
+        ctx.save();
+        ctx.font = "600 11.5px 'Plus Jakarta Sans', sans-serif";
+        ctx.lineJoin = 'round';
+        const label = (text, x, y, align, color) => {
+            ctx.textAlign = align;
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.strokeText(text, x, y);
+            ctx.fillStyle = color; ctx.fillText(text, x, y);
+        };
+        const pp = meta.data[pi], lp = meta.data[li];
+        const when = new Date(peak.x).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+        const peakText = `${rrMode === 'rating' ? 'Peak' : 'Best'} ${fmt(peak.y)} · ${when}`;
+        const above = rrMode === 'rating' ? -10 : 18;
+        label(peakText, Math.max(chart.chartArea.left + 4, Math.min(pp.x, chart.chartArea.right - 4)), pp.y + above,
+              pp.x > chart.chartArea.left + chart.chartArea.width * 0.6 ? 'right' : 'left', '#1a1a2e');
+        if (pi !== li - 1 || data[li].y !== peak.y) {
+            label(`${fmt(data[li].y)} now`, lp.x - 2, lp.y + (rrMode === 'rating' ? 18 : -10), 'right', '#6b7280');
         }
-    });
+        ctx.restore();
+    },
+};
+
+function rrTooltip(context) {
+    const { chart, tooltip } = context;
+    const tipEl = rrMode === 'rating' ? ratingsTooltipEl : rankTooltipEl;
+    const other = rrMode === 'rating' ? rankTooltipEl : ratingsTooltipEl;
+    other.style.opacity = '0';
+    if (tooltip.opacity === 0 || !tooltip.dataPoints.length) { tipEl.style.opacity = '0'; return; }
+    if (rrMode === 'rating') { ratingsExternalTooltip(context); return; }
+    _fillRankTooltip(tipEl, tooltip.dataPoints[0].raw, activeDisc, rrMode === 'world' ? 'world ranking' : 'national ranking');
+    _positionTooltip(tipEl, chart, tooltip);
 }
 
-function buildMiniChart(disc) {
-    const canvas = document.getElementById(`ratings-mini-${disc}`);
-    new Chart(canvas, {
-        type: 'line',
-        data: {
-            datasets: [{
-                data: ratingsData[disc],
-                borderColor: DISC_COLORS[disc],
-                borderWidth: 1.5,
-                pointRadius: 0,
-                stepped: true,
-                fill: false,
-                backgroundColor: 'transparent',
-                clip: false,
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: { enabled: false },
-                yearBands: false,  // disable global year-band plugin on sparklines
+function rrRender() {
+    const data = _rrData(rrMode, activeDisc);
+    const hex = DISC_COLORS[activeDisc];
+    const yearGap = (a, b) => (new Date(b.x) - new Date(a.x)) > 365 * 864e5;
+    if (!rrChart) {
+        rrChart = new Chart(document.getElementById('rr-canvas'), {
+            type: 'line',
+            data: { datasets: [{ data }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                animation: { duration: 600, easing: 'easeInOutCubic' },
+                layout: { padding: { top: 8, right: 6 } },
+                interaction: { mode: 'nearest', axis: 'x', intersect: false },
+                onClick: (e, els) => {
+                    const p = els.length && rrChart.data.datasets[0].data[els[0].index];
+                    if (p && !p.now) location.href = '/race/' + p.race_id;
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false, external: rrTooltip, filter: item => !item.raw.now },
+                },
+                scales: {
+                    x: { type: 'time', grid: { display: false }, ticks: { display: false } },
+                    y: _rrScale(rrMode, data),
+                },
             },
-            scales: {
-                x: { type: 'time', display: false },
-                y: { display: false, beginAtZero: false, grid: { display: false }, border: { display: false } }
-            },
-            animation: false,
-        }
+            plugins: [rrDecor],
+        });
+    } else {
+        rrChart.data.datasets[0].data = data;
+        rrChart.options.scales.y = _rrScale(rrMode, data);
+    }
+    Object.assign(rrChart.data.datasets[0], {
+        borderColor: hex, backgroundColor: 'transparent', borderWidth: 2,
+        stepped: true, fill: false, clip: false,
+        pointRadius: ctx => (ctx.raw?.now ? 0 : 2.5), pointBackgroundColor: hex,
+        pointHoverRadius: ctx => (ctx.raw?.now ? 0 : 5), pointHoverBackgroundColor: '#fff',
+        pointHoverBorderColor: hex, pointHoverBorderWidth: 2,
+        // Dashed over a gap of more than a year without racing.
+        segment: { borderDash: ctx => (yearGap(ctx.p0.raw, ctx.p1.raw) ? [4, 4] : undefined) },
     });
+    rrChart.update();
 }
 
-const ratingsHeading = document.getElementById('ratings-section-title');
-
-function updateRatingTitle(disc) {
-    if (ratingsHeading) ratingsHeading.textContent = `Rating History - ${DISC_LABELS[disc]}`;
-}
-
-function switchRatingDisc(disc) {
-    if (disc === activeDisc) return;
-
-    ['overall', 'swim', 'bike', 'run', 'transition'].forEach(d => {
-        const existing = Chart.getChart(document.getElementById(`ratings-mini-${d}`));
-        if (existing) existing.destroy();
+(function initRatingRank() {
+    if (!rrSeries.rating || !document.getElementById('rr-canvas')) return;
+    const press = (group, btn) => group.forEach(b => {
+        b.classList.toggle('active', b === btn);
+        b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
     });
-
-    const card = document.getElementById('ratings-mini-overall').closest('.collapsible-card');
-    card.querySelectorAll('.ratings-mini').forEach(el => el.classList.remove('active'));
-    card.querySelector(`.ratings-mini[data-disc="${disc}"]`).classList.add('active');
-
-    activeDisc = disc;
-    updateRatingTitle(disc);
-    buildMainChart(disc);
-    ['overall', 'swim', 'bike', 'run', 'transition'].forEach(buildMiniChart);
-}
-
-// Init
-if (ratingsData) {
-    updateRatingTitle('overall');
-    buildMainChart('overall');
-    ['overall', 'swim', 'bike', 'run', 'transition'].forEach(buildMiniChart);
-}
+    const modeBtns = [...document.querySelectorAll('#rr-mode [data-mode]')];
+    const discBtns = [...document.querySelectorAll('#rr-disc [data-disc]')];
+    // No national rank (no nationality pool): drop its button.
+    if (!Object.values(rrSeries.national || {}).some(a => a.length)) modeBtns.find(b => b.dataset.mode === 'national').remove();
+    modeBtns.forEach(b => b.addEventListener('click', () => {
+        if (rrMode === b.dataset.mode) return;
+        rrMode = b.dataset.mode; press(modeBtns, b); rrRender();
+    }));
+    discBtns.forEach(b => b.addEventListener('click', () => {
+        if (activeDisc === b.dataset.disc) return;
+        activeDisc = b.dataset.disc; press(discBtns, b); rrRender();
+    }));
+    rrRender();
+})();
 
 // % Behind Leader chart -------------------------------------------------------
 const pctBehindData = getJSON('pct-behind-chart-data');
@@ -869,8 +769,6 @@ if (pctBehindData) {
 
 // Expose functions referenced from inline HTML onclick attributes. The IIFE
 // wrap above makes these locally scoped, so we hoist them back onto window.
-window.switchRatingDisc    = switchRatingDisc;
-window.switchRankingDisc   = switchRankingDisc;
 window.switchPctBehindDisc = switchPctBehindDisc;
 window.toggleNotableResults = toggleNotableResults;
 

@@ -354,7 +354,7 @@
         {% endif %}
         <div class="sc-row"><dt>Podium</dt><dd>{{ sc.podium_hits }} of 3 predicted{{ ', in order' if sc.podium_order }}</dd></div>
         {% if sc.top_n < sc.field %}
-        <div class="sc-row"><dt>Predicted top {{ sc.top_n }}</dt><dd>{{ sc.top_hits }} finished there{% if sc.top_dnf %}<span class="sc-sub">{{ sc.top_dnf }} did not finish</span>{% endif %}</dd></div>
+        <div class="sc-row"><dt>Predicted top {{ sc.top_n }}</dt><dd>{{ sc.top_hits }} finished in top 10{% if sc.top_dnf %}<span class="sc-sub">{{ sc.top_dnf }} did not finish</span>{% endif %}</dd></div>
         {% endif %}
         <div class="sc-row"><dt>Within 5 places</dt><dd>{{ sc.within5 }} of {{ sc.called }} finishers</dd></div>
         <div class="sc-row"><dt>Typical miss</dt><dd>{{ sc.median_miss }} place{{ 's' if sc.median_miss != 1 }}</dd></div>

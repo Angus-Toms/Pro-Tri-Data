@@ -884,3 +884,21 @@
     .doping-marquee-track { animation: none; }
     .doping-overlay-icon { animation: none; }
 }
+
+/* Rating and rank chart: measure and discipline switches over one chart. */
+.rr-card { padding: 1rem 1.25rem 0.75rem; margin-bottom: 2rem; }
+.rr-controls { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.75rem; }
+.rr-controls .race-view-btn { padding-left: 0.8rem; padding-right: 0.8rem; }
+.rr-controls .th-short { display: none; }
+.rr-chart { position: relative; height: 320px; }
+@media (max-width: 768px) {
+    .rr-controls { flex-direction: column; }
+    .rr-controls .race-view-btn { flex: 1; padding-left: 0.3rem; padding-right: 0.3rem; }
+}
+@media (max-width: 480px) {
+    .rr-card { padding: 0.75rem 0.75rem 0.5rem; }
+    .rr-chart { height: 240px; }
+    .rr-controls .race-view-btn { font-size: 0.76rem; }
+    .rr-controls .th-full { display: none; }
+    .rr-controls .th-short { display: inline; }
+}

@@ -450,46 +450,26 @@
 
 {% if has_ratings %}
 {% if show_charts %}
-<div class="page-section-head" id="ratings-section-title">Rating History - Overall</div>
-<div class="collapsible-card ratings-history-section">
-    <div class="ratings-main-chart">
-        <canvas id="ratings-main-canvas"></canvas>
-    </div>
-    <div class="ratings-mini-row">
-        {% for disc in ['overall', 'swim', 'bike', 'run', 'transition'] %}
-        <div class="ratings-mini {% if disc == 'overall' %}active{% endif %}" data-disc="{{ disc }}" data-label="{{ disc.capitalize() }}" onclick="switchRatingDisc('{{ disc }}')">
-            <canvas id="ratings-mini-{{ disc }}"></canvas>
+{# Rating and rank: one chart for the rating, world rank or national rank in
+   any discipline. A step line (ratings only change at a race), dashed over
+   gaps of more than a year; ranks on a reversed log scale with the top 10
+   shaded; the peak (or best rank) and the current value labelled. Switching
+   animates the line rather than redrawing it (athlete.js). #}
+<div class="page-section-head"><span>Rating and rank {{ help_icon('athlete-rating-rank') }}</span></div>
+<div class="collapsible-card rr-card">
+    <div class="rr-controls">
+        <div class="race-view-toggle" id="rr-mode" role="group" aria-label="Measure">
+            <button type="button" class="race-view-btn active" data-mode="rating" aria-pressed="true">Rating</button>
+            <button type="button" class="race-view-btn" data-mode="world" aria-pressed="false">World rank</button>
+            <button type="button" class="race-view-btn" data-mode="national" aria-pressed="false">National rank</button>
         </div>
-        {% endfor %}
-    </div>
-</div>
-
-<div class="page-section-head" id="world-rankings-section-title">World Rankings - Overall</div>
-<div class="collapsible-card ratings-history-section">
-    <div class="ratings-main-chart">
-        <canvas id="world-rankings-main-canvas"></canvas>
-    </div>
-    <div class="ratings-mini-row">
-        {% for disc in ['overall', 'swim', 'bike', 'run', 'transition'] %}
-        <div class="ratings-mini {% if disc == 'overall' %}active{% endif %}" data-disc="{{ disc }}" data-label="{{ disc.capitalize() }}" onclick="switchRankingDisc('{{ disc }}', 'world')">
-            <canvas id="world-rankings-mini-{{ disc }}"></canvas>
+        <div class="race-view-toggle" id="rr-disc" role="group" aria-label="Discipline">
+            {% for d, label, short in [('overall', 'Overall', 'Overall'), ('swim', 'Swim', 'Swim'), ('bike', 'Bike', 'Bike'), ('run', 'Run', 'Run'), ('transition', 'Transition', 'T1/T2')] %}
+            <button type="button" class="race-view-btn{{ ' active' if loop.first }}" data-disc="{{ d }}" aria-pressed="{{ 'true' if loop.first else 'false' }}"><span class="th-full">{{ label }}</span><span class="th-short">{{ short }}</span></button>
+            {% endfor %}
         </div>
-        {% endfor %}
     </div>
-</div>
-
-<div class="page-section-head" id="national-rankings-section-title">National Rankings - Overall</div>
-<div class="collapsible-card ratings-history-section">
-    <div class="ratings-main-chart">
-        <canvas id="national-rankings-main-canvas"></canvas>
-    </div>
-    <div class="ratings-mini-row">
-        {% for disc in ['overall', 'swim', 'bike', 'run', 'transition'] %}
-        <div class="ratings-mini {% if disc == 'overall' %}active{% endif %}" data-disc="{{ disc }}" data-label="{{ disc.capitalize() }}" onclick="switchRankingDisc('{{ disc }}', 'national')">
-            <canvas id="national-rankings-mini-{{ disc }}"></canvas>
-        </div>
-        {% endfor %}
-    </div>
+    <div class="rr-chart"><canvas id="rr-canvas" aria-label="Rating and rank after each race"></canvas></div>
 </div>
 
 <div class="page-section-head" id="pct-behind-section-title">% Behind Leader - Overall</div>

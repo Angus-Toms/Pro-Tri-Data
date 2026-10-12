@@ -376,6 +376,10 @@ const HELP_TOURS = {
         { sel: '.h2h-card', title: 'Head-to-head',
           text: 'The athletes this one has met most evenly in the last 5 years. Meetings and the record (finishes ahead and behind) cover every shared race. Swim, bike and run are this athlete\'s median gap on that leg in those races, faster or slower. Hover a gap for how many of the races it held in.' },
     ],
+    'athlete-rating-rank': [
+        { sel: '#rr-canvas', title: 'Rating and rank',
+          text: 'The rating, world rank or national rank after each race, in any discipline. The line steps because a rating only changes at a race; it is dashed across breaks of more than a year. Ranks use a log scale so the top places get room, with the top 10 shaded. Click a point to open the race.' },
+    ],
     'athlete-races': [
         { sel: '#races-table', title: 'Races',
           text: 'Every start in this career, newest first, with the date, distance and program under each race. Times shows the splits: the fastest split of the race is highlighted and every other time shows the gap behind it.' },
