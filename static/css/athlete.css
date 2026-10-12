@@ -278,10 +278,10 @@
 .upcoming-list { list-style: none; margin: 0; padding: 0; }
 .upcoming-item {
     display: grid;
-    grid-template-columns: 7.5rem minmax(0, 1fr) auto;
-    align-items: baseline;
+    grid-template-columns: 7rem minmax(0, 1fr) 2.5rem 6.5rem 4.5rem 4.5rem;
+    align-items: center;
     gap: 0.25rem 1rem;
-    padding: 0.45rem 0;
+    padding: 0.5rem 0;
     font-size: 0.9rem;
     font-variant-numeric: tabular-nums;
 }
@@ -289,8 +289,13 @@
 .upcoming-date { color: var(--text-light); font-size: 0.85rem; }
 .upcoming-race a { color: var(--text-color); font-weight: 600; text-decoration: none; }
 .upcoming-race a:hover { color: var(--primary-color); }
-.upcoming-meta { display: flex; gap: 1.25rem; color: var(--text-light); font-size: 0.85rem; white-space: nowrap; }
-.upcoming-meta b { color: var(--text-color); }
+.upcoming-time b { display: block; }
+.upcoming-item small { display: block; font-size: 0.7rem; color: var(--text-light); }
+.upcoming-pct .time-cell-main { font-weight: 700; }
+/* Column heads once on desktop; on phones each figure carries its own label. */
+.upcoming-item.upcoming-cols { padding: 0 0 0.2rem; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-light); }
+.upcoming-cols + .upcoming-item { border-top: 0; }
+.upcoming-pct small { display: none; }
 .career-provisional {
     font-size: 0.72rem;
     font-weight: 700;
@@ -391,19 +396,6 @@
     .career-ratings td.rt-rank, .career-ratings td.rt-rank a { font-size: 1rem; }
 }
 
-/* Course tag on an upcoming race when the athlete has several careers. */
-.career-tag {
-    display: inline-block;
-    font-size: 0.66rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    padding: 0.08rem 0.4rem;
-    border-radius: 4px;
-    margin-left: 0.3rem;
-    background: rgba(26, 26, 46, 0.07);
-    color: var(--text-light);
-    vertical-align: 1px;
-}
 
 
 .athlete-compare-link {
@@ -684,8 +676,12 @@ tr.sub-race-row .link:hover {
     /* Stacked: the short, current Form first, then the longer Palmares. */
     .cs-body.two-col .cs-form { order: -1; border-left: 0; padding-left: 0; }
     .cs-body.two-col .cs-palmares { border-top: 1px solid var(--border-color); padding-top: 1rem; }
-    .upcoming-item { grid-template-columns: 6.5rem minmax(0, 1fr); }
-    .upcoming-meta { grid-column: 2; gap: 1rem; }
+    .upcoming-item { grid-template-columns: 2.5rem minmax(0, 1fr) 4rem 4rem; }
+    .upcoming-date { grid-column: 1 / -1; font-size: 0.78rem; }
+    .upcoming-race { grid-column: 1 / -1; }
+    .upcoming-pos { grid-column: 1; }
+    .upcoming-cols { display: none !important; }
+    .upcoming-pct small { display: block; }
     .career-ratings .rt-spark { width: 4em; margin-left: 0.35rem; }
 
     .athlete-hero-name { font-size: 1.5rem; }

@@ -663,12 +663,13 @@ def get_athlete(request: Request, athlete_id: int,
 
             # Predictions are precomputed at build time and shared with the
             # race page (ptd_data/predictions.py), so the two always agree.
-            pred_pos, win_pct, splits, behinds = None, None, {}, {}
+            pred_pos, win_pct, podium_pct, splits, behinds = None, None, None, {}, {}
             stored = queries.get_race_predictions(race['race_id'])
             mine   = next((r for r in stored if r['athlete_id'] == athlete_id), None)
             if mine:
                 pred_pos = mine['predicted_position']
                 win_pct  = mine['win_pct']
+                podium_pct = mine['podium_pct']
                 for disc in ['overall', 'swim', 'bike', 'run']:
                     raw = mine[f'{disc}_s']
                     if not raw:
@@ -688,6 +689,7 @@ def get_athlete(request: Request, athlete_id: int,
                 'country':    race['country'],
                 'pred_pos':   pred_pos,
                 'win_pct':    win_pct,
+                'podium_pct': podium_pct,
                 'pred_overall':        splits.get('overall'),
                 'pred_overall_behind': behinds.get('overall'),
                 'pred_swim':           splits.get('swim'),
@@ -698,7 +700,6 @@ def get_athlete(request: Request, athlete_id: int,
                 'pred_run_behind':     behinds.get('run'),
                 'has_pred':     bool(splits),
                 'std_class':    std_class,
-                'career_key':   'ag' if race['category'] == 'ag' else f"elite-{_rating_course[race['race_id']]}",
             })
 
     # --- charts ---
@@ -778,9 +779,6 @@ def get_athlete(request: Request, athlete_id: int,
         careers.append(_career(ag_course, 'ag', 'Age group', 'ag'))
     careers = sorted([cr for cr in careers if cr], key=lambda cr: cr["last"], reverse=True)
     active_key = 'ag' if category == 'ag' else f'elite-{course}'
-    career_label = {cr["key"]: cr["label"] for cr in careers}
-    for r in upcoming_races:
-        r["career_label"] = career_label.get(r["career_key"]) if len(careers) > 1 else None
 
 
     return templates.TemplateResponse("athlete.html", {

@@ -137,6 +137,7 @@
 
 {% block content %}
 {% from "partials/_icons.html" import help_icon %}
+{% from "partials/_race_table.html" import pct, pos_marker %}
 {# Upcoming races belong to the person: every career's entries, tagged. #}
 {% if upcoming_races %}
 {# One line per entry: date, race, course tag, predicted place and win
@@ -144,14 +145,15 @@
 <section class="upcoming-card" aria-label="Upcoming races">
     <div class="upcoming-card-head">Upcoming {{ help_icon('athlete-upcoming') }}</div>
     <ul class="upcoming-list">
+        <li class="upcoming-item upcoming-cols" aria-hidden="true"><span></span><span></span><span>Pred</span><span>Time</span><span>Win</span><span>Podium</span></li>
         {% for r in upcoming_races %}
         <li class="upcoming-item">
             <span class="upcoming-date">{{ r.race_date.strftime('%a %d %b') }}</span>
-            <span class="upcoming-race"><a href="/race/{{ r.race_id }}">{{ r.race_handle }}</a>{% if r.career_label %}<span class="career-tag">{{ r.career_label }}</span>{% endif %}</span>
-            <span class="upcoming-meta">
-                {% if r.pred_pos %}<span>Predicted <b>{{ r.pred_pos|ordinal }}</b></span>{% endif %}
-                {% if r.win_pct is not none %}<span>Win <b>{{ '<1' if r.win_pct < 0.005 else "%.0f"|format(r.win_pct * 100) }}%</b></span>{% endif %}
-            </span>
+            <span class="upcoming-race"><a href="/race/{{ r.race_id }}">{{ r.race_handle }}</a></span>
+            <span class="upcoming-pos">{% if r.pred_pos %}{{ pos_marker(r.pred_pos) }}{% endif %}</span>
+            <span class="upcoming-time">{% if r.pred_overall %}<b>{{ r.pred_overall }}</b><small>{{ 'Fastest' if r.pred_overall_behind == 'fastest' else r.pred_overall_behind }}</small>{% endif %}</span>
+            <span class="upcoming-pct">{% if r.win_pct is not none %}<small>Win</small>{{ pct(r.win_pct, "%.0f"|format(r.win_pct * 100) ~ '%') }}{% endif %}</span>
+            <span class="upcoming-pct pct-col--podium">{% if r.podium_pct is not none %}<small>Podium</small>{{ pct(r.podium_pct, "%.0f"|format(r.podium_pct * 100) ~ '%') }}{% endif %}</span>
         </li>
         {% endfor %}
     </ul>
