@@ -444,21 +444,6 @@ def _program_slug(sub, gender, prog_name=None):
     return _program_slug_for_option({"sub_category": sub, "gender": gender, "prog_name": prog_name})
 
 
-@router.get("/series/list")
-def series_list():
-    """Lightweight list of all series for the global search modal."""
-    return JSONResponse([
-        {"name": s["name"], "slug": s["slug"], "race_count": s["race_count"]}
-        for s in queries.get_all_series()
-    ])
-
-
-@router.get("/recurring/list")
-def recurring_list():
-    """Lightweight list of recurring events for the global search modal."""
-    return JSONResponse(queries.get_all_recurring_events())
-
-
 @router.get("/series", response_class=HTMLResponse)
 def series_index(request: Request):
     series_list = queries.get_all_series()

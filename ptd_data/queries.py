@@ -507,6 +507,251 @@ def search_events_full(query, country=None, year_start=None, year_end=None,
 
 
 # ---------------------------------------------------------------------------
+# Global search (header modal)
+# ---------------------------------------------------------------------------
+
+_COURSE_CASE = f"CASE WHEN r.distance IN {_LONG_IN} THEN 'long' ELSE 'short' END"
+
+
+@lru_cache(maxsize=1)
+def _current_world_ranks():
+    """{athlete_id: {(category, course): rank}} for every athlete who raced the
+    course in the last 18 months. Same pool and tie rule as
+    get_athlete_active_rankings, so search shows the rank the athlete page
+    shows; built once because each rank needs the whole pool."""
+    rows = _get_conn().execute(f"""
+        WITH cur AS (
+            SELECT DISTINCT ON (ra.athlete_id, ra.category, course)
+                   ra.athlete_id, ra.category, {_COURSE_CASE} AS course,
+                   ra.overall, r.race_date
+            FROM ratings ra
+            JOIN races r ON r.race_id = ra.race_id
+            ORDER BY ra.athlete_id, ra.category, course, r.race_date DESC, ra.race_id DESC
+        )
+        SELECT c.athlete_id, c.category, c.course,
+               RANK() OVER (PARTITION BY a.gender, c.category, c.course ORDER BY c.overall DESC)
+        FROM cur c
+        JOIN athletes a ON a.athlete_id = c.athlete_id
+        WHERE c.race_date >= CURRENT_DATE - INTERVAL 18 MONTHS
+    """).fetchall()
+    ranks = defaultdict(dict)
+    for athlete_id, category, course, rank in rows:
+        ranks[athlete_id][(str(category), course)] = rank
+    return ranks
+
+
+def global_search(query, limit=20):
+    """Athletes, races (recurring groups and single events) and series
+    matching `query`, for the header search modal. Every whitespace-separated
+    word must appear somewhere in the name (accents and order ignored), so
+    "yee alex" and "lopez" both find their targets. Each list carries its
+    total match count."""
+    conn = _get_conn()
+    tokens = query.lower().split()
+
+    def match(expr):
+        return " AND ".join(
+            [f"strip_accents(lower({expr})) LIKE '%' || strip_accents(?) || '%'"] * len(tokens))
+
+    # --- Athletes ---
+    # A word of the name starting with the first token beats a mid-word hit,
+    # then elites before age-groupers, then the best world rank ever held
+    # (so Alistair Brownlee still leads "brown" after retiring).
+    athlete_rows = conn.execute(f"""
+        WITH hits AS (
+            SELECT a.athlete_id,
+                   (' ' || strip_accents(lower(replace(a.name, '-', ' '))))
+                       LIKE '% ' || strip_accents(?) || '%' AS word_start
+            FROM athletes a
+            WHERE {match('a.name')}
+        ),
+        progs AS (
+            SELECT rk.athlete_id, rk.category, {_COURSE_CASE} AS course,
+                   MIN(rk.active_world_overall) AS best_rank
+            FROM rankings rk
+            JOIN races r ON r.race_id = rk.race_id
+            WHERE rk.athlete_id IN (SELECT athlete_id FROM hits)
+            GROUP BY ALL
+        ),
+        scored AS (
+            SELECT athlete_id,
+                   MIN(CASE WHEN category = 'elite' THEN best_rank ELSE 100000 + best_rank END) AS prominence,
+                   LIST(STRUCT_PACK(category := category::VARCHAR, course := course, best := best_rank)) AS progs
+            FROM progs
+            GROUP BY athlete_id
+        )
+        SELECT a.athlete_id, a.name, a.year_of_birth, a.gender, a.country_full, n.alpha3,
+               a.profile_img, s.progs, COUNT(*) OVER () AS total
+        FROM hits h
+        JOIN scored s        ON s.athlete_id = h.athlete_id
+        JOIN athletes a      ON a.athlete_id = h.athlete_id
+        JOIN nationalities n ON n.country_full = a.country_full
+        ORDER BY h.word_start DESC, s.prominence, a.name
+        LIMIT ?
+    """, [tokens[0]] + tokens + [limit]).fetchall()
+
+    current = _current_world_ranks()
+    athletes = []
+    for aid, name, yob, gender, country, alpha3, img, progs, _ in athlete_rows:
+        # One rank per athlete. Elite programs beat AG. A course raced in the
+        # last 18 months shows today's rank (as the athlete page does) and
+        # beats a finished course's best; among equals the better rank wins.
+        shown = [p for p in progs if p["category"] == "elite"] or progs
+        options = []
+        for p in shown:
+            now = current.get(aid, {}).get((p["category"], p["course"]))
+            if now or p["best"]:
+                options.append({"course": p["course"], "ag": p["category"] == "ag",
+                                "rank": now or p["best"], "current": now is not None})
+        rank = min(options, key=lambda r: (not r["current"], r["rank"])) if options else None
+        athletes.append({"athlete_id": aid, "name": name, "year_of_birth": yob, "gender": gender,
+                         "country_full": country, "country_alpha3": alpha3,
+                         "has_img": bool(img), "rank": rank})
+
+    # --- Races ---
+    # Recurring races are one result each, carrying their editions so the
+    # modal can drop down to a single year. Matched on any edition's venue
+    # too, so "kona" finds the Hawaii Ironman World Championships. Two
+    # editions minimum, as on /recurring; cancelled editions (event, no
+    # races) don't count. Events outside every matched group follow as
+    # single results, matched on name, venue, country and year, so
+    # "yokohama 2024" goes straight to that edition.
+    group_cte = f"""
+        grp AS (
+            SELECT re.recurring_event_id
+            FROM recurring_events re
+            JOIN event_recurring er ON er.recurring_event_id = re.recurring_event_id
+            JOIN events e           ON e.event_id = er.event_id
+            WHERE EXISTS (SELECT 1 FROM races r WHERE r.event_id = e.event_id)
+            GROUP BY re.recurring_event_id
+            HAVING COUNT(DISTINCT e.event_id) >= 2
+               AND BOOL_OR({match("re.name || ' ' || COALESCE(e.venue, '') || ' ' || COALESCE(e.country, '')")})
+        )"""
+    group_rows = conn.execute(f"""
+        WITH {group_cte}
+        SELECT re.recurring_event_id, re.slug, re.name,
+               COUNT(DISTINCT e.event_id) AS editions,
+               YEAR(MIN(e.start_date)) AS first_year,
+               YEAR(MAX(e.start_date) FILTER (WHERE e.start_date <= CURRENT_DATE)) AS last_year,
+               MIN(e.start_date) FILTER (WHERE e.start_date > CURRENT_DATE) AS next_date,
+               ARG_MAX(e.venue, e.start_date) AS venue,
+               ARG_MAX(e.country, e.start_date) AS country,
+               ARG_MAX(n.alpha3, e.start_date) AS alpha3,
+               COUNT(*) OVER () AS total
+        FROM grp
+        JOIN recurring_events re  ON re.recurring_event_id = grp.recurring_event_id
+        JOIN event_recurring er   ON er.recurring_event_id = re.recurring_event_id
+        JOIN events e             ON e.event_id = er.event_id
+        LEFT JOIN nationalities n ON n.country_full = e.country
+        WHERE EXISTS (SELECT 1 FROM races r WHERE r.event_id = e.event_id)
+        GROUP BY re.recurring_event_id, re.slug, re.name
+        ORDER BY editions DESC, MAX(e.start_date) DESC
+        LIMIT ?
+    """, tokens + [limit]).fetchall()
+    groups = [{"recurring_event_id": r[0], "slug": r[1], "name": r[2], "editions": r[3],
+               "first_year": r[4], "last_year": r[5], "next_date": r[6], "venue": r[7],
+               "country": r[8], "country_alpha3": r[9]} for r in group_rows]
+
+    single_rows = conn.execute(f"""
+        WITH {group_cte}
+        SELECT e.event_id, e.name, e.venue, e.country, n.alpha3, e.start_date,
+               COUNT(*) OVER () AS total
+        FROM events e
+        LEFT JOIN nationalities n ON n.country_full = e.country
+        WHERE {match("e.name || ' ' || COALESCE(e.venue, '') || ' ' || COALESCE(e.country, '') || ' ' || YEAR(e.start_date)")}
+          AND EXISTS (SELECT 1 FROM races r WHERE r.event_id = e.event_id)
+          AND e.event_id NOT IN (SELECT er.event_id FROM event_recurring er JOIN grp USING (recurring_event_id))
+        ORDER BY e.start_date DESC, e.event_id
+        LIMIT ?
+    """, tokens + tokens + [limit]).fetchall()
+    singles = [{"event_id": r[0], "name": r[1], "venue": r[2], "country": r[3],
+                "country_alpha3": r[4], "date": r[5]} for r in single_rows]
+
+    # The dropdown lists the latest 12 editions; the rest are a click away
+    # on the recurring page.
+    editions = defaultdict(list)
+    if groups:
+        for rid, event_id, venue, start_date in conn.execute(f"""
+            SELECT er.recurring_event_id, e.event_id, e.venue, e.start_date
+            FROM event_recurring er
+            JOIN events e ON e.event_id = er.event_id
+            WHERE er.recurring_event_id IN ({",".join("?" * len(groups))})
+              AND EXISTS (SELECT 1 FROM races r WHERE r.event_id = e.event_id)
+            QUALIFY ROW_NUMBER() OVER (PARTITION BY er.recurring_event_id ORDER BY e.start_date DESC) <= 12
+            ORDER BY e.start_date DESC
+        """, [g["recurring_event_id"] for g in groups]).fetchall():
+            editions[rid].append({"event_id": event_id, "venue": venue, "date": start_date})
+
+    # Distances and elite winners for every event above: one elite program
+    # per gender, D1 over D2 by prog_name, as event cards pick.
+    event_ids = [s["event_id"] for s in singles] + [e["event_id"] for eds in editions.values() for e in eds]
+    distances, winners = defaultdict(list), defaultdict(dict)
+    if event_ids:
+        for event_id, distance, gender, sub, aid, name, alpha3, img in conn.execute(f"""
+            SELECT r.event_id, r.distance::VARCHAR, r.gender::VARCHAR, r.sub_category::VARCHAR,
+                   a.athlete_id, a.name, n.alpha3, a.profile_img
+            FROM races r
+            LEFT JOIN results w       ON w.race_id = r.race_id AND w.position = 1 AND w.status = 'Finished'
+            LEFT JOIN athletes a      ON a.athlete_id = w.athlete_id
+            LEFT JOIN nationalities n ON n.country_full = a.country_full
+            WHERE r.event_id IN ({",".join("?" * len(event_ids))})
+            ORDER BY r.event_id, r.prog_name, r.race_date, r.race_id
+        """, event_ids).fetchall():
+            if distance not in distances[event_id]:
+                distances[event_id].append(distance)
+            if sub == "elite" and gender in ("male", "female") and aid and gender not in winners[event_id]:
+                winners[event_id][gender] = {"athlete_id": aid, "name": name,
+                                             "country_alpha3": alpha3, "has_img": bool(img)}
+
+    def winner_list(event_id):
+        w = winners.get(event_id, {})
+        return [w[g] for g in ("male", "female") if g in w]
+
+    for s in singles:
+        s["distances"] = distances[s["event_id"]]
+        s["winners"] = winner_list(s["event_id"])
+    for g in groups:
+        eds = editions[g.pop("recurring_event_id")]
+        # The row itself shows the latest winners and distance, with photos;
+        # the dropdown only needs names.
+        latest = next((e for e in eds if winners.get(e["event_id"])), eds[0])
+        g["winners"] = winner_list(latest["event_id"])
+        g["distances"] = distances[latest["event_id"]]
+        for e in eds:
+            e["winners"] = [{"name": w["name"], "country_alpha3": w["country_alpha3"]}
+                            for w in winner_list(e["event_id"])]
+        g["editions_list"] = eds
+
+    # --- Series ---
+    series = _dicts(["slug", "name", "events", "first_year", "last_year", "next_venue", "next_date"],
+                    conn.execute(f"""
+        SELECT s.slug, s.name,
+               COUNT(DISTINCT e.event_id) AS events,
+               YEAR(MIN(e.start_date)),
+               YEAR(MAX(e.start_date) FILTER (WHERE e.start_date <= CURRENT_DATE)),
+               ARG_MIN(COALESCE(NULLIF(e.venue, ''), e.name), e.start_date) FILTER (WHERE e.start_date > CURRENT_DATE),
+               MIN(e.start_date) FILTER (WHERE e.start_date > CURRENT_DATE)
+        FROM series s
+        JOIN event_series es ON es.series_id = s.series_id
+        JOIN events e        ON e.event_id = es.event_id
+        WHERE {match('s.name')}
+          AND EXISTS (SELECT 1 FROM races r WHERE r.event_id = e.event_id)
+        GROUP BY s.series_id, s.slug, s.name, s.sort_order
+        ORDER BY s.sort_order, s.name
+    """, tokens))
+
+    return {
+        "athletes":        athletes,
+        "athletes_total":  athlete_rows[0][-1] if athlete_rows else 0,
+        "groups":          groups,
+        "groups_total":    group_rows[0][-1] if group_rows else 0,
+        "events":          singles,
+        "events_total":    single_rows[0][-1] if single_rows else 0,
+        "series":          series,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Leaderboard
 # ---------------------------------------------------------------------------
 
@@ -5517,34 +5762,6 @@ def _collapse_program_rows(rows):
                 nonag_seen[key] = opt
                 out.append(opt)
     return out
-
-
-def get_all_recurring_events(min_editions=2):
-    """All recurring events with edition count and date range.
-
-    Used by the global search modal. Filters to groups with at least
-    `min_editions` editions so noise from one-off renames is excluded.
-    """
-    rows = _get_conn().execute("""
-        SELECT re.slug, re.name,
-               COUNT(DISTINCT e.event_id) AS edition_count,
-               MIN(e.start_date) AS first_date,
-               MAX(e.start_date) AS last_date
-        FROM recurring_events re
-        JOIN event_recurring er ON er.recurring_event_id = re.recurring_event_id
-        JOIN events e           ON e.event_id = er.event_id
-        -- Cancelled editions (event exists, no races - e.g. the COVID-era
-        -- WTCS Chengdu events) don't count and shouldn't stretch the span.
-        WHERE EXISTS (SELECT 1 FROM races r WHERE r.event_id = e.event_id)
-        GROUP BY re.recurring_event_id, re.slug, re.name
-        HAVING edition_count >= ?
-        ORDER BY edition_count DESC, last_date DESC
-    """, [min_editions]).fetchall()
-    return [{
-        "slug": r[0], "name": r[1], "edition_count": r[2],
-        "first_year": r[3].year if r[3] else None,
-        "last_year":  r[4].year if r[4] else None,
-    } for r in rows]
 
 
 def get_recurring_index():

@@ -119,31 +119,30 @@
         </div>
     </header>
 
-    <!-- Global search modal -->
-    <div class="search-modal" id="search-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-label="Search Pro Tri Data">
-        <div class="search-modal-backdrop" data-search-close></div>
-        <div class="search-modal-panel">
-            <div class="search-modal-bar">
-                <svg class="search-modal-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <!-- Global search modal (static/js/header.js) -->
+    <div class="gs" id="gs" hidden role="dialog" aria-modal="true" aria-label="Search Pro Tri Data">
+        <div class="gs-backdrop" data-gs-close></div>
+        <div class="gs-panel">
+            <div class="gs-bar">
+                <svg class="gs-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <circle cx="11" cy="11" r="7"/>
                     <line x1="20" y1="20" x2="16.65" y2="16.65"/>
                 </svg>
-                <input type="search" class="search-modal-input" id="search-modal-input" placeholder="Search athletes, races, series..." autocomplete="off" spellcheck="false">
-                <kbd class="search-modal-kbd">Esc</kbd>
-                <button type="button" class="search-modal-close" data-search-close aria-label="Close search">&times;</button>
+                <input type="search" class="gs-input" id="gs-input" placeholder="Athletes, races, venues, series..." autocomplete="off" spellcheck="false" enterkeyhint="go" aria-label="Search">
+                <button type="button" class="gs-cancel" data-gs-close>Cancel</button>
             </div>
-            <div class="search-modal-tabs" role="tablist">
-                <button type="button" class="search-modal-tab active" data-search-tab="athletes" role="tab">Athletes <span class="search-modal-tab-count" data-count="athletes"></span></button>
-                <button type="button" class="search-modal-tab" data-search-tab="races" role="tab">Races <span class="search-modal-tab-count" data-count="races"></span></button>
-                <button type="button" class="search-modal-tab" data-search-tab="recurring" role="tab">Recurring <span class="search-modal-tab-count" data-count="recurring"></span></button>
-                <button type="button" class="search-modal-tab" data-search-tab="series" role="tab">Series <span class="search-modal-tab-count" data-count="series"></span></button>
+            <div class="gs-tabs" role="tablist">
+                <button type="button" class="gs-tab" data-gs-tab="all" role="tab">All<span class="gs-tab-count"></span></button>
+                <button type="button" class="gs-tab" data-gs-tab="athletes" role="tab">Athletes<span class="gs-tab-count"></span></button>
+                <button type="button" class="gs-tab" data-gs-tab="races" role="tab">Races<span class="gs-tab-count"></span></button>
+                <button type="button" class="gs-tab" data-gs-tab="series" role="tab">Series<span class="gs-tab-count"></span></button>
             </div>
-            <div class="search-modal-results">
-                <div class="search-modal-empty" data-search-empty>Start typing to search across athletes, races, recurring events, and series.</div>
-                <div class="search-modal-pane" data-search-pane="athletes" hidden></div>
-                <div class="search-modal-pane" data-search-pane="races" hidden></div>
-                <div class="search-modal-pane" data-search-pane="recurring" hidden></div>
-                <div class="search-modal-pane" data-search-pane="series" hidden></div>
+            <div class="gs-results">
+                <div class="gs-message gs-hint" data-gs-empty>Search by name, venue, country or year, in any order: <b>yee alex</b>, <b>kona</b>, <b>yokohama 2024</b>.</div>
+                <div class="gs-pane" data-gs-pane="all" hidden></div>
+                <div class="gs-pane" data-gs-pane="athletes" hidden></div>
+                <div class="gs-pane" data-gs-pane="races" hidden></div>
+                <div class="gs-pane" data-gs-pane="series" hidden></div>
             </div>
         </div>
     </div>
@@ -165,204 +164,8 @@
         </div>
     </footer>
     
-    <!-- Header behavior: hamburger, dropdowns, global search modal. -->
-    <script>
-    (function () {
-        // ---------- Hamburger ----------
-        const toggle = document.querySelector('.nav-toggle');
-        const nav = document.getElementById('main-nav');
-        const setNavOpen = (open) => {
-            if (!toggle || !nav) return;
-            toggle.setAttribute('aria-expanded', String(open));
-            nav.classList.toggle('open', open);
-            if (!open) {
-                nav.querySelectorAll('.nav-dropdown.open').forEach(d => d.classList.remove('open'));
-            }
-        };
-        if (toggle && nav) {
-            toggle.addEventListener('click', (e) => {
-                e.stopPropagation();
-                setNavOpen(toggle.getAttribute('aria-expanded') !== 'true');
-            });
-            nav.addEventListener('click', (e) => {
-                if (e.target.closest('a.nav-dropdown-item') || (e.target.closest('a.nav-link') && !e.target.closest('.nav-dropdown-toggle'))) {
-                    setNavOpen(false);
-                }
-            });
-            document.addEventListener('click', (e) => {
-                if (toggle.getAttribute('aria-expanded') === 'true' && !e.target.closest('.site-header')) setNavOpen(false);
-            });
-            window.addEventListener('resize', () => {
-                if (window.innerWidth > 768 && toggle.getAttribute('aria-expanded') === 'true') setNavOpen(false);
-            });
-        }
-
-        // Dropdowns are pure hover on desktop; on mobile they render expanded
-        // inline inside the hamburger panel, so no JS toggle behavior is needed.
-        const closeAllDropdowns = () => {};
-
-        // ---------- Global search modal ----------
-        const modal       = document.getElementById('search-modal');
-        const modalInput  = document.getElementById('search-modal-input');
-        const triggers    = document.querySelectorAll('[data-search-open]');
-        const closers     = modal ? modal.querySelectorAll('[data-search-close]') : [];
-        const tabs        = modal ? modal.querySelectorAll('[data-search-tab]')   : [];
-        const panes       = modal ? modal.querySelectorAll('[data-search-pane]')  : [];
-        const emptyEl     = modal ? modal.querySelector('[data-search-empty]')    : null;
-        const countEls    = modal ? modal.querySelectorAll('[data-count]')        : [];
-        let seriesCache    = null;
-        let recurringCache = null;
-        let activeTab      = 'athletes';
-        let debounceTimer = 0;
-        let lastQuery     = '';
-        let reqToken      = 0;
-
-        const openModal = () => {
-            if (!modal) return;
-            modal.hidden = false;
-            modal.setAttribute('aria-hidden', 'false');
-            document.body.classList.add('search-modal-locked');
-            setNavOpen(false);
-            closeAllDropdowns(null);
-            requestAnimationFrame(() => modalInput.focus());
-            // Pre-fetch series + recurring lists (small) for instant client-side filtering.
-            if (seriesCache === null) {
-                seriesCache = [];
-                fetch('/series/list').then(r => r.ok ? r.json() : []).then(d => { seriesCache = Array.isArray(d) ? d : []; if (lastQuery) runSearch(lastQuery); });
-            }
-            if (recurringCache === null) {
-                recurringCache = [];
-                fetch('/recurring/list').then(r => r.ok ? r.json() : []).then(d => { recurringCache = Array.isArray(d) ? d : []; if (lastQuery) runSearch(lastQuery); });
-            }
-        };
-        const closeModal = () => {
-            if (!modal) return;
-            modal.hidden = true;
-            modal.setAttribute('aria-hidden', 'true');
-            document.body.classList.remove('search-modal-locked');
-        };
-
-        triggers.forEach(t => t.addEventListener('click', openModal));
-        closers.forEach(c => c.addEventListener('click', closeModal));
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && modal && !modal.hidden) { e.preventDefault(); closeModal(); }
-            // Cmd/Ctrl-K opens search
-            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openModal(); }
-        });
-
-        const setActiveTab = (name) => {
-            activeTab = name;
-            tabs.forEach(t => t.classList.toggle('active', t.dataset.searchTab === name));
-            panes.forEach(p => p.hidden = p.dataset.searchPane !== name);
-            if (emptyEl) emptyEl.hidden = !!lastQuery;
-        };
-        tabs.forEach(t => t.addEventListener('click', () => setActiveTab(t.dataset.searchTab)));
-        if (modal) setActiveTab('athletes');
-
-        const escapeHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-        const setCount = (name, n) => { countEls.forEach(el => { if (el.dataset.count === name) el.textContent = n > 0 ? n : ''; }); };
-        const renderAthletes = (list) => {
-            const pane = modal.querySelector('[data-search-pane="athletes"]');
-            if (!list.length) { pane.innerHTML = '<div class="search-modal-no-results">No athletes found.</div>'; return; }
-            pane.innerHTML = list.map(a => {
-                const fl = flagImg(a.country_alpha3, a.country_full);
-                const sub  = [(fl ? fl + ' ' : '') + escapeHtml(a.country_full || ''), a.year_of_birth || ''].filter(Boolean).join(' &middot; ');
-                return `
-                <a class="search-modal-row" href="/athlete/${a.athlete_id}">
-                    <div class="search-modal-row-main">
-                        <span class="search-modal-row-title">${escapeHtml(a.name)}</span>
-                        <span class="search-modal-row-sub">${sub}</span>
-                    </div>
-                    <div class="search-modal-row-meta">${escapeHtml(a.overall_rating || '')}</div>
-                </a>`;
-            }).join('');
-        };
-        const renderRaces = (list) => {
-            const pane = modal.querySelector('[data-search-pane="races"]');
-            if (!list.length) { pane.innerHTML = '<div class="search-modal-no-results">No races found.</div>'; return; }
-            pane.innerHTML = list.map(r => {
-                const sub = [r.event_date || '', r.venue || '', r.country || ''].filter(Boolean).map(escapeHtml).join(' &middot; ');
-                return `
-                <a class="search-modal-row" href="/event/${r.event_id}">
-                    <div class="search-modal-row-main">
-                        <span class="search-modal-row-title">${escapeHtml(r.name || '')}</span>
-                        <span class="search-modal-row-sub">${sub}</span>
-                    </div>
-                </a>`;
-            }).join('');
-        };
-        const renderSeries = (list) => {
-            const pane = modal.querySelector('[data-search-pane="series"]');
-            if (!list.length) { pane.innerHTML = '<div class="search-modal-no-results">No series found.</div>'; return; }
-            pane.innerHTML = list.map(s => `
-                <a class="search-modal-row" href="/series/${encodeURIComponent(s.slug)}">
-                    <div class="search-modal-row-main">
-                        <span class="search-modal-row-title">${escapeHtml(s.name)}</span>
-                        <span class="search-modal-row-sub">${s.race_count ? s.race_count + ' races' : ''}</span>
-                    </div>
-                </a>`).join('');
-        };
-        const renderRecurring = (list) => {
-            const pane = modal.querySelector('[data-search-pane="recurring"]');
-            if (!list.length) { pane.innerHTML = '<div class="search-modal-no-results">No recurring events found.</div>'; return; }
-            pane.innerHTML = list.map(r => {
-                const years = (r.first_year && r.last_year)
-                    ? (r.first_year === r.last_year ? String(r.first_year) : `${r.first_year} - ${r.last_year}`)
-                    : '';
-                const sub = [r.edition_count ? r.edition_count + ' editions' : '', years].filter(Boolean).join(' &middot; ');
-                return `
-                <a class="search-modal-row" href="/recurring/${encodeURIComponent(r.slug)}">
-                    <div class="search-modal-row-main">
-                        <span class="search-modal-row-title">${escapeHtml(r.name)}</span>
-                        <span class="search-modal-row-sub">${sub}</span>
-                    </div>
-                </a>`;
-            }).join('');
-        };
-
-        const runSearch = (q) => {
-            const token = ++reqToken;
-            // Athletes
-            fetch(`/athletes/search?q=${encodeURIComponent(q)}`).then(r => r.ok ? r.json() : []).then(d => {
-                if (token !== reqToken) return;
-                const arr = Array.isArray(d) ? d.slice(0, 20) : [];
-                renderAthletes(arr);
-                setCount('athletes', arr.length);
-            });
-            // Races
-            fetch(`/races/search?q=${encodeURIComponent(q)}`).then(r => r.ok ? r.json() : []).then(d => {
-                if (token !== reqToken) return;
-                const arr = Array.isArray(d) ? d.slice(0, 20) : [];
-                renderRaces(arr);
-                setCount('races', arr.length);
-            });
-            // Series + Recurring (client-side filter against cached lists)
-            const needle = q.toLowerCase();
-            const seriesMatches = (seriesCache || []).filter(s => (s.name || '').toLowerCase().includes(needle)).slice(0, 20);
-            renderSeries(seriesMatches);
-            setCount('series', seriesMatches.length);
-            const recurringMatches = (recurringCache || []).filter(r => (r.name || '').toLowerCase().includes(needle)).slice(0, 20);
-            renderRecurring(recurringMatches);
-            setCount('recurring', recurringMatches.length);
-        };
-
-        if (modalInput) {
-            modalInput.addEventListener('input', (e) => {
-                const q = e.target.value.trim();
-                lastQuery = q;
-                clearTimeout(debounceTimer);
-                if (q.length < 2) {
-                    panes.forEach(p => p.innerHTML = '');
-                    countEls.forEach(el => el.textContent = '');
-                    if (emptyEl) emptyEl.hidden = false;
-                    return;
-                }
-                if (emptyEl) emptyEl.hidden = true;
-                debounceTimer = setTimeout(() => runSearch(q), 180);
-            });
-        }
-    })();
-    </script>
+    <!-- Header behavior: hamburger and the global search modal -->
+    <script src="{{ STATIC_BASE_URL }}js/header.js?v={{ ASSET_VERSION }}"></script>
 
     <!-- Chart.js before utils.js: utils.js registers a global Chart plugin
          (yearBands) at load, so Chart must already be defined. -->
