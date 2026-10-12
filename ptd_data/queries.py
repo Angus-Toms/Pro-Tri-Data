@@ -2112,8 +2112,8 @@ def get_athlete_long_course_notable_results(athlete_id):
 
 @lru_cache(maxsize=8192)
 def get_athlete_stats(athlete_id, category=None, course='short'):
-    """race_starts, podiums (pos 1-3), wins (pos 1), dnfs (any non-finish),
-    first_race_date, last_race_date. Course-scoped.
+    """race_starts, podiums (pos 1-3), wins (pos 1), seconds, thirds, dnfs
+    (any non-finish), first_race_date, last_race_date. Course-scoped.
     Pass category='elite' or 'ag' to restrict to that category."""
     conn = _get_conn()
     course_in = _course_in(course)
@@ -2126,7 +2126,9 @@ def get_athlete_stats(athlete_id, category=None, course='short'):
             COUNT(CASE WHEN res.position = 1  THEN 1 END)       AS wins,
             MAX(r.race_date)                                     AS last_race_date,
             MIN(r.race_date)                                     AS first_race_date,
-            COUNT(CASE WHEN res.status <> 'Finished' THEN 1 END) AS dnfs
+            COUNT(CASE WHEN res.status <> 'Finished' THEN 1 END) AS dnfs,
+            COUNT(CASE WHEN res.position = 2  THEN 1 END)       AS seconds,
+            COUNT(CASE WHEN res.position = 3  THEN 1 END)       AS thirds
         FROM results res
         JOIN races r ON res.race_id = r.race_id
         WHERE res.athlete_id = ?
@@ -2137,7 +2139,7 @@ def get_athlete_stats(athlete_id, category=None, course='short'):
                           WHERE ig.race_id = res.race_id AND ig.parent_race_id IS NOT NULL)
     """, params).fetchone()
     return {"race_starts": row[0], "podiums": row[1], "wins": row[2], "last_race_date": row[3],
-            "first_race_date": row[4], "dnfs": row[5]}
+            "first_race_date": row[4], "dnfs": row[5], "seconds": row[6], "thirds": row[7]}
 
 
 def get_athlete_best_finish(athlete_id, category='elite', course='short'):

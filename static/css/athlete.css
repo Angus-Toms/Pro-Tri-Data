@@ -180,9 +180,8 @@
 .career-card-line { font-size: 0.8rem; color: var(--text-light); font-variant-numeric: tabular-nums; }
 
 
-/* Career summary: one card under the career cards. Stats line on top, then
-   Palmares and Current Form side by side, split by a rule (stacked below
-   768). */
+/* Career summary: one card under the career cards with the Palmares medal
+   table and Current Form side by side, split by a rule (stacked below 768). */
 .career-summary {
     margin: 0.75rem 0 2rem;
     padding: 1.1rem 1.5rem 1.25rem;
@@ -190,32 +189,16 @@
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-lg);
 }
-.cs-stats {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0.25rem 1.25rem;
-    margin: 0;
-    font-size: 0.95rem;
-    color: var(--text-light);
-    font-variant-numeric: tabular-nums;
-}
-.cs-stats b { font-size: 1.2rem; font-weight: 800; color: var(--text-color); margin-right: 0.15rem; }
 .cs-body {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 1.25rem 2rem;
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border-color);
 }
 .cs-body.two-col { grid-template-columns: minmax(0, 1fr) auto; }
 .cs-body.two-col .cs-form { border-left: 1px solid var(--border-color); padding-left: 2rem; }
-.cs-label {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    margin-bottom: 0.4rem;
+/* Each column's label sits in its own header row, beside the column heads. */
+.cs-label,
+.career-form-table thead th.cs-label {
     font-size: 0.68rem;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -225,14 +208,22 @@
 
 /* Palmares: a medal table, one row per tier with gold / silver / bronze
    counts. Rows open to list the races. */
-.pt-head, .pt-row summary {
+.pt-head, .pt-total, .pt-row summary {
     display: grid;
     grid-template-columns: 16rem minmax(0, 1fr) repeat(3, 2.25rem) 1.25rem;
     column-gap: 0.5rem;
     align-items: center;
 }
-.pt-head { padding-bottom: 0.3rem; justify-items: center; }
+.pt-head { padding-bottom: 0.35rem; justify-items: center; }
 .pt-head span:first-child { justify-self: start; }
+/* "All races": the career's stats as the table's first row. */
+.pt-total { padding: 0.5rem 0.6rem; margin: 0 -0.6rem; background: var(--bg-color); border-radius: 6px; font-size: 0.9rem; }
+/* The label takes the preview column too, so the stats have room. */
+.pt-total .pt-name { grid-column: 1 / 3; }
+.pt-sub { display: block; font-size: 0.78rem; font-weight: 400; color: var(--text-light); font-variant-numeric: tabular-nums; }
+.pt-sub > span { white-space: nowrap; }
+.pt-sub .career-provisional { margin-left: 0.3rem; }
+.pt-total + .pt-row { border-top: 0; }
 .pt-dot { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 50%; flex-shrink: 0; }
 .pt-dot.m1 { background: var(--gold); }
 .pt-dot.m2 { background: var(--silver); }
@@ -685,16 +676,15 @@ tr.sub-race-row .link:hover {
 
     .career-summary { padding: 1rem 1.1rem; }
     .cs-body.two-col { grid-template-columns: minmax(0, 1fr); }
-    .pt-head, .pt-row summary { grid-template-columns: minmax(0, 1fr) repeat(3, 2.25rem) 1.25rem; }
+    .pt-head, .pt-total, .pt-row summary { grid-template-columns: minmax(0, 1fr) repeat(3, 2.25rem) 1.25rem; }
     .pt-preview, .pt-head span + span { display: none; }
+    .pt-total .pt-name { grid-column: auto; }
     /* Stacked: the short, current Form first, then the longer Palmares. */
     .cs-body.two-col .cs-form { order: -1; border-left: 0; padding-left: 0; }
     .cs-body.two-col .cs-palmares { border-top: 1px solid var(--border-color); padding-top: 1rem; }
     .upcoming-item { grid-template-columns: 6.5rem minmax(0, 1fr); }
     .upcoming-meta { grid-column: 2; gap: 1rem; }
-    .cs-stats { gap: 0.2rem 1rem; }
     .career-ratings .rt-spark { width: 4em; margin-left: 0.35rem; }
-    .cs-stats b { font-size: 1.05rem; }
 
     .athlete-hero-name { font-size: 1.5rem; }
 

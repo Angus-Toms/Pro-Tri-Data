@@ -483,6 +483,8 @@ def get_athlete(request: Request, athlete_id: int,
         "active":        active,
         "is_low_confidence": race_starts < LOW_CONF_STARTS,
         "dnfs":          stats["dnfs"],
+        "seconds":       stats["seconds"],
+        "thirds":        stats["thirds"],
         "first_year":    stats["first_race_date"].year if stats["first_race_date"] else None,
         "last_year":     stats["last_race_date"].year if stats["last_race_date"] else None,
     }
