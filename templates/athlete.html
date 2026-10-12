@@ -151,7 +151,7 @@
             <span class="upcoming-date">{{ r.race_date.strftime('%a %d %b') }}</span>
             <span class="upcoming-race"><a href="/race/{{ r.race_id }}">{{ r.race_handle }}</a></span>
             <span class="upcoming-pos">{% if r.pred_pos %}{{ pos_marker(r.pred_pos) }}{% endif %}</span>
-            <span class="upcoming-time">{% if r.pred_overall %}<b>{{ r.pred_overall }}</b><small>{{ 'Fastest' if r.pred_overall_behind == 'fastest' else r.pred_overall_behind }}</small>{% endif %}</span>
+            <span class="upcoming-time">{% if r.pred_overall %}<b>{{ r.pred_overall }}</b>{% if r.pred_overall_behind != 'fastest' %}<small>{{ r.pred_overall_behind }}</small>{% endif %}{% endif %}</span>
             <span class="upcoming-pct">{% if r.win_pct is not none %}<small>Win</small>{{ pct(r.win_pct, "%.0f"|format(r.win_pct * 100) ~ '%') }}{% endif %}</span>
             <span class="upcoming-pct pct-col--podium">{% if r.podium_pct is not none %}<small>Podium</small>{{ pct(r.podium_pct, "%.0f"|format(r.podium_pct * 100) ~ '%') }}{% endif %}</span>
         </li>
