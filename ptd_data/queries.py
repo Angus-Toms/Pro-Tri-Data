@@ -1791,14 +1791,15 @@ def get_athlete_active_rankings(athlete_id, category='elite', course='short'):
             (SELECT COUNT(*) + 1 FROM active aa WHERE aa.swim       > me.swim       AND aa.country_full = me.country_full) AS national_swim,
             (SELECT COUNT(*) + 1 FROM active aa WHERE aa.bike       > me.bike       AND aa.country_full = me.country_full) AS national_bike,
             (SELECT COUNT(*) + 1 FROM active aa WHERE aa.run        > me.run        AND aa.country_full = me.country_full) AS national_run,
-            (SELECT COUNT(*) + 1 FROM active aa WHERE aa.transition > me.transition AND aa.country_full = me.country_full) AS national_transition
+            (SELECT COUNT(*) + 1 FROM active aa WHERE aa.transition > me.transition AND aa.country_full = me.country_full) AS national_transition,
+            (SELECT COUNT(*) FROM active) AS pool
         FROM me
     """, [category, athlete_id, athlete_id]).fetchone()
 
     if not row:
         return None
     cols = ["world_overall", "world_swim", "world_bike", "world_run", "world_transition",
-            "national_overall", "national_swim", "national_bike", "national_run", "national_transition"]
+            "national_overall", "national_swim", "national_bike", "national_run", "national_transition", "pool"]
     return dict(zip(cols, row))
 
 
@@ -1873,14 +1874,14 @@ def get_athlete_1yr_changes(athlete_id, category='elite', course='short'):
 
 
 def get_athlete_peak_ratings(athlete_id, category='elite', course='short'):
-    """Max rating per discipline + race handle + race_id where it was achieved. Course-scoped."""
+    """Max rating per discipline + race handle, race_id and date where it was achieved. Course-scoped."""
     conn = _get_conn()
     course_in = _course_in(course)
     discs = ["overall", "swim", "bike", "run", "transition"]
     result = {}
     for disc in discs:
         row = conn.execute(f"""
-            SELECT ra.{disc}, r.race_handle, r.race_id
+            SELECT ra.{disc}, r.race_handle, r.race_id, r.race_date
             FROM ratings ra
             JOIN races r ON ra.race_id = r.race_id
             WHERE ra.athlete_id = ? AND ra.category = ? AND r.distance IN {course_in}
@@ -1890,53 +1891,7 @@ def get_athlete_peak_ratings(athlete_id, category='elite', course='short'):
         result[f"max_{disc}"]         = row[0] if row else 0
         result[f"max_{disc}_race"]    = row[1] if row else ""
         result[f"max_{disc}_race_id"] = row[2] if row else 0
-    return result
-
-
-def get_athlete_best_performances(athlete_id, category='elite', course='short'):
-    """
-    Best rating change per discipline + the race handle. Course-scoped.
-    Largest positive change only: a race that lost rating is never the best,
-    so a discipline with no gain returns None.
-
-    Excludes races where the athlete had no recorded time for the relevant
-    discipline - a missing split can't be a "best performance" even if the
-    ratings row carries a non-zero change rolled in from elsewhere. For the
-    transition discipline both T1 and T2 must be present.
-    """
-    conn = _get_conn()
-    course_in = _course_in(course)
-    # Per-discipline split-time gate. The ratings table doesn't know whether
-    # a split was real or zero-filled, so we cross-check against results.
-    DISC_GATE = {
-        "overall":    "res.overall_s > 0",
-        "swim":       "res.swim_s    > 0",
-        "bike":       "res.bike_s    > 0",
-        "run":        "res.run_s     > 0",
-        "transition": "res.t1_s > 0 AND res.t2_s > 0",
-    }
-    result = {}
-    for disc, gate in DISC_GATE.items():
-        row = conn.execute(f"""
-            SELECT ra.{disc}_change, r.race_handle, ra.race_id
-            FROM ratings ra
-            JOIN races   r   ON r.race_id  = ra.race_id
-            JOIN results res ON res.race_id = ra.race_id AND res.athlete_id = ra.athlete_id
-            WHERE ra.athlete_id = ? AND ra.category = ? AND r.distance IN {course_in}
-              AND ra.{disc}_change IS NOT NULL
-              AND ra.{disc}_change > 0
-              AND {gate}
-            ORDER BY ra.{disc}_change DESC
-            LIMIT 1
-        """, [athlete_id, category]).fetchone()
-        if row:
-            result[f"{disc}_change"]    = row[0]
-            result[f"{disc}_race"]      = row[1]
-            result[f"{disc}_race_id"]   = row[2]
-        else:
-            result[f"{disc}_change"]    = None
-            result[f"{disc}_race"]      = ""
-            result[f"{disc}_race_id"]   = None
+        result[f"max_{disc}_date"]    = row[3] if row else None
     return result
 
 

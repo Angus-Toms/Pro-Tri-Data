@@ -96,13 +96,16 @@ def format_ordinal(n):
     except Exception:
         return "***"
     suffix = "th" if 10 <= n % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
-    return f"{n}{suffix}"
+    return f"{n:,}{suffix}"
 
 
 templates.env.filters["ordinal"] = format_ordinal
 
 
 _GENDER_WORD = {"male": "Men", "female": "Women", "mixed": "Mixed"}
+
+DISCS = ["overall", "swim", "bike", "run", "transition"]
+DISC_LABELS = {"overall": "Overall", "swim": "Swim", "bike": "Bike", "run": "Run", "transition": "Transition"}
 
 
 def _display_program(prog_name, gender=None):
@@ -325,7 +328,6 @@ def get_athlete(request: Request, athlete_id: int,
     current  = queries.get_athlete_current_ratings(athlete_id, category, course=course) if has_ratings else None
     changes  = queries.get_athlete_1yr_changes(athlete_id, category, course=course)     if has_ratings else None
     peaks    = queries.get_athlete_peak_ratings(athlete_id, category, course=course)    if has_ratings else None
-    best     = queries.get_athlete_best_performances(athlete_id, category, course=course) if has_ratings else None
     stats    = queries.get_athlete_stats(athlete_id, category, course=course)
     notable_raw        = queries.get_athlete_notable_results(athlete_id)
     ag_notable_raw     = queries.get_athlete_ag_notable_results(athlete_id)
@@ -365,20 +367,11 @@ def get_athlete(request: Request, athlete_id: int,
     _cat_last = race_hist[0]["race_date"] if race_hist else None
     _active   = bool(has_ratings and _cat_last and _cat_last >= (date.today() - timedelta(days=int(18 * 30.44))))
 
-    current_rankings = {}
-    peak_rankings    = {}
-    if _active:
-        active_ranks = queries.get_athlete_active_rankings(athlete_id, category, course=course)
-        if active_ranks:
-            for disc in ["overall", "swim", "bike", "run", "transition"]:
-                current_rankings[f"world_{disc}"]    = _make_ranking(active_ranks.get(f"world_{disc}"))
-                current_rankings[f"national_{disc}"] = _make_ranking(active_ranks.get(f"national_{disc}"))
-    elif has_ratings:
-        # Retired athletes: show their best-ever world ranking instead of a (now empty) current rank.
-        peak_ranks = queries.get_athlete_peak_rankings(athlete_id, category, course=course)
-        if peak_ranks:
-            for disc in ["overall", "swim", "bike", "run", "transition"]:
-                peak_rankings[f"world_{disc}"] = _make_ranking(peak_ranks.get(f"world_{disc}"))
+    # A current career ranks among athletes active in the last 18 months; a
+    # finished one shows the best world rank it held in that pool.
+    active_ranks = queries.get_athlete_active_rankings(athlete_id, category, course=course) if _active else None
+    peak_ranks   = queries.get_athlete_peak_rankings(athlete_id, category, course=course) if has_ratings and not _active else None
+    current_rankings = {f"world_{d}": _make_ranking(active_ranks[f"world_{d}"]) for d in DISCS} if active_ranks else {}
 
     # --- current form card ---
     # Equivalent race-day splits from the form model (ptd_data/form.py): the
@@ -428,61 +421,29 @@ def get_athlete(request: Request, athlete_id: int,
             current_form = {'cols': [label for label, _ in form_cols],
                             'rows': form_rows, 'as_of': as_of}
 
-    # --- 1yr changes card ---
-    rating_changes_1yr = {}
-    if changes:
-        for disc in ["overall", "swim", "bike", "run", "transition"]:
-            rating_changes_1yr[f"{disc}_change_1yr"] = format_1yr_rating_change(
-                changes[f"{disc}_change_1yr"]
-            )
 
-    # --- peak ratings card ---
-    rating_peaks = {}
-    if peaks:
-        for disc in ["overall", "swim", "bike", "run", "transition"]:
-            rating_peaks[f"max_{disc}"]      = round(peaks[f"max_{disc}"]) if peaks[f"max_{disc}"] else 0
-            rating_peaks[f"max_{disc}_race"] = peaks[f"max_{disc}_race"]
-
-    # --- best performances card ---
-    best_performances = {}
-    if best:
-        no_best = {"formatted_str": "-", "css_class": "no-best-performance"}
-        for disc in ["overall", "swim", "bike", "run", "transition"]:
-            change = best[f"{disc}_change"]
-            best_performances[f"{disc}_change"] = format_rating_change(change) if change else no_best
-            best_performances[f"{disc}_race"]   = best[f"{disc}_race"]
-
-    # --- 1y sparklines per discipline ---
-    # Inline SVG polyline normalised into a 100x28 viewBox. To stay consistent
-    # with the "1y change" number, the sparkline window is anchored on the
-    # same reference race that change uses: the most recent race at least 365
-    # days old. We include that anchor as the first point so the line starts
-    # at the same rating the change calculation starts from. If no race that
-    # old exists, fall back to the full history.
-    sparklines: dict = {}
-    if rating_hist:
-        cutoff = date.today() - timedelta(days=365)
-        # rating_hist is DESC by race_date. Walk it newest -> oldest, keeping
-        # races up to and including the first race at/before the cutoff.
-        recent = []
-        for r in rating_hist:
-            recent.append(r)
-            if r["race_date"] <= cutoff:
-                break
-        if len(recent) >= 2:
-            chrono = list(reversed(recent))  # ASC: anchor first, current last
-            n = len(chrono)
-            W, H, PAD = 100.0, 28.0, 3.0
-            for disc in ["overall", "swim", "bike", "run", "transition"]:
-                vals = [r[f"{disc}_rating"] for r in chrono]
-                lo, hi = min(vals), max(vals)
-                span = (hi - lo) or 1.0
-                pts = []
-                for i, v in enumerate(vals):
-                    x = (i / (n - 1)) * W
-                    y = PAD + (1 - (v - lo) / span) * (H - 2 * PAD)
-                    pts.append(f"{x:.1f},{y:.1f}")
-                sparklines[disc] = " ".join(pts)
+    # --- Ratings table: one row per discipline ---
+    # World rank leads because it compares across disciplines, which raw
+    # ratings don't; "of N" is the active pool. A finished career shows its
+    # best world rank instead, with no national rank or 1-year change.
+    ratings_rows = []
+    if has_ratings:
+        for disc in DISCS:
+            rating = current_ratings[f"{disc}_rating"]
+            peak = round(peaks[f"max_{disc}"])
+            ranks = active_ranks or peak_ranks or {}
+            ratings_rows.append({
+                "label":        DISC_LABELS[disc],
+                "rating":       rating,
+                "world":        ranks.get(f"world_{disc}"),
+                "national":     active_ranks[f"national_{disc}"] if active_ranks else None,
+                "change":       format_1yr_rating_change(changes[f"{disc}_change_1yr"]) if changes and _active else None,
+                "peak":         peak,
+                "at_peak":      peak == rating,
+                "peak_race":    peaks[f"max_{disc}_race"],
+                "peak_race_id": peaks[f"max_{disc}_race_id"],
+                "peak_date":    peaks[f"max_{disc}_date"],
+            })
 
     # --- athlete dict: merge info + stats + computed fields expected by template ---
     race_starts = stats["race_starts"]
@@ -509,10 +470,6 @@ def get_athlete(request: Request, athlete_id: int,
         "first_year":    stats["first_race_date"].year if stats["first_race_date"] else None,
         "last_year":     stats["last_race_date"].year if stats["last_race_date"] else None,
     }
-    if peaks and best:
-        for disc in ["overall", "swim", "bike", "run", "transition"]:
-            athlete_dict[f"max_{disc}_race_id"]       = peaks[f"max_{disc}_race_id"]
-            athlete_dict[f"{disc}_increase_race_id"]  = best[f"{disc}_race_id"] or 0
 
     # --- crawlable intro sentence ---
     # Athlete pages are otherwise near-identical tables; a unique line of real
@@ -828,7 +785,6 @@ def get_athlete(request: Request, athlete_id: int,
         "athlete":        athlete_dict,
         "has_ratings":          has_ratings,
         "show_charts":          has_ratings and race_starts > 1,
-        "show_rankings":        bool(current_rankings) or bool(peak_rankings),
         "is_active_athlete":    _active,
         "low_conf_starts":      LOW_CONF_STARTS,
         "category":             category,
@@ -846,12 +802,8 @@ def get_athlete(request: Request, athlete_id: int,
         "long_notable_col2":   long_notable_col2,
         "current_form":        current_form,
         "current_ratings":     current_ratings,
-        "current_rankings":    current_rankings,
-        "peak_rankings":       peak_rankings,
-        "rating_changes_1yr":  rating_changes_1yr,
-        "rating_peaks":        rating_peaks,
-        "best_performances":   best_performances,
-        "sparklines":          sparklines,
+        "ratings_rows":        ratings_rows,
+        "rank_pool":           active_ranks["pool"] if active_ranks else None,
         "doping_ban":          queries.get_athlete_doping_ban(athlete_id),
         "nationality_history": queries.get_athlete_nationality_history(athlete_id),
         "upcoming_races":      upcoming_races,

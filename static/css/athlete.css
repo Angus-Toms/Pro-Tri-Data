@@ -244,6 +244,68 @@
 .cf-leg { display: block; font-size: 0.7rem; color: var(--text-light); }
 .career-form-table .cf-rank, .career-form-table .cf-rank:last-child { padding-right: 0; text-align: right; }
 
+/* Ratings table (athlete page). Shares .ratings-table with the race page's
+   standards table; these rules only apply here. World rank is the headline,
+   the rating is secondary, and nothing needs a horizontal scroll. */
+.career-ratings { min-width: 0; }
+.career-ratings th.rt-rank, .career-ratings td.rt-rank { width: 9em; }
+.career-ratings td.rt-rank a,
+.career-ratings td.rt-rank { font-size: 1.15rem; font-weight: 800; color: var(--text-color); text-decoration: none; }
+.career-ratings td.rt-rank a:hover { color: var(--primary-color); }
+.career-ratings td.rt-rank .rt-of { display: block; font-size: 0.72rem; font-weight: 500; color: var(--text-light); }
+.career-ratings td.rt-rating { font-size: 0.95rem; font-weight: 600; }
+.career-ratings td.rt-disc { font-size: 0.85rem; color: var(--text-light); }
+.career-ratings .rt-row--overall td.rt-disc { color: var(--text-color); font-weight: 700; }
+.career-ratings th.rt-change, .career-ratings td.rt-change { width: 6em; min-width: 0; }
+.career-ratings th.rt-nat, .career-ratings td.rt-nat { width: 7em; }
+.career-ratings td.rt-nat a { font-weight: 700; color: var(--text-color); text-decoration: none; }
+.career-ratings td.rt-nat a:hover { color: var(--primary-color); }
+.career-ratings th.rt-peak, .career-ratings td.rt-peak { width: auto; }
+.career-ratings .rt-peak-main { display: inline; }
+.rt-peak-date { font-size: 0.8rem; color: var(--text-light); margin-left: 0.35rem; white-space: nowrap; }
+.rt-at-peak {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--success-color);
+    margin-left: 0.4rem;
+}
+.rt-inline-label { display: none; }
+
+/* On phones each row is one grid line (discipline, rank, rating, change)
+   with national and peak on a second line under it. */
+@media (max-width: 480px) {
+    .career-ratings, .career-ratings thead, .career-ratings tbody { display: block; }
+    .career-ratings tr {
+        display: grid;
+        grid-template-columns: minmax(5.5rem, 1fr) 6rem 4rem;
+        align-items: baseline;
+    }
+    .career-ratings.has-change tr { grid-template-columns: minmax(5.5rem, 1fr) 6rem 4rem 3.75rem; }
+    .career-ratings thead tr { background: var(--navy); }
+    .career-ratings thead th { background: none; white-space: normal; }
+    .career-ratings tbody tr { border-top: 1px solid var(--border-color); }
+    .career-ratings tbody tr:nth-child(even) td { background: none; }
+    .career-ratings th, .career-ratings td,
+    .career-ratings th.rt-rank, .career-ratings td.rt-rank,
+    .career-ratings th.rt-change, .career-ratings td.rt-change,
+    .career-ratings th.rt-nat, .career-ratings td.rt-nat,
+    .career-ratings th.rt-rating, .career-ratings td.rt-rating,
+    .career-ratings th.rt-disc, .career-ratings td.rt-disc,
+    .career-ratings th:first-child, .career-ratings td:first-child,
+    .career-ratings th:last-child, .career-ratings td:last-child { width: auto; border-top: 0; padding: 0.55rem 0.6rem; }
+    .career-ratings thead th.rt-nat, .career-ratings thead th.rt-peak { display: none; }
+    .career-ratings td.rt-nat, .career-ratings td.rt-peak { padding-top: 0; font-size: 0.78rem; color: var(--text-light); }
+    .career-ratings td.rt-nat { grid-column: 1; }
+    .career-ratings td.rt-peak { grid-column: 2 / -1; }
+    .career-ratings:not(.has-nat) td.rt-peak { grid-column: 1 / -1; }
+    .career-ratings .rt-peak-main { font-size: 0.78rem; font-weight: 700; color: var(--text-color); }
+    .career-ratings .rt-peak-sub { display: none; }
+    .rt-inline-label { display: inline; }
+    .career-ratings td.rt-rank, .career-ratings td.rt-rank a { font-size: 1rem; }
+}
+
 /* Course tag on an upcoming race when the athlete has several careers. */
 .career-tag {
     display: inline-block;

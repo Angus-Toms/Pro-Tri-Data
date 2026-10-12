@@ -356,17 +356,17 @@ const _ratingBasics = 'Every athlete carries a rating per discipline, updated af
 const _tierText = `Tiers grade the field strength against all races of the same gender and course: ${_pill('beginner')} bottom 30%, ${_pill('novice')} next 30%, ${_pill('intermediate')} 60th-85th percentile, ${_pill('advanced')} 85th-95th, and ${_pill('expert')} the top 5%.`;
 
 const HELP_TOURS = {
-    'athlete-ratings': [
-        { sel: '.ratings-table th.rt-rating', column: true, title: 'Rating',
-          text: _ratingBasics },
-        { sel: '.ratings-table th.rt-rank', column: true, title: 'Rankings',
-          text: 'Where this rating places the athlete among athletes of the same gender who raced this course in the last 18 months - world and national rank. For retired athletes, the best world rank they held. Click through to see the full leaderboard.' },
-        { sel: '.ratings-table th.rt-peak', column: true, title: 'Peak rating',
-          text: 'The highest rating the athlete has ever held in each discipline, and the race where they hit it.' },
-        { sel: '.ratings-table th.rt-best', column: true, title: 'Best race',
-          text: 'The single race that earned the biggest rating gain in each discipline. Blank if no race gained rating.' },
-        { sel: '.ratings-table th.rt-change', column: true, title: '1y change',
-          text: 'Rating change over the last 12 months, with a sparkline of the trajectory. Green means improving, red means declining.' },
+    'career-ratings': [
+        { sel: '.career-ratings th.rt-rank', column: true, title: 'World rank',
+          text: 'Where the athlete ranks among athletes of the same gender who raced this course in the last 18 months, out of the number shown. Rank, not rating, is the number to compare across disciplines. For a career that has finished, the best world rank it reached.' },
+        { sel: '.career-ratings th.rt-rating', column: true, title: 'Rating',
+          text: _ratingBasics + ' Each discipline has its own scale, so compare ranks rather than ratings across columns.' },
+        { sel: '.career-ratings th.rt-change', column: true, title: '1 year',
+          text: 'Rating change over the last 12 months.' },
+        { sel: '.career-ratings th.rt-nat', column: true, title: 'National',
+          text: 'Rank among athletes of the same nationality in the same pool. Click through to the leaderboard.' },
+        { sel: '.career-ratings th.rt-peak', column: true, title: 'Peak',
+          text: 'The highest rating the athlete has held in each discipline, when, and the race that took it there.' },
     ],
     'athlete-form': [
         { sel: '.career-form-table', title: 'Current form',
