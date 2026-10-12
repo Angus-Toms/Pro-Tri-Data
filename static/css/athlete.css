@@ -666,90 +666,63 @@
     font-variant-numeric: tabular-nums;
 }
 
-.rivals-row {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
-}
-.rival-card {
-    position: relative;
-    width: 140px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.75rem 0.5rem;
+/* Head-to-head: one compact row per rival. Desktop: who | record | swim |
+   bike | run | compare. Phones: photo and name with the leg gaps on a small
+   line under it, record on the right. */
+.h2h-card {
+    margin-bottom: 2rem;
+    padding: 0.4rem 1.25rem;
     background: var(--white);
     border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    transition: box-shadow 0.12s ease, border-color 0.12s ease;
+    border-radius: var(--border-radius-lg);
 }
-.rival-card:hover {
-    border-color: var(--primary-color);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-}
-.rival-link {
-    display: flex;
-    flex-direction: column;
+.h2h-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 7rem repeat(3, 4.5rem) 1.5rem;
     align-items: center;
-    gap: 0.4rem;
-    text-decoration: none;
-    color: var(--text-color);
-    width: 100%;
-}
-.rival-img {
-    width: 72px;
-    height: 72px;
-    border-radius: 50%;
-    object-fit: cover;
-    background: var(--border-color);
-}
-.rival-name {
-    font-size: 0.82rem;
-    font-weight: 600;
-    text-align: center;
-    line-height: 1.2;
-}
-.rival-record {
-    font-size: 0.78rem;
-    color: var(--text-light);
+    gap: 0 1rem;
+    padding: 0.5rem 0;
     font-variant-numeric: tabular-nums;
 }
-.rival-window {
-    font-size: 0.7rem;
-    color: var(--text-light);
-}
-.rival-wins   { color: #16a34a; font-weight: 600; }
-.rival-losses { color: #dc2626; font-weight: 600; }
-.rival-compare {
-    position: absolute;
-    top: 0.4rem;
-    right: 0.4rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    color: var(--text-light);
-    background: transparent;
-    border: 1px solid var(--border-color);
-    transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
-}
-.rival-compare svg { width: 13px; height: 13px; }
-.rival-compare:hover {
-    color: var(--primary-color);
-    border-color: var(--primary-color);
-    background: rgba(232, 93, 4, 0.08);
-}
+.h2h-row + .h2h-row { border-top: 1px solid var(--border-color); }
+.h2h-head { padding: 0.35rem 0 0.25rem; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-light); }
+.h2h-head + .h2h-row { border-top: 0; }
+.h2h-who { display: flex; align-items: center; gap: 0.65rem; min-width: 0; color: var(--text-color); text-decoration: none; }
+.h2h-who:hover .h2h-name { color: var(--primary-color); }
+.h2h-who img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.h2h-name { min-width: 0; font-size: 0.9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.h2h-name small { display: block; font-size: 0.72rem; font-weight: 400; color: var(--text-light); }
+.h2h-rec { display: flex; flex-direction: column; gap: 4px; }
+.h2h-rec b { font-size: 0.95rem; font-weight: 800; }
+.h2h-bar { display: block; width: 4.5rem; height: 4px; border-radius: 2px; background: rgba(220, 38, 38, 0.35); overflow: hidden; }
+.h2h-bar i { display: block; height: 100%; background: var(--success-color); }
+.h2h-leg { font-size: 0.85rem; font-weight: 700; color: var(--text-light); }
+.h2h-leg small { display: none; }
+.h2h-leg.ahead { color: var(--success-color); }
+.h2h-leg.behind { color: var(--error-color); }
+.h2h-compare { color: var(--text-lighter); line-height: 0; justify-self: end; }
+.h2h-compare svg { width: 15px; height: 15px; }
+.h2h-compare:hover { color: var(--primary-color); }
 
+@media (max-width: 768px) {
+    .h2h-card { padding: 0.25rem 0.9rem; }
+    .h2h-row { display: flex; flex-wrap: wrap; align-items: center; column-gap: 0.75rem; }
+    .h2h-row.h2h-head { display: none; }
+    .h2h-who { flex: 1 1 0; }
+    .h2h-name small { display: none; }
+    .h2h-rec { order: 1; align-items: flex-end; }
+    .h2h-compare { display: none; }
+    /* Legs on a small line under the name, past the photo. */
+    .h2h-row::after { content: ''; order: 2; flex-basis: 100%; }
+    .h2h-leg { order: 3; font-size: 0.72rem; }
+    .h2h-who + .h2h-rec + .h2h-leg { margin-left: calc(32px + 0.65rem); }
+    .h2h-leg small { display: inline; margin-right: 0.2rem; font-size: inherit; font-weight: 500; color: var(--text-lighter); }
+}
 @media (max-width: 480px) {
-    .rival-card { width: 120px; padding: 0.5rem 0.4rem; }
-    .rival-img  { width: 56px; height: 56px; }
-    .rival-name { font-size: 0.74rem; }
-    .rival-record { font-size: 0.72rem; }
+    /* Four rivals on a phone (the head row is the first child). */
+    .h2h-row:nth-child(n+6) { display: none; }
+}
+}
 }
 
 /* The results / rating mobile accordion CSS now lives in base.css so the

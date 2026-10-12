@@ -871,29 +871,6 @@ if (pctBehindData) {
     ['overall', 'swim', 'bike', 'run'].forEach(buildMiniPctBehindChart);
 }
 
-// Rivals row: hide any card that doesn't fit on one line. Recomputed on
-// container resize so the row stays single-line at every width without
-// hard-coded breakpoints.
-(function () {
-    const row = document.querySelector('.rivals-row');
-    if (!row) return;
-    const cards = Array.from(row.querySelectorAll('.rival-card'));
-    if (!cards.length) return;
-    function fit() {
-        cards.forEach(c => { c.style.display = ''; });
-        const firstTop = cards[0].offsetTop;
-        for (const c of cards) {
-            if (c.offsetTop > firstTop) c.style.display = 'none';
-        }
-    }
-    fit();
-    if ('ResizeObserver' in window) {
-        new ResizeObserver(fit).observe(row.parentElement || document.body);
-    } else {
-        window.addEventListener('resize', fit);
-    }
-})();
-
 // Expose functions referenced from inline HTML onclick attributes. The IIFE
 // wrap above makes these locally scoped, so we hoist them back onto window.
 window.switchRatingDisc    = switchRatingDisc;

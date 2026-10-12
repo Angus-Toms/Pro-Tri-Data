@@ -4197,6 +4197,58 @@ def get_athlete_rivals(athlete_id, category='elite', course='short', limit=6):
     } for r in rows]
 
 
+def get_rival_leg_gaps(athlete_id, rival_ids, category='elite', course='short'):
+    """Per rival, the subject's median gap on each leg over their shared
+    finishes in the last 5 years (the Rivals record's window), on corrected
+    splits: {rival_id: {disc: {"med_s", "faster", "n"}}}. Negative med_s means
+    the subject was faster; faster counts the races they were."""
+    if not rival_ids:
+        return {}
+    ids = [athlete_id] + list(rival_ids)
+    marks = ",".join("?" * len(ids))
+    rows = _get_conn().execute(f"""
+        WITH corr AS (
+            SELECT race_id, athlete_id, discipline,
+                   COALESCE(MAX(value) FILTER (WHERE source='manual'),
+                            MAX(value) FILTER (WHERE source='auto')) AS value
+            FROM corrections WHERE athlete_id IN ({marks})
+            GROUP BY race_id, athlete_id, discipline
+        ),
+        splits AS (
+            SELECT res.race_id, res.athlete_id,
+                   NULLIF(COALESCE(MAX(c.value) FILTER (WHERE c.discipline = 'swim'), res.swim_s), 0) AS swim,
+                   NULLIF(COALESCE(MAX(c.value) FILTER (WHERE c.discipline = 'bike'), res.bike_s), 0) AS bike,
+                   NULLIF(COALESCE(MAX(c.value) FILTER (WHERE c.discipline = 'run'),  res.run_s),  0) AS run
+            FROM results res
+            JOIN races r ON r.race_id = res.race_id
+            LEFT JOIN corr c ON c.race_id = res.race_id AND c.athlete_id = res.athlete_id
+            WHERE res.athlete_id IN ({marks})
+              AND res.status = 'Finished'
+              AND r.category = ? AND r.distance IN {_course_in(course)}
+              AND r.race_date >= CURRENT_DATE - INTERVAL 5 YEAR
+              AND NOT EXISTS (SELECT 1 FROM ignored_races ig WHERE ig.race_id = res.race_id)
+            GROUP BY res.race_id, res.athlete_id, res.swim_s, res.bike_s, res.run_s
+        ),
+        pairs AS (
+            SELECT op.athlete_id AS rival,
+                   me.swim - op.swim AS swim, me.bike - op.bike AS bike, me.run - op.run AS run
+            FROM splits me
+            JOIN splits op ON op.race_id = me.race_id AND op.athlete_id <> me.athlete_id
+            WHERE me.athlete_id = ?
+        )
+        SELECT rival,
+               MEDIAN(swim), COUNT(swim) FILTER (WHERE swim < 0), COUNT(swim),
+               MEDIAN(bike), COUNT(bike) FILTER (WHERE bike < 0), COUNT(bike),
+               MEDIAN(run),  COUNT(run)  FILTER (WHERE run  < 0), COUNT(run)
+        FROM pairs GROUP BY rival
+    """, ids + ids + [category, athlete_id]).fetchall()
+    out = {}
+    for r in rows:
+        out[r[0]] = {disc: {"med_s": r[1 + 3 * i], "faster": r[2 + 3 * i], "n": r[3 + 3 * i]}
+                     for i, disc in enumerate(("swim", "bike", "run")) if r[3 + 3 * i]}
+    return out
+
+
 # --- Upcoming race queries ---
 
 def get_athlete_upcoming_races(athlete_id):

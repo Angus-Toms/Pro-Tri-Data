@@ -794,6 +794,26 @@ def get_athlete(request: Request, athlete_id: int,
     active_key = 'ag' if category == 'ag' else f'elite-{course}'
 
 
+    # --- Head-to-head: record plus the median gap per leg in shared finishes ---
+    rivals = queries.get_athlete_rivals(athlete_id, category, course, limit=5) if has_ratings else []
+    gaps = queries.get_rival_leg_gaps(athlete_id, [r["athlete_id"] for r in rivals], category, course)
+    for r in rivals:
+        r["legs"] = []
+        for disc in ("swim", "bike", "run"):
+            g = gaps.get(r["athlete_id"], {}).get(disc)
+            if not g:
+                r["legs"].append({"label": disc.capitalize(), "text": "-", "cls": ""})
+                continue
+            v = round(g["med_s"])
+            text = f'{abs(v)}s' if abs(v) < 60 else format_time(abs(v)).lstrip("0").lstrip(":")
+            r["legs"].append({
+                "label": disc.capitalize(),
+                "text":  ("-" if v < 0 else "+") + text if v else "0s",
+                # Negative is the athlete faster.
+                "cls":   "ahead" if v < 0 else "behind" if v > 0 else "",
+                "title": f'Faster in {g["faster"]} of {g["n"]} shared races',
+            })
+
     return templates.TemplateResponse("athlete.html", {
         "request":        request,
         "active_page":    "athletes",
@@ -819,7 +839,7 @@ def get_athlete(request: Request, athlete_id: int,
         "doping_ban":          queries.get_athlete_doping_ban(athlete_id),
         "nationality_history": queries.get_athlete_nationality_history(athlete_id),
         "upcoming_races":      upcoming_races,
-        "rivals":              queries.get_athlete_rivals(athlete_id, category, course) if has_ratings else [],
+        "rivals":              rivals,
         "race_history":        race_history,
         "has_preds":           any(e["pred"] for e in race_history),
         "ratings_chart":           ratings_chart,

@@ -372,6 +372,10 @@ const HELP_TOURS = {
         { sel: '.upcoming-list', title: 'Upcoming races',
           text: 'Races this athlete is entered in, with the finishing position and splits the model expects from their current rating. These are estimates made before the race - they don\'t know the course or the conditions on the day, so actual results will differ.' },
     ],
+    'athlete-h2h': [
+        { sel: '.h2h-card', title: 'Head-to-head',
+          text: 'The athletes this one has met most often with the closest record, over the last 5 years. Record is finishes ahead and behind in shared races. Swim, bike and run are the median gap on that leg in those races: green means this athlete was faster, red slower. Hover a gap for how many of the races it held in.' },
+    ],
     'athlete-races': [
         { sel: '#races-table', title: 'Races',
           text: 'Every start in this career, newest first, with the date, distance and program under each race. Times shows the splits: the fastest split of the race is highlighted and every other time shows the gap behind it.' },
