@@ -374,7 +374,7 @@ const HELP_TOURS = {
     ],
     'athlete-h2h': [
         { sel: '.h2h-card', title: 'Head-to-head',
-          text: 'The athletes this one has met most often with the closest record, over the last 5 years. Record is finishes ahead and behind in shared races. Swim, bike and run are the median gap on that leg in those races: green means this athlete was faster, red slower. Hover a gap for how many of the races it held in.' },
+          text: 'The athletes this one has met most evenly in the last 5 years. Meetings and the record (finishes ahead and behind) cover every shared race. Swim, bike and run are this athlete's median gap on that leg in those races, faster or slower. Hover a gap for how many of the races it held in.' },
     ],
     'athlete-races': [
         { sel: '#races-table', title: 'Races',

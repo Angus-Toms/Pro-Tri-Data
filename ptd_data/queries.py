@@ -4094,10 +4094,10 @@ def get_athlete_rivals(athlete_id, category='elite', course='short', limit=6):
     """Athletes the subject races against often with mixed results.
 
     Score: sqrt(n_meets) * min(wins,losses)/max(wins,losses) — rewards both
-    meeting volume and head-to-head balance. Restricted to last 5 years (keeps
+    meeting volume and head-to-head balance. Chosen on the last 5 years (keeps
     the section current — old rivalries get forgotten), same gender/category/
-    course bucket, and opponents whose latest overall rating is within 150
-    points of the subject's.
+    course bucket, and opponents whose latest overall rating is within the
+    window below. The returned meetings and record are all-time.
 
     Cached per process — DB doesn't change between deploys.
     """
@@ -4137,12 +4137,12 @@ def get_athlete_rivals(athlete_id, category='elite', course='short', limit=6):
               AND res.position IS NOT NULL
               AND r.category = ?
               AND r.distance IN {course_in}
-              AND r.race_date >= CURRENT_DATE - INTERVAL 5 YEAR
               AND NOT EXISTS (SELECT 1 FROM ignored_races ig
                               WHERE ig.race_id = res.race_id AND ig.parent_race_id IS NOT NULL)
         ),
         shared AS (
-            SELECT my.race_id, my.my_pos, op.athlete_id AS opp_id, op.position AS opp_pos
+            SELECT my.race_id, my.my_pos, my.race_date >= CURRENT_DATE - INTERVAL 5 YEAR AS recent,
+                   op.athlete_id AS opp_id, op.position AS opp_pos
             FROM my_results my
             JOIN results op ON op.race_id = my.race_id
             WHERE op.athlete_id <> ?
@@ -4153,12 +4153,15 @@ def get_athlete_rivals(athlete_id, category='elite', course='short', limit=6):
             SELECT opp_id,
                    COUNT(*) AS n_meets,
                    SUM(CASE WHEN my_pos < opp_pos THEN 1 ELSE 0 END) AS wins,
-                   SUM(CASE WHEN my_pos > opp_pos THEN 1 ELSE 0 END) AS losses
+                   SUM(CASE WHEN my_pos > opp_pos THEN 1 ELSE 0 END) AS losses,
+                   COUNT(*) FILTER (WHERE recent) AS r_meets,
+                   COUNT(*) FILTER (WHERE recent AND my_pos < opp_pos) AS r_wins,
+                   COUNT(*) FILTER (WHERE recent AND my_pos > opp_pos) AS r_losses
             FROM shared
             GROUP BY opp_id
-            HAVING COUNT(*) >= 4
-               AND SUM(CASE WHEN my_pos < opp_pos THEN 1 ELSE 0 END) >= 1
-               AND SUM(CASE WHEN my_pos > opp_pos THEN 1 ELSE 0 END) >= 1
+            HAVING COUNT(*) FILTER (WHERE recent) >= 4
+               AND COUNT(*) FILTER (WHERE recent AND my_pos < opp_pos) >= 1
+               AND COUNT(*) FILTER (WHERE recent AND my_pos > opp_pos) >= 1
         ),
         opp_latest_rating AS (
             SELECT DISTINCT ON (ra.athlete_id)
@@ -4172,8 +4175,8 @@ def get_athlete_rivals(athlete_id, category='elite', course='short', limit=6):
         )
         SELECT a.athlete_id, a.name, a.profile_img, n.alpha3,
                os.n_meets, os.wins, os.losses, olr.overall,
-               SQRT(os.n_meets) * LEAST(os.wins, os.losses)::DOUBLE
-                                / GREATEST(os.wins, os.losses)
+               SQRT(os.r_meets) * LEAST(os.r_wins, os.r_losses)::DOUBLE
+                                / GREATEST(os.r_wins, os.r_losses)
                                 * CASE WHEN a.country_full = ? THEN 1.2 ELSE 1.0 END AS score
         FROM opp_stats os
         JOIN opp_latest_rating olr ON olr.athlete_id = os.opp_id
@@ -4198,9 +4201,8 @@ def get_athlete_rivals(athlete_id, category='elite', course='short', limit=6):
 
 
 def get_rival_leg_gaps(athlete_id, rival_ids, category='elite', course='short'):
-    """Per rival, the subject's median gap on each leg over their shared
-    finishes in the last 5 years (the Rivals record's window), on corrected
-    splits: {rival_id: {disc: {"med_s", "faster", "n"}}}. Negative med_s means
+    """Per rival, the subject's median gap on each leg over all their shared
+    finishes, on corrected splits: {rival_id: {disc: {"med_s", "faster", "n"}}}. Negative med_s means
     the subject was faster; faster counts the races they were."""
     if not rival_ids:
         return {}
@@ -4225,7 +4227,6 @@ def get_rival_leg_gaps(athlete_id, rival_ids, category='elite', course='short'):
             WHERE res.athlete_id IN ({marks})
               AND res.status = 'Finished'
               AND r.category = ? AND r.distance IN {_course_in(course)}
-              AND r.race_date >= CURRENT_DATE - INTERVAL 5 YEAR
               AND NOT EXISTS (SELECT 1 FROM ignored_races ig WHERE ig.race_id = res.race_id)
             GROUP BY res.race_id, res.athlete_id, res.swim_s, res.bike_s, res.run_s
         ),

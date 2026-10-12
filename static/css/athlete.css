@@ -698,6 +698,7 @@
 .h2h-bar i { display: block; height: 100%; background: var(--success-color); }
 .h2h-leg { font-size: 0.85rem; font-weight: 700; color: var(--text-light); }
 .h2h-leg small { display: none; }
+.h2h-leg em { display: block; font-style: normal; font-size: 0.68rem; font-weight: 500; }
 .h2h-leg.ahead { color: var(--success-color); }
 .h2h-leg.behind { color: var(--error-color); }
 .h2h-compare { color: var(--text-lighter); line-height: 0; justify-self: end; }
@@ -706,17 +707,17 @@
 
 @media (max-width: 768px) {
     .h2h-card { padding: 0.25rem 0.9rem; }
-    .h2h-row { display: flex; flex-wrap: wrap; align-items: center; column-gap: 0.75rem; }
+    .h2h-row { display: flex; flex-wrap: wrap; align-items: center; column-gap: 0.6rem; }
     .h2h-row.h2h-head { display: none; }
     .h2h-who { flex: 1 1 0; }
     .h2h-name small { display: none; }
     .h2h-rec { order: 1; align-items: flex-end; }
     .h2h-compare { display: none; }
-    /* Legs on a small line under the name, past the photo. */
+    /* Legs on a small line under the photo and name. */
     .h2h-row::after { content: ''; order: 2; flex-basis: 100%; }
-    .h2h-leg { order: 3; font-size: 0.72rem; }
-    .h2h-who + .h2h-rec + .h2h-leg { margin-left: calc(32px + 0.65rem); }
+    .h2h-leg { order: 3; margin-top: 0.15rem; font-size: 0.72rem; white-space: nowrap; }
     .h2h-leg small { display: inline; margin-right: 0.2rem; font-size: inherit; font-weight: 500; color: var(--text-lighter); }
+    .h2h-leg em { display: inline; margin-left: 0.2rem; font-size: inherit; }
 }
 @media (max-width: 480px) {
     /* Four rivals on a phone (the head row is the first child). */

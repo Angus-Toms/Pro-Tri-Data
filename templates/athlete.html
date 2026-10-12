@@ -307,8 +307,8 @@
 
 {% if rivals %}
 {# Head-to-head: the athletes this one meets most evenly, one compact row
-   each: record over the last 5 years with a win-loss bar, and the median gap
-   per leg in shared finishes (negative: this athlete faster). On phones the
+   each: all-time record with a win-loss bar, and the median gap per leg in
+   shared finishes, worded faster or slower for this athlete. On phones the
    legs drop to a small line under the name. #}
 <div class="page-section-head"><span>Head-to-head {{ help_icon('athlete-h2h') }}</span></div>
 <div class="h2h-card">
@@ -317,13 +317,13 @@
     <div class="h2h-row">
         <a class="h2h-who" href="/athlete/{{ r.athlete_id }}">
             <img src="{{ STATIC_BASE_URL ~ 'athlete_imgs/128/' ~ r.athlete_id ~ '.webp' if r.profile_img else STATIC_BASE_URL ~ 'imgs/default_user_64.webp' }}" alt="" loading="lazy" width="32" height="32">
-            <span class="h2h-name">{{ r.name }} {{ flag(r.country_alpha3) }}<small>{{ r.n_meets }} meetings, last 5 years</small></span>
+            <span class="h2h-name">{{ r.name }} {{ flag(r.country_alpha3) }}<small>{{ r.n_meets }} meetings</small></span>
         </a>
         <span class="h2h-rec">
             <b>{{ r.wins }}-{{ r.losses }}</b>
             <span class="h2h-bar" title="{{ r.wins }} ahead, {{ r.losses }} behind"><i style="width: {{ (r.wins / (r.wins + r.losses) * 100) | round(1) }}%"></i></span>
         </span>
-        {% for l in r.legs %}<span class="h2h-leg {{ l.cls }}"{% if l.title %} title="{{ l.title }}"{% endif %}><small>{{ l.label }}</small>{{ l.text }}</span>{% endfor %}
+        {% for l in r.legs %}<span class="h2h-leg {{ l.cls }}"{% if l.title %} title="{{ l.title }}"{% endif %}><small>{{ l.label }}</small>{{ l.text }}{% if l.word %}<em>{{ l.word }}</em>{% endif %}</span>{% endfor %}
         <a class="h2h-compare" href="/athlete-compare?a1={{ athlete.athlete_id }}&a2={{ r.athlete_id }}&program={{ 'ag' if category == 'ag' else 'elite-' ~ course }}" rel="nofollow" aria-label="Compare with {{ r.name }}" title="Compare">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
         </a>

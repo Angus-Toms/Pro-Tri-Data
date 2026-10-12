@@ -802,14 +802,15 @@ def get_athlete(request: Request, athlete_id: int,
         for disc in ("swim", "bike", "run"):
             g = gaps.get(r["athlete_id"], {}).get(disc)
             if not g:
-                r["legs"].append({"label": disc.capitalize(), "text": "-", "cls": ""})
+                r["legs"].append({"label": disc.capitalize(), "text": "-", "word": "", "cls": ""})
                 continue
             v = round(g["med_s"])
             text = f'{abs(v)}s' if abs(v) < 60 else format_time(abs(v)).lstrip("0").lstrip(":")
             r["legs"].append({
                 "label": disc.capitalize(),
-                "text":  ("-" if v < 0 else "+") + text if v else "0s",
+                "text":  text if v else "Level",
                 # Negative is the athlete faster.
+                "word":  "faster" if v < 0 else "slower" if v > 0 else "",
                 "cls":   "ahead" if v < 0 else "behind" if v > 0 else "",
                 "title": f'Faster in {g["faster"]} of {g["n"]} shared races',
             })
