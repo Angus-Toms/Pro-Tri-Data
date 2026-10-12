@@ -372,19 +372,15 @@ const HELP_TOURS = {
         { sel: '.upcoming-list', title: 'Upcoming races',
           text: 'Races this athlete is entered in, with the finishing position and splits the model expects from their current rating. These are estimates made before the race - they don\'t know the course or the conditions on the day, so actual results will differ.' },
     ],
-    'athlete-results': [
-        { sel: '.table-section.results-table', title: 'Race results',
-          text: 'Every recorded result with full splits. The fastest split of the race is highlighted; every other time shows the gap behind it.' },
-        { sel: '.table-section.results-table .std-pill', title: 'Race tiers',
+    'athlete-races': [
+        { sel: '#races-table', title: 'Races',
+          text: 'Every start in this career, newest first, with the date, distance and program under each race. Times shows the splits: the fastest split of the race is highlighted and every other time shows the gap behind it.' },
+        { sel: '.races-table + .race-table-foot, .race-view-toggle', title: 'Views',
+          text: 'Ratings shows the rating after each race, with what the result gained or lost: beating expectation earns points, underperforming costs them. Predictions shows the place and time the model expected before the race, and how the result compared.' },
+        { sel: '.race-table-tools', title: 'Find and filter',
+          text: 'Search by race name, or narrow to one distance or to wins, podiums or non-finishes. The table shows the latest 20 races until you filter or choose Show all.' },
+        { sel: '#races-table .std-pill', title: 'Race tiers',
           text: _tierText },
-        { sel: '.table-section.results-table th.sortable', title: 'Sorting',
-          text: 'Click any column header to sort the table - by date, position, or any split.' },
-        { sel: '.results-sort-chips', title: 'Sorting',
-          text: 'Tap a chip to sort the table - by date, overall time or any split. Tap it again to reverse.' },
-    ],
-    'athlete-rating-history': [
-        { sel: '.table-section.rating-table', title: 'Rating history',
-          text: 'The athlete\'s rating after each race. The small green or red number is what the result gained or lost: beating expectation earns points, underperforming costs them.' },
     ],
     'race-standards': [
         { sel: '.ratings-table th.rt-rating', column: true, title: 'Race standard',

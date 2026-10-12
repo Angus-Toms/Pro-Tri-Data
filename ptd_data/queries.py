@@ -2176,7 +2176,7 @@ def get_athlete_race_history(athlete_id, category='elite', course='short'):
         "overall_s", "swim_s", "bike_s", "run_s", "t1_s", "t2_s",
         "overall_behind_s", "swim_behind_s", "bike_behind_s", "run_behind_s",
         "t1_behind_s", "t2_behind_s", "overall_std", "is_ignored", "parent_race_id",
-        "is_multi_stage", "event_id",
+        "is_multi_stage", "event_id", "distance",
     ]
     return _dicts(cols, conn.execute(f"""
         WITH corr AS (
@@ -2239,7 +2239,8 @@ def get_athlete_race_history(athlete_id, category='elite', course='short'):
             ig.race_id IS NOT NULL AS is_ignored,
             ig.parent_race_id,
             r.is_multi_stage,
-            r.event_id
+            r.event_id,
+            r.distance
         FROM corrected res
         JOIN races r ON res.race_id = r.race_id
         JOIN (
@@ -2260,6 +2261,17 @@ def get_athlete_race_history(athlete_id, category='elite', course='short'):
         WHERE res.athlete_id = ? AND r.category = ? AND r.distance IN {course_in}
         ORDER BY r.race_date DESC, res.race_id DESC
     """, [athlete_id, category]))
+
+
+def get_athlete_race_predictions(athlete_id):
+    """Stored pre-race predictions for every race the athlete has one for:
+    {race_id: {"predicted_position", "overall_s"}}."""
+    rows = _get_conn().execute("""
+        SELECT race_id, predicted_position, overall_s
+        FROM race_predictions
+        WHERE athlete_id = ?
+    """, [athlete_id]).fetchall()
+    return {r: {"predicted_position": p, "overall_s": o} for r, p, o in rows}
 
 
 def get_athlete_relay_history(athlete_id):

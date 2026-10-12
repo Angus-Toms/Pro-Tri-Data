@@ -83,6 +83,11 @@ _TIER_LABELS = {
 }
 
 
+# Distance names for the Races table's meta line and its distance filter.
+_DISTANCE_LABELS = {"sprint": "Sprint", "standard": "Standard", "relay": "Relay",
+                    "middle": "70.3", "t100": "T100", "long": "Full distance"}
+
+
 # --- Formatting helpers that previously lived on the Athlete object ---
 
 def format_ranking(rank):
@@ -343,6 +348,7 @@ def get_athlete(request: Request, athlete_id: int,
         relay_hist = queries.get_athlete_relay_history(athlete_id)
         for r in relay_hist:
             r["is_relay"] = True
+            r["distance"] = "relay"
         if relay_hist:
             race_hist = sorted(race_hist + relay_hist,
                                key=lambda r: (r["race_date"], r["race_id"]), reverse=True)
@@ -516,11 +522,8 @@ def get_athlete(request: Request, athlete_id: int,
 
     # --- race history table ---
     # Fetch percentile thresholds once for this athlete's gender (cached per process).
-    # Build a race_id→overall_std map here so the rating history table reuses the same
-    # values rather than re-querying with a different formula.
     _gender = next((r["gender"] for r in race_hist if r.get("gender") in ("male", "female")), "male")
     _thresholds = queries.get_race_standard_thresholds(_gender, course=course)
-    _std_map = {r["race_id"]: r.get("overall_std") for r in race_hist}
 
     def _std_class(std, disc="overall"):
         # No standard (relay legs, unrated rollups) means no pill, not Beginner.
@@ -542,6 +545,7 @@ def get_athlete(request: Request, athlete_id: int,
             "leg_num":        r.get("leg_num"),
             "race_title":     r["race_title"],
             "race_date":      r["race_date"],
+            "distance":       _DISTANCE_LABELS[r["distance"]],
             "program":        (_mtr_program(r["program"], r.get("leg_num")) if r.get("is_relay")
                                else _display_program(r["program"], r.get("gender"))),
             "position":       r["position"],
@@ -607,30 +611,33 @@ def get_athlete(request: Request, athlete_id: int,
         entry["sub_races"] = subs
         race_history.append(entry)
 
-    # --- rating history table ---
-    rating_history = [
-        {
-            "race_id":           r["race_id"],
-            "race_date":         r["race_date"],
-            "race_title":        r["race_title"],
-            "race_program":      (_mtr_program(r["race_program"], r["leg_num"]) if r["is_relay"]
-                                  else _display_program(r["race_program"])),
-            "position":          r["position"],
-            "status":            r["status"],
-            "standard_class":    _std_class(_std_map.get(r["race_id"])),
-            "overall_rating":    round(r["overall_rating"]),
-            "swim_rating":       round(r["swim_rating"]),
-            "bike_rating":       round(r["bike_rating"]),
-            "run_rating":        round(r["run_rating"]),
-            "transition_rating": round(r["transition_rating"]),
-            "overall_change":    format_rating_change(r["overall_change"]),
-            "swim_change":       format_rating_change(r["swim_change"]),
-            "bike_change":       format_rating_change(r["bike_change"]),
-            "run_change":        format_rating_change(r["run_change"]),
-            "transition_change": format_rating_change(r["transition_change"]),
-        }
-        for r in rating_hist
-    ]
+    # --- Races table: each row's rating and stored prediction ---
+    # One table with Times, Ratings and Predictions views over the same rows,
+    # so each race carries its post-race ratings (rated races only) and the
+    # prediction stored before it (when there was one).
+    ratings_by_race = {r["race_id"]: r for r in rating_hist}
+    preds = queries.get_athlete_race_predictions(athlete_id)
+    rows_with_subs = race_history + [sub for e in race_history for sub in e["sub_races"]]
+    raw_overall = {r["race_id"]: r["overall_s"] for r in race_hist}
+    for e in rows_with_subs:
+        rt = ratings_by_race.get(e["race_id"])
+        e["rating"] = {
+            disc: {"value": round(rt[f"{disc}_rating"]), "change": format_rating_change(rt[f"{disc}_change"])}
+            for disc in DISCS
+        } if rt else None
+        p = preds.get(e["race_id"])
+        e["pred"] = None
+        if p and p["predicted_position"]:
+            actual_s = raw_overall.get(e["race_id"])
+            gap = actual_s - p["overall_s"] if actual_s and p["overall_s"] else None
+            e["pred"] = {
+                "pos":    p["predicted_position"],
+                "time":   format_time(p["overall_s"]) if p["overall_s"] else None,
+                # Places gained on the prediction: positive beat it.
+                "places": p["predicted_position"] - e["position"] if e["position"] and e["status"] == "Finished" else None,
+                "gap":    (("-" if gap < 0 else "+") + format_time(abs(round(gap)))) if gap else None,
+                "gap_s":  gap,
+            }
 
     # --- upcoming races with predictions ---
     upcoming_raw = queries.get_athlete_upcoming_races(athlete_id)
@@ -808,7 +815,7 @@ def get_athlete(request: Request, athlete_id: int,
         "upcoming_races":      upcoming_races,
         "rivals":              queries.get_athlete_rivals(athlete_id, category, course) if has_ratings else [],
         "race_history":        race_history,
-        "rating_history":      rating_history,
+        "has_preds":           any(e["pred"] for e in race_history),
         "ratings_chart":           ratings_chart,
         "pct_behind_chart":        pct_behind,
         "world_rankings_chart":    world_rankings_charts,

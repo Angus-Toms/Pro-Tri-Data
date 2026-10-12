@@ -458,178 +458,74 @@
 .rating-change-1yr.negative { color: var(--error-color); }
 .rating-change-1yr.neutral  { color: var(--text-light); }
 
-/* Sub-race expand toggle - sits inline in the date cell */
-.sub-race-toggle {
-    background: none;
-    border: none;
+/* ============================================
+   RACES TABLE - every start in the career, with Times, Ratings and
+   Predictions views (the shared view table in base.css; initRacesTable in
+   athlete.js). The race cell is the flexible column: name, then date,
+   distance and program under it.
+   ============================================ */
+/* Automatic layout: in a fixed one the other views' hidden columns still
+   take a share of the width. The race column takes what the others leave. */
+.race-table-section table.races-table { table-layout: auto; }
+.races-table .race-col { width: auto; min-width: 0; }
+.races-table .race-col .std-pill { margin-left: 0.35rem; vertical-align: 1px; }
+.race-select {
+    padding: 0.42rem 1.8rem 0.42rem 0.65rem;
+    font: inherit;
+    font-size: 0.85rem;
+    color: var(--text-color);
+    background: var(--white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 0.6rem center;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    appearance: none;
     cursor: pointer;
-    padding: 0;
-    margin-left: 0.4em;
-    color: var(--text-lighter);
-    display: inline-flex;
-    align-items: center;
-    vertical-align: middle;
-    line-height: 1;
-    transition: color var(--transition-fast);
 }
+.race-select:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(232, 93, 4, 0.12); }
 
-.sub-race-toggle:hover {
-    color: var(--primary-color);
-}
-
-.sub-race-chevron {
-    display: block;
-    transition: transform 0.15s ease;
-}
-
-.sub-race-toggle.expanded .sub-race-chevron {
-    transform: rotate(90deg);
-}
-
-/* Disable CSS nth-child striping for athlete tables - JS handles it via .stripe-even */
-.results-table tbody tr:nth-child(even) td,
-.rating-table tbody tr:nth-child(even) td {
-    background: unset;
-}
-
-.results-table tbody tr.stripe-even td,
-.rating-table tbody tr.stripe-even td {
-    background: #f2f4f6;
-}
-
-/* Hidden by default, shown when parent is expanded */
-tr.sub-race-row {
-    display: none;
-}
-
-tr.sub-race-row.visible {
-    display: table-row;
-}
-
-/* Sub-race rows always use the "even" shade so they look dimmed */
-tr.sub-race-row td {
-    background: #f2f4f6;
-    color: var(--text-lighter);
-}
-
-tr.sub-race-row:hover td {
-    background: #e6eaef;
-}
-
-tr.sub-race-row .link {
+/* Year dividers while the table is sorted by date: the year and its tally. */
+.races-table tr.season-row td {
+    padding-top: 0.45rem;
+    padding-bottom: 0.45rem;
+    background: var(--bg-color) !important;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.78rem;
     color: var(--text-light);
 }
+.races-table tr.season-row b { font-size: 0.85rem; font-weight: 800; color: var(--text-color); margin-right: 0.6rem; }
 
-tr.sub-race-row .link:hover {
-    color: var(--primary-color);
+/* Heats: hidden under their final until its "n heats" toggle opens them. */
+.sub-race-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0;
+    font: inherit;
+    color: var(--text-light);
+    background: none;
+    border: 0;
+    cursor: pointer;
 }
+.sub-race-toggle:hover { color: var(--primary-color); }
+.sub-race-chevron { transition: transform var(--transition-fast); }
+.sub-race-toggle[aria-expanded="true"] .sub-race-chevron { transform: rotate(180deg); }
+.races-table tr.sub-race-row td { background: rgba(26, 26, 46, 0.03) !important; }
+.races-table tr.sub-race-row td.race-col { padding-left: 1.5rem; }
+.races-table tr.sub-race-row .link { font-weight: 500; }
 
-.sub-race-stage-col {
-    white-space: nowrap;
+/* Predictions view: places and time against the prediction. */
+.pred-places { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-light); }
+.pred-places.up { color: var(--success-color); }
+.pred-places.down { color: var(--error-color); }
+
+@media (max-width: 768px) {
+    .race-select { flex: none; padding-left: 0.5rem; }
 }
-
-.sub-race-corner-icon {
-    color: var(--text-lighter);
-    vertical-align: middle;
-    margin-right: 0.25em;
-}
-
-.sub-race-stage-label {
-    font-size: 0.8em;
-    font-weight: 500;
-    vertical-align: middle;
-}
-
-/* Muted date/program columns - same visual weight as YOB in race tables */
-.results-table td.date-col,
-.results-table td.program-col,
-.rating-table td.date-col,
-.rating-table td.program-col {
-    font-size: 0.75rem;
-    color: var(--text-lighter);
-}
-
-/* Athlete table column widths. Every column is fixed-width so the table has a
-   natural size that fills the 1100px page container; .table-section scrolls
-   horizontally if the screen is narrower. */
-.results-table .date-col     { width: 135px; }
-.results-table .race-col     { width: 247px; }
-.results-table .program-col  { width: 95px; }
-
-/* Match results-table for the four leading columns so the two tables line up
-   visually on desktop. */
-.rating-table .date-col      { width: 135px; }
-.rating-table .race-col      { width: 247px; }
-.rating-table .program-col   { width: 95px; }
-
-/* Table fills its .table-section; non-time columns + overall are fixed and
-   the 5 split columns share the remainder via calc(), so the header always
-   meets the right edge cleanly. min-width keeps the splits readable on
-   narrow screens; below that .table-section scrolls.
-   Fixed total = 135+247+95+80+110 (overall) = 667.
-   Scoped to >=769px so it doesn't fight the mobile-accordion `min-width: 0`
-   override in base.css - without this scope the desktop min-width wins on
-   mobile (same specificity, athlete.css loads after base.css) and blows the
-   rows off the right edge. */
-@media (min-width: 769px) {
-    .results-table table         { width: 100%; min-width: 988px; }
-    .rating-table table          { min-width: 988px; }
-}
-
-/* Ranking number in stat card inherits race-stat-num size;
-   link should be dark, orange on hover */
-.ranking-num a.ranking-link {
-    color: var(--text-color);
-}
-
-.ranking-num a.ranking-link:hover {
-    color: var(--primary-color);
-}
-
-/* ============================================
-   HISTORICAL TABLES
-   ============================================ */
-
-/* Split + overall columns: fixed compact widths. Leftover space goes to the
-   race-col (which has no explicit width). Table min-width keeps the splits
-   readable; below that the section scrolls horizontally. The default
-   `table td` padding (1rem each side) eats too much of the narrow time
-   columns, so override with a tighter horizontal padding. */
-.results-table .time-col    { width: calc((100% - 667px) / 5); }
-.results-table .overall-col { width: 110px; }
-
-/* (Desktop-hide rules for .time-disc-label, sort chips and .splits-toggle-col
-   live in base.css so both the athlete and race tables get them.) */
-
-/* Upcoming races table - wider pos col, 4 splits plus win chance. The race
-   column takes what's left so the table fits without scrolling. */
-
-/* Mirror the results-table pattern so declared widths sum to exactly 100%
-   (no proportional rescaling). Fixed total = 135+247+95+80+110 = 667; the
-   four discipline rating columns share the remainder via calc(). The
-   .overall-col rule below has to come AFTER this one because both rules
-   apply to the overall <th> (it has both classes) - last-in-source wins. */
-.rating-table .rating-col   { width: calc((100% - 667px) / 4); }
-.rating-table .overall-col  { width: 110px; }
-
-/* Tablets: date and program move under the race name (.race-col-meta) so the
-   tables fit without scrolling, and the race column takes what the fixed
-   splits leave. Comes after the width rules above so it wins. */
-.race-col-meta { display: none; }
-/* Phones and 768 hide the date and program cells too (base.css), so the meta
-   line is the only place the date shows; it must cover every width to 1024. */
-@media (max-width: 1024px) {
-    .race-col-meta { display: block; margin-top: 2px; font-size: 0.75rem; color: var(--text-lighter); }
-}
-@media (min-width: 769px) and (max-width: 1024px) {
-    .results-table .date-col, .results-table .program-col,
-    .rating-table  .date-col, .rating-table  .program-col { display: none; }
-    .results-table table, .rating-table table { min-width: 0; }
-    .results-table .race-col, .rating-table .race-col { width: auto; }
-    .results-table .position-col, .rating-table .position-col { width: 60px; }
-    .results-table .time-col    { width: 72px; }
-    .rating-table  .rating-col  { width: 80px; }
-    .results-table .overall-col, .rating-table .overall-col { width: 100px; }
+@media (max-width: 480px) {
+    .races-table tbody tr.season-row { display: block; padding: 0; }
+    .races-table tbody tr.season-row td { display: block; padding: 0.4rem 0.6rem; }
+    .races-table tr.sub-race-row td.race-col { padding-left: 0.75rem; }
+    .race-table-tools { flex-wrap: wrap; }
+    .race-select { flex: 1 1 40%; }
 }
 
 /* (Moved to base.css so the race-page rating tables also keep the

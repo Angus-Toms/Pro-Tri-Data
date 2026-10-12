@@ -331,148 +331,154 @@ function toggleNotableResults(button, targetId) {
     button.classList.toggle('open', !expanded);
 }
 
-// Mobile-only sort chips for the race results table. Mirrors the existing
-// header click behavior: click a chip to sort by that column; click again to
-// flip direction. Default state: Date desc (matches initial server order).
-(function initSortChips() {
-    const chipRow = document.querySelector('.results-sort-chips');
-    if (!chipRow) return;
-    // The .results-table class is shared with the upcoming-races table; target
-    // the race-results table specifically (it's the chip row's next sibling).
-    const table = chipRow.nextElementSibling?.querySelector('table.sortable-table');
+// Races table: Times, Ratings and Predictions views of every start in the
+// career. Find, distance and result filters show every match; unfiltered it
+// shows the latest 20 until Show all. While sorted by date, a divider row
+// opens each year with its tally. Heats sit under their final and open from
+// its "n heats" toggle.
+(function initRacesTable() {
+    const table = document.getElementById('races-table');
     if (!table) return;
-    const chips = chipRow.querySelectorAll('.sort-chip');
+    const TOP = 20;
+    const tbody   = table.tBodies[0];
+    const ths     = [...table.tHead.rows[0].cells];
+    const raceTh  = ths.find(th => th.dataset.key === 'race');
+    const buttons = document.querySelectorAll('.race-view-btn[data-view]');
+    const chipRow = document.querySelector('.race-table-chips');
+    const find    = document.getElementById('races-find');
+    const dist    = document.getElementById('races-dist');
+    const result  = document.getElementById('races-result');
+    const count   = document.querySelector('.race-table-count');
+    const more    = document.querySelector('.race-show-all');
+    const norm    = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    const chevron = '<svg class="chip-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
+    const plural  = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+    let showAll = false;
 
-    // Mark Date chip as the initial selected/desc state. We don't re-sort on
-    // load - server already delivers rows in date-desc order.
-    const dateChip = chipRow.querySelector('.sort-chip[data-sort-col="0"]');
-    if (dateChip) dateChip.classList.add('selected', 'desc');
-
-    chips.forEach(chip => {
-        chip.addEventListener('click', () => {
-            const col = parseInt(chip.dataset.sortCol, 10);
-            const wasSelected = chip.classList.contains('selected');
-            const wasDesc = chip.classList.contains('desc');
-
-            chips.forEach(c => c.classList.remove('selected', 'asc', 'desc'));
-
-            // Toggle direction when re-clicking the active chip; otherwise pick
-            // a sensible default per column (date -> desc, others -> asc).
-            let asc;
-            if (wasSelected) asc = wasDesc;
-            else asc = col !== 0;
-
-            chip.classList.add('selected', asc ? 'asc' : 'desc');
-            sortTable(table, col, asc);
-            const tbody = table.querySelector('tbody');
-            if (tbody) _restripeTable(tbody);
-        });
-    });
-})();
-
-// Rating-history chip row: sort by date, position, or any discipline rating.
-// Default direction per axis: date -> desc (newest first), position -> asc
-// (1st first), discipline rating -> desc (highest first). All values are
-// read from the cell's data-value attribute.
-(function initRatingChips() {
-    const chipRow = document.querySelector('.ratings-sort-chips');
-    if (!chipRow) return;
-    const table = chipRow.nextElementSibling?.querySelector('table.sortable-table');
-    if (!table) return;
-
-    const chips = chipRow.querySelectorAll('.sort-chip');
-
-    // Default: Date desc, matching server-side order.
-    const dateChip = chipRow.querySelector('.sort-chip[data-sort-col="0"]');
-    if (dateChip) dateChip.classList.add('selected', 'desc');
-
-    const defaultAscFor = { date: false, position: true, discipline: false };
-
-    function sortRatings(col, axis, asc) {
-        const tbody = table.querySelector('tbody');
-        // Position shares sortTable's status handling (non-finishers sink).
-        if (axis === 'position') {
-            sortTable(table, col, asc);
-            _restripeTable(tbody);
-            return;
-        }
-        const rows  = Array.from(tbody.querySelectorAll('tr')).filter(
-            r => !r.querySelector('.no-data')
-        );
-        rows.sort((a, b) => {
-            let aVal = a.cells[col].getAttribute('data-value');
-            let bVal = b.cells[col].getAttribute('data-value');
-            if (axis === 'date') {
-                aVal = (aVal || '').toString();
-                bVal = (bVal || '').toString();
-            } else {
-                aVal = parseFloat(aVal);
-                bVal = parseFloat(bVal);
-                // NaNs (missing data) sink to the bottom regardless of asc/desc.
-                if (isNaN(aVal)) return 1;
-                if (isNaN(bVal)) return -1;
+    function refresh() {
+        tbody.querySelectorAll('.season-row').forEach(r => r.remove());
+        const q = norm(find.value.trim());
+        const d = dist ? dist.value : '';
+        const res = result.value;
+        const filtered = !!(q || d || res);
+        const years = new Map();   // year -> tally of matching races, first visible row
+        let matched = 0, total = 0, shown = 0;
+        for (const row of tbody.querySelectorAll('tr.race-row')) {
+            total++;
+            const r = row.dataset.res;
+            const ok = (!q || row.dataset.find.includes(q)) && (!d || row.dataset.dist === d)
+                       && (!res || r === res || (res === 'podium' && r === 'win'));
+            if (!ok) { row.classList.add('is-hidden'); continue; }
+            matched++;
+            const visible = filtered || showAll || matched <= TOP;
+            row.classList.toggle('is-hidden', !visible);
+            if (!years.has(row.dataset.year)) years.set(row.dataset.year, { races: 0, wins: 0, podiums: 0, first: null });
+            const y = years.get(row.dataset.year);
+            y.races++;
+            if (r === 'win') y.wins++;
+            if (r === 'win' || r === 'podium') y.podiums++;
+            if (visible) {
+                row.classList.toggle('stripe', shown++ % 2 === 1);
+                y.first ??= row;
             }
-            if (aVal < bVal) return asc ? -1 : 1;
-            if (aVal > bVal) return asc ? 1 : -1;
-            return 0;
+        }
+        // Heats show only under an open, visible final.
+        for (const sub of tbody.querySelectorAll('tr.sub-race-row')) {
+            const toggle = tbody.querySelector(`.sub-race-toggle[data-parent="${sub.dataset.parent}"]`);
+            sub.classList.toggle('is-hidden', toggle.closest('tr').classList.contains('is-hidden')
+                                              || toggle.getAttribute('aria-expanded') !== 'true');
+        }
+        if (raceTh.matches('.asc, .desc')) {
+            for (const [year, y] of years) {
+                if (!y.first) continue;
+                const tr = document.createElement('tr');
+                tr.className = 'season-row';
+                tr.innerHTML = `<td colspan="${ths.length}"><b>${year}</b>${plural(y.races, 'race')} · ${plural(y.wins, 'win')} · ${plural(y.podiums, 'podium')}</td>`;
+                y.first.before(tr);
+            }
+        }
+        const limited = !filtered && !showAll && total > TOP;
+        // "Latest" only while newest first; any other sort shows its top 20.
+        const first = raceTh.classList.contains('desc') ? `the latest ${TOP}` : `the top ${TOP}`;
+        count.textContent = filtered ? `${matched} of ${plural(total, 'race')}`
+                          : limited ? `Showing ${first} of ${total} races` : plural(total, 'race');
+        more.hidden = filtered || total <= TOP;
+        more.textContent = showAll ? `Show ${first}` : `Show all ${total} races`;
+        chipRow.querySelectorAll('.sort-chip').forEach(chip => {
+            chip.classList.toggle('selected', chip._th.matches('.asc, .desc'));
+            chip.classList.toggle('asc', chip._th.classList.contains('asc'));
+            chip.classList.toggle('desc', chip._th.classList.contains('desc'));
         });
-        rows.forEach(r => tbody.appendChild(r));
-        _restripeTable(tbody);
     }
 
-    chips.forEach(chip => {
-        chip.addEventListener('click', () => {
-            const col  = parseInt(chip.dataset.sortCol, 10);
-            const axis = chip.dataset.sortAxis;
-            const wasSelected = chip.classList.contains('selected');
-            const wasDesc = chip.classList.contains('desc');
-            chips.forEach(c => c.classList.remove('selected', 'asc', 'desc'));
-            const asc = wasSelected ? wasDesc : defaultAscFor[axis];
-            chip.classList.add('selected', asc ? 'asc' : 'desc');
-            sortRatings(col, axis, asc);
-        });
-    });
-})();
+    function sortBy(th, asc) {
+        tbody.querySelectorAll('.season-row').forEach(r => r.remove());
+        ths.forEach(h => h.classList.remove('asc', 'desc'));
+        th.classList.add(asc ? 'asc' : 'desc');
+        sortTable(table, ths.indexOf(th), asc);
+        refresh();
+    }
+    // Re-clicking flips the direction; a fresh column starts in its data-first direction.
+    const clickSort = th => sortBy(th, th.classList.contains('desc') ||
+        (!th.classList.contains('asc') && th.dataset.first !== 'desc'));
 
-// Mobile splits accordion: each main race row has a chevron button that
-// toggles a .expanded class on its <tr>, revealing the splits row below.
-(function initSplitsToggle() {
-    document.querySelectorAll('.results-table .splits-toggle, .rating-table .splits-toggle').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const row = btn.closest('tr');
-            if (!row) return;
-            const expanded = row.classList.toggle('expanded');
-            btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-            btn.setAttribute('aria-label', expanded ? 'Hide splits' : 'Show splits');
-        });
-    });
-})();
+    // Phone chips stand in for the hidden header: Position, Date and the
+    // view's columns still on screen at phone width.
+    function buildChips() {
+        chipRow.innerHTML = '';
+        for (const th of ths) {
+            const onPhone = th.classList.contains('on') && (th.classList.contains('drawer') || !th.matches('.hide-768, .hide-1024'));
+            if (!th.classList.contains('sortable') || (th.classList.contains('vc') && !onPhone)) continue;
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'sort-chip';
+            chip.innerHTML = th.dataset.label + chevron;
+            chip._th = th;
+            chip.addEventListener('click', () => clickSort(th));
+            chipRow.appendChild(chip);
+        }
+    }
 
-// Add click handlers to sortable headers.
-// (Previously wrapped in DOMContentLoaded; runs immediately because athlete.js
-// is at end of body and we also re-run it after partial nav when DOMContent
-// is long fired.)
-(function initSortHeaders() {
-    const tables = document.querySelectorAll('table.sortable-table');
-    if (!tables.length) return;
-    tables.forEach(table => {
-        const headers = table.querySelectorAll('th.sortable');
-        headers.forEach((header, index) => {
-            header.addEventListener('click', () => {
-                const isAsc = header.classList.contains('asc');
-                headers.forEach(h => h.classList.remove('asc', 'desc'));
-                if (isAsc) {
-                    header.classList.add('desc');
-                    sortTable(table, index, false);
-                } else {
-                    header.classList.add('asc');
-                    sortTable(table, index, true);
-                }
-                const tbody = table.querySelector('tbody');
-                if (tbody) _restripeTable(tbody);
-            });
+    function setView(btn) {
+        const view = btn.dataset.view;
+        table.dataset.view = view;
+        table.querySelectorAll('.vc').forEach(c => c.classList.toggle('on', c.classList.contains('v-' + view)));
+        buttons.forEach(b => {
+            b.classList.toggle('active', b === btn);
+            b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
         });
+        document.getElementById('races-download').dataset.downloadUrl = btn.dataset.download;
+        buildChips();
+        // A sort on a column the new view hides falls back to newest first.
+        const sorted = ths.find(th => th.matches('.asc, .desc'));
+        if (sorted.classList.contains('vc') && !sorted.classList.contains('on')) sortBy(raceTh, false);
+        else refresh();
+    }
+
+    ths.forEach(th => { if (th.classList.contains('sortable')) th.addEventListener('click', () => clickSort(th)); });
+    buttons.forEach(b => b.addEventListener('click', () => setView(b)));
+    find.addEventListener('input', refresh);
+    dist?.addEventListener('change', refresh);
+    result.addEventListener('change', refresh);
+    more.addEventListener('click', () => { showAll = !showAll; refresh(); });
+    tbody.addEventListener('click', e => {
+        const heats = e.target.closest('.sub-race-toggle');
+        if (heats) {
+            heats.setAttribute('aria-expanded', heats.getAttribute('aria-expanded') === 'true' ? 'false' : 'true');
+            refresh();
+            return;
+        }
+        // Phone: tap a row (or its chevron) to open the rest of the view's values.
+        if (e.target.closest('a, button:not(.row-toggle)')) return;
+        const row = e.target.closest('tr');
+        const btn = row?.querySelector('.row-toggle');
+        if (!btn || !btn.offsetParent) return;
+        btn.setAttribute('aria-expanded', row.classList.toggle('expanded') ? 'true' : 'false');
     });
+
+    // Server renders newest first.
+    buildChips();
+    refresh();
 })();
 
 // Ratings chart ---------------------------------------------------------------
@@ -859,69 +865,11 @@ function switchPctBehindDisc(disc) {
     ['overall', 'swim', 'bike', 'run'].forEach(buildMiniPctBehindChart);
 }
 
-// Align race pills: when the pill has wrapped to a new line, left-align it.
-// Uses rendered positions so it handles both single-line-link-overflow and multi-line links.
-function alignRacePills() {
-    document.querySelectorAll('.race-name-wrap').forEach(wrap => {
-        const link = wrap.querySelector('.link');
-        const pill = wrap.querySelector('.std-pill');
-        if (!link || !pill) return;
-
-        pill.classList.remove('pill-block');
-
-        const linkRects = link.getClientRects();
-        const lastLinkTop = linkRects[linkRects.length - 1].top;
-        const pillTop = pill.getBoundingClientRect().top;
-
-        // Multi-line link, or pill sits below the link's last baseline
-        if (linkRects.length > 1 || pillTop > lastLinkTop + 4) {
-            pill.classList.add('pill-block');
-        }
-    });
-}
-alignRacePills();
-let _pillResizeTimer;
-if (!window._ptdAthleteResizeBound) {
-    window._ptdAthleteResizeBound = true;
-    window.addEventListener('resize', () => {
-        clearTimeout(_pillResizeTimer);
-        _pillResizeTimer = setTimeout(alignRacePills, 100);
-    });
-}
-
 // Init
 if (pctBehindData) {
     buildMainPctBehindChart('overall');
     ['overall', 'swim', 'bike', 'run'].forEach(buildMiniPctBehindChart);
 }
-
-// Re-stripe visible (non-sub-race) rows so alternation is correct
-// regardless of how many hidden sub-race rows exist in the DOM.
-function _restripeTable(tbody) {
-    let stripe = 0;
-    for (const row of tbody.rows) {
-        if (row.classList.contains('sub-race-row')) continue;
-        row.classList.toggle('stripe-even', stripe % 2 === 1);
-        stripe++;
-    }
-}
-
-// Sub-race expand/collapse toggles. Each parent row has two (the date cell's,
-// and one under the race name for tablets, where the date column is hidden),
-// so they flip together.
-document.querySelectorAll('.sub-race-toggle').forEach(btn => {
-    btn.addEventListener('click', () => {
-        const parentId = btn.dataset.parent;
-        const expanded = !btn.classList.contains('expanded');
-        document.querySelectorAll(`.sub-race-toggle[data-parent="${parentId}"]`)
-                .forEach(b => b.classList.toggle('expanded', expanded));
-        document.querySelectorAll(`.sub-race-row[data-parent="${parentId}"]`)
-                .forEach(row => row.classList.toggle('visible', expanded));
-    });
-});
-
-// Initial stripe pass - also called after sort (sortTable fires on th click)
-document.querySelectorAll('.results-table tbody, .rating-table tbody').forEach(_restripeTable);
 
 // Rivals row: hide any card that doesn't fit on one line. Recomputed on
 // container resize so the row stays single-line at every width without
