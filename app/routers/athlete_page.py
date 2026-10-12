@@ -1,4 +1,3 @@
-import bisect
 import math
 import re
 from datetime import date, timedelta
@@ -57,7 +56,6 @@ _MIN_POINTS = 20
 # Hide anything worth less than this fraction of the athlete's best result, so
 # a world champion's early Continental Cup placings drop off.
 _REL_THRESHOLD = 0.2
-_MAX_ITEMS = 10
 
 # (title, medal prefix, event name) for championship-style tiers; everything
 # else reads "{label} Win" / "{label} Silver" / "{label}, 5th".
@@ -149,51 +147,6 @@ def _format_position(tier, pos):
     return f"{label}, {format_ordinal(pos)}"
 
 
-def _build_notable_results(notable_raw):
-    """Pick an athlete's most significant results across every tier.
-
-    Finishes are grouped by (tier, position) and scored on the shared
-    _TIER_POINTS scale. Within a tier, a podium hides that tier's non-podium
-    finishes (an Olympic champion's 12th at the next Games is noise); without
-    a podium only the single best finish is kept. Groups below _MIN_POINTS
-    or below _REL_THRESHOLD of the athlete's best group are dropped, and the
-    rest are listed best first.
-    """
-    groups = {}
-    for r in notable_raw:
-        groups.setdefault((r["tier"], r["position"]), []).append(r)
-
-    by_tier = {}
-    for (tier, pos), races in groups.items():
-        points = _TIER_POINTS[tier] * _POS_DECAY ** (pos - 1)
-        if points >= _MIN_POINTS:
-            by_tier.setdefault(tier, []).append((points, tier, pos, races))
-
-    kept = []
-    for tier_groups in by_tier.values():
-        tier_groups.sort(reverse=True)
-        podiums = [g for g in tier_groups if g[2] <= 3]
-        kept.extend(podiums or tier_groups[:1])
-    if not kept:
-        return []
-
-    best = max(g[0] for g in kept)
-    kept = [g for g in kept if g[0] >= best * _REL_THRESHOLD]
-    kept.sort(key=lambda g: (-g[0], -_TIER_POINTS[g[1]], -len(g[3])))
-
-    formatted = []
-    for points, tier, pos, races in kept[:_MAX_ITEMS]:
-        desc = _format_position(tier, pos)
-        if len(races) > 1:
-            plural = desc.endswith("Win")
-            desc = f"{len(races)} x {desc}{'s' if plural else ''}"
-        races_sorted = sorted(races, key=lambda x: x["race_date"] or "", reverse=True)
-        formatted.append({"description": desc, "pos": pos, "races": [
-            {"race_id": r["race_id"], "race_name": r["race_handle"], "race_date": r["race_date"]}
-            for r in races_sorted]})
-    return formatted
-
-
 # Words a palmares tier row already says, stripped from race handles so the
 # races read as places: "IM 70.3 Oceanside 26" -> "Oceanside 26".
 _HANDLE_NOISE = re.compile(
@@ -204,12 +157,14 @@ _HANDLE_NOISE = re.compile(
 def _build_palmares_tiers(notable_raw):
     """Palmares as one row per tier with gold / silver / bronze counts.
 
-    Same scoring and thresholds as _build_notable_results, applied to each
-    tier's best finish. A tier with a podium lists its podium races; one
-    without lists its best placing. Races get short names, since the row
-    already names the series: what is left of the handle once the series
-    words go, or the event venue when nothing is left ("IM 70.3 World
-    Championship 26" -> "Nice 26").
+    Each tier is scored by its best finish on the shared _TIER_POINTS scale.
+    Tiers below _MIN_POINTS or below _REL_THRESHOLD of the athlete's best
+    tier are dropped, and the rest are listed best first. A tier with a
+    podium lists its podium races (an Olympic champion's 12th at the next
+    Games is noise); one without lists its best placing. Races get short
+    names, since the row already names the series: what is left of the
+    handle once the series words go, or the event venue when nothing is
+    left ("IM 70.3 World Championship 26" -> "Nice 26").
     """
     by_tier = {}
     for r in notable_raw:
@@ -225,10 +180,12 @@ def _build_palmares_tiers(notable_raw):
         shown.sort(key=lambda r: (r["position"], -r["race_date"].toordinal()))
         rows.append({
             "points": points,
+            "tier":   tier,
             "name":   _CHAMPIONSHIP_LABELS[tier][2] if tier in _CHAMPIONSHIP_LABELS else _TIER_LABELS[tier],
             "medals": [sum(r["position"] == p for r in races) for p in (1, 2, 3)] if best <= 3 else None,
             "best":   best,
             "races":  [{"race_id": r["race_id"], "position": r["position"],
+                        "handle": r["race_handle"], "year": r["race_date"].year,
                         "name": f'{" ".join(_HANDLE_NOISE.sub(" ", r["race_handle"]).split()) or r["venue"].split(",")[0]} {r["race_date"]:%y}'}
                        for r in shown],
         })
@@ -445,10 +402,6 @@ def get_athlete(request: Request, athlete_id: int,
                     ('middle', 'bike'): '90km', ('long', 'bike'): '180km',
                     ('middle', 'run'): '21.1km', ('long', 'run'): '42.2km'}
         form_rows = []
-        as_of = None
-        # Each discipline's place among the athletes who also get a form card,
-        # so the equivalent times have a reference.
-        form_pool = queries.get_form_pool(course, info['gender'])
         for disc in form_discs:
             f = form.get(disc)
             if not f or f['n_obs'] < FORM_MIN_STARTS or f['last_race_date'] < form_cutoff:
@@ -460,13 +413,9 @@ def get_athlete(request: Request, athlete_id: int,
                     'leg':  legs[(dist, disc)],
                     'time': format_time(round(ref * math.exp(f['form_rel']))) if ref else '-',
                 })
-            pool = form_pool[disc]
-            form_rows.append({'label': disc.capitalize(), 'cells': cells,
-                              'rank': bisect.bisect_left(pool, f['form_rel']) + 1, 'pool': len(pool)})
-            as_of = max(as_of, f['last_race_date']) if as_of else f['last_race_date']
+            form_rows.append({'label': disc.capitalize(), 'cells': cells})
         if form_rows:
-            current_form = {'cols': [label for label, _ in form_cols],
-                            'rows': form_rows, 'as_of': as_of}
+            current_form = {'cols': [label for label, _ in form_cols], 'rows': form_rows}
 
 
     # --- Ratings table: one row per discipline ---
@@ -538,10 +487,10 @@ def get_athlete(request: Request, athlete_id: int,
     if world_rank:
         seo_intro += f" Ranked {world_rank['n']}{world_rank['suffix']} in the world."
 
-    # --- notable results: three parallel streams (short-course elite, AG, long-course) ---
-    notable_results      = _build_notable_results(notable_raw)
-    ag_notable_results   = _build_notable_results(ag_notable_raw)
-    long_notable_results = _build_notable_results(long_notable_raw)
+    # --- Palmares: one per career (short-course elite, long-course elite, AG) ---
+    palmares_by_key = {'elite-short': _build_palmares_tiers(notable_raw),
+                       'elite-long':  _build_palmares_tiers(long_notable_raw),
+                       'ag':          _build_palmares_tiers(ag_notable_raw)}
 
     # --- race history table ---
     # Fetch percentile thresholds once for this athlete's gender (cached per process).
@@ -744,22 +693,20 @@ def get_athlete(request: Request, athlete_id: int,
     # AG results. Each card names the career's headline result and its world
     # rank, so the careers not on screen are still visible.
     cutoff_active = date.today() - timedelta(days=int(18 * 30.44))
-    palmares_by_key = {'elite-short': notable_results, 'elite-long': long_notable_results, 'ag': ag_notable_results}
-    palmares_raw_by_key = {'elite-short': notable_raw, 'elite-long': long_notable_raw, 'ag': ag_notable_raw}
 
     def _headline(key, c, cat):
-        # Top Palmares entry (already ranked on the shared tier-points
-        # scale), with its year when it is a single race; otherwise the
-        # career's best finish.
+        # The top Palmares tier's best finish, with its year when it is a
+        # single race; otherwise the career's best finish.
         top = palmares_by_key[key][:1]
         if top:
-            item = top[0]
-            if len(item["races"]) > 1:
-                return item["description"]                      # "7 x WTCS Wins"
-            race = item["races"][0]
-            if ", " in item["description"]:                     # "WTCS, 5th" -> "5th, Yokohama WTCS 21"
-                return f'{item["description"].split(", ")[1]}, {race["race_name"]}'
-            return f'{item["description"]} {race["race_date"].year}'   # "Olympic Champion 2021"
+            t = top[0]
+            races = [r for r in t["races"] if r["position"] == t["best"]]
+            desc = _format_position(t["tier"], t["best"])
+            if len(races) > 1:                                  # "7 x WTCS Wins"
+                return f'{len(races)} x {desc}{"s" if desc.endswith("Win") else ""}'
+            if ", " in desc:                                    # "WTCS, 5th" -> "5th, Yokohama WTCS 21"
+                return f'{desc.split(", ")[1]}, {races[0]["handle"]}'
+            return f'{desc} {races[0]["year"]}'                 # "Olympic Champion 2021"
         best_finish = queries.get_athlete_best_finish(athlete_id, cat, course=c)
         if best_finish:
             return f'Best: {format_ordinal(best_finish["position"])}, {best_finish["race_handle"]}'
@@ -827,7 +774,6 @@ def get_athlete(request: Request, athlete_id: int,
         "has_elite":            'elite' in available_categories,
         "has_ag":               'ag' in available_categories,
         "palmares":            palmares_by_key[active_key],
-        "palmares_tiers":      _build_palmares_tiers(palmares_raw_by_key[active_key]),
         "current_form":        current_form,
         "current_ratings":     current_ratings,
         "ratings_rows":        ratings_rows,

@@ -222,38 +222,9 @@
     text-transform: uppercase;
     color: var(--text-light);
 }
-.cs-label-date { margin-left: auto; padding-left: 1rem; font-size: 0.75rem; font-weight: 400; letter-spacing: 0; text-transform: none; }
 
-/* Palmares: one ranked list, best first. The dot is the medal for podium
-   entries and a plain marker for placings and grouped wins below third. */
-.pal-list { list-style: none; margin: 0; padding: 0; }
-.pal-item {
-    position: relative;
-    padding: 0.4rem 0 0.4rem 1.3rem;
-    font-size: 0.9rem;
-    line-height: 1.45;
-}
-.pal-item + .pal-item { border-top: 1px solid var(--border-color); }
-.pal-medal { position: absolute; left: 0; top: 0.78rem; width: 0.7rem; height: 0.7rem; box-sizing: border-box; border-radius: 50%; border: 2px solid var(--border-color); }
-.pal-medal.m1, .pal-medal.m2, .pal-medal.m3 { border: 0; }
-.pal-medal.m1 { background: var(--gold); }
-.pal-medal.m2 { background: var(--silver); }
-.pal-medal.m3 { background: var(--bronze); }
-.pal-title { font-weight: 700; color: var(--text-color); margin-right: 0.5rem; }
-.pal-races { font-size: 0.8rem; color: var(--text-lighter); }
-.pal-races a { color: var(--text-light); text-decoration: none; white-space: nowrap; }
-.pal-races a:hover { color: var(--primary-color); }
-
-/* Comparison, option B: Palmares by tier. A medal table (one row per tier,
-   gold / silver / bronze counts) whose rows open to list the races. */
-.pal-compare .cs-body { margin-top: 0; padding-top: 0; border-top: 0; }
-.pal-option {
-    font-size: 0.62rem;
-    letter-spacing: 0.04em;
-    padding: 0.1rem 0.45rem;
-    border-radius: 999px;
-    background: rgba(26, 26, 46, 0.07);
-}
+/* Palmares: a medal table, one row per tier with gold / silver / bronze
+   counts. Rows open to list the races. */
 .pt-head, .pt-row summary {
     display: grid;
     grid-template-columns: 16rem minmax(0, 1fr) repeat(3, 2.25rem) 1.25rem;
@@ -357,7 +328,6 @@
 .career-form-table tbody th { color: var(--text-color); font-size: 0.85rem; font-weight: 700; text-transform: none; letter-spacing: 0; }
 .cf-time { font-weight: 700; }
 .cf-leg { display: block; font-size: 0.7rem; color: var(--text-light); }
-.career-form-table .cf-rank, .career-form-table .cf-rank:last-child { padding-right: 0; text-align: right; }
 
 /* Ratings table (athlete page). Shares .ratings-table with the race page's
    standards table; these rules only apply here. World rank is the headline,

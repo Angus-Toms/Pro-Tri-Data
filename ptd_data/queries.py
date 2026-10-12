@@ -4028,31 +4028,6 @@ def get_athlete_form(athlete_id, course):
             for disc, f, n, d in rows}
 
 
-@lru_cache(maxsize=8)
-def get_form_pool(course, gender):
-    """Sorted current form_rel per discipline for the athletes the profile
-    shows form for: elite, this gender and course, 5+ observed splits and a
-    race in the last 18 months (the same gate as the Current Form card).
-    Lower is faster, so an athlete's place is bisect_left + 1."""
-    rows = _get_conn().execute(f"""
-        WITH latest AS (
-            SELECT DISTINCT ON (af.athlete_id, af.discipline)
-                   af.discipline, af.form_rel, af.n_obs, r.race_date
-            FROM athlete_form af
-            JOIN races r ON r.race_id = af.race_id
-            JOIN athletes a ON a.athlete_id = af.athlete_id
-            WHERE r.distance IN {_course_in(course)} AND r.category = 'elite' AND a.gender = ?
-            ORDER BY af.athlete_id, af.discipline, r.race_date DESC, af.race_id DESC
-        )
-        SELECT discipline, form_rel FROM latest
-        WHERE n_obs >= 5 AND race_date >= CURRENT_DATE - INTERVAL 18 MONTHS
-    """, [gender]).fetchall()
-    pool = defaultdict(list)
-    for disc, f in rows:
-        pool[disc].append(f)
-    return {disc: sorted(v) for disc, v in pool.items()}
-
-
 @lru_cache(maxsize=4)
 def get_form_reference_times(course):
     """Typical split per (gender, distance, discipline) for mapping form to

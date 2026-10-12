@@ -180,30 +180,9 @@
 </nav>
 {% endif %}
 
-{% set form_block %}
-{% if current_form %}
-{# Equivalent race-day splits from the form model, with each discipline's
-   place among athletes who also have a form card. #}
-<div class="cs-form">
-    <div class="cs-label">Current form {{ help_icon('athlete-form') }}<span class="cs-label-date">as of {{ current_form.as_of.strftime('%d %b %Y') }}</span></div>
-    <table class="career-form-table">
-        <thead><tr><th></th>{% for c in current_form.cols %}<th>{{ c }}</th>{% endfor %}<th class="cf-rank">Rank</th></tr></thead>
-        <tbody>
-            {% for row in current_form.rows %}
-            <tr>
-                <th scope="row">{{ row.label }}</th>
-                {% for cell in row.cells %}<td><span class="cf-time">{{ cell.time }}</span><span class="cf-leg">{{ cell.leg }}</span></td>{% endfor %}
-                <td class="cf-rank"><b>{{ row.rank|ordinal }}</b><span class="cf-leg">of {{ "{:,}".format(row.pool) }}</span></td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% endif %}
-{% endset %}
 {# Career summary: the stats line, then Palmares and Current Form side by
-   side (stacked below 768). The selected career card above names the
-   career, so there is no title here. #}
+   side (stacked below 768, Form first). The selected career card above
+   names the career, so there is no title here. #}
 <section class="career-summary" aria-label="Career summary">
     <p class="cs-stats">
         <span><b>{{ athlete.race_starts }}</b> start{{ '' if athlete.race_starts == 1 else 's' }}</span>
@@ -216,34 +195,12 @@
     {% if palmares or current_form %}
     <div class="cs-body{{ ' two-col' if palmares and current_form else '' }}">
         {% if palmares %}
+        {# One row per tier with medal counts; each row opens to list its
+           races. On desktop a closed row previews them on one line. #}
         <div class="cs-palmares">
             <div class="cs-label">Palmares</div>
-            <ul class="pal-list">
-                {% for item in palmares %}
-                <li class="pal-item">
-                    <i class="pal-medal{{ ' m' ~ item.pos if item.pos <= 3 else '' }}" aria-hidden="true"></i>
-                    <span class="pal-title">{{ item.description }}</span>
-                    <span class="pal-races">{% for race in item.races %}<a href="/race/{{ race.race_id }}">{{ race.race_name }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</span>
-                </li>
-                {% endfor %}
-            </ul>
-        </div>
-        {% endif %}
-        {{ form_block }}
-    </div>
-    {% endif %}
-</section>
-
-{# Comparison, option B: Palmares as one row per tier with medal counts, races
-   in a drawer under short names. Remove whichever version loses, with
-   _build_palmares_tiers and the .pt-* CSS if it is this one. #}
-{% if palmares_tiers %}
-<section class="career-summary pal-compare" aria-label="Palmares by tier">
-    <div class="cs-body{{ ' two-col' if current_form else '' }}">
-        <div class="cs-palmares">
-            <div class="cs-label">Palmares <span class="pal-option">Option B: by tier</span></div>
             <div class="pt-head" aria-hidden="true"><span></span><span></span><i class="pt-dot m1"></i><i class="pt-dot m2"></i><i class="pt-dot m3"></i><span></span></div>
-            {% for t in palmares_tiers %}
+            {% for t in palmares %}
             <details class="pt-row">
                 <summary>
                     <span class="pt-name">{{ t.name }}</span>
@@ -263,10 +220,27 @@
             </details>
             {% endfor %}
         </div>
-        {{ form_block }}
+        {% endif %}
+        {% if current_form %}
+        {# Equivalent race-day splits from the form model. #}
+        <div class="cs-form">
+            <div class="cs-label">Current form {{ help_icon('athlete-form') }}</div>
+            <table class="career-form-table">
+                <thead><tr><th></th>{% for c in current_form.cols %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+                <tbody>
+                    {% for row in current_form.rows %}
+                    <tr>
+                        <th scope="row">{{ row.label }}</th>
+                        {% for cell in row.cells %}<td><span class="cf-time">{{ cell.time }}</span><span class="cf-leg">{{ cell.leg }}</span></td>{% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
     </div>
+    {% endif %}
 </section>
-{% endif %}
 
 {% if has_ratings %}
 {# Ratings: one row per discipline. World rank leads, with the pool size,
