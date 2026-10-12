@@ -509,14 +509,16 @@ const rrDecor = {
     id: 'rrDecor',
     beforeDatasetsDraw(chart) {
         const y = chart.scales.y, area = chart.chartArea, ctx = chart.ctx;
-        if (rrMode === 'rating' || y.min > 10) return;
+        // Only when the axis reaches above #10, so the band has height.
+        if (rrMode === 'rating' || y.min >= 10) return;
         const y10 = y.getPixelForValue(10);
         ctx.save();
         ctx.fillStyle = 'rgba(232, 93, 4, 0.07)';
         ctx.fillRect(area.left, area.top, area.right - area.left, y10 - area.top);
         ctx.fillStyle = 'rgba(196, 77, 3, 0.75)';
         ctx.font = "600 11px 'Plus Jakarta Sans', sans-serif";
-        ctx.fillText('Top 10', area.left + 6, y10 - 6);
+        // Inside the band when it fits, else just under its edge.
+        ctx.fillText('Top 10', area.left + 6, y10 - area.top >= 16 ? y10 - 6 : y10 + 13);
         ctx.restore();
     },
     afterDatasetsDraw(chart) {
@@ -538,24 +540,35 @@ const rrDecor = {
             ctx.fillStyle = color; ctx.fillText(text, x, y);
         };
         const pp = meta.data[pi], lp = meta.data[li];
-        const month = x => new Date(x).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+        const month = _rrMonth;
         const peakText = rrMode === 'rating' ? `Peak ${fmt(peak.y)} · ${month(peak.x)}` : _rrBestText(data, peak.y);
-        const above = rrMode === 'rating' ? -10 : 18;
-        label(peakText, Math.max(chart.chartArea.left + 4, Math.min(pp.x, chart.chartArea.right - 4)), pp.y + above,
-              pp.x > chart.chartArea.left + chart.chartArea.width * 0.6 ? 'right' : 'left', '#1a1a2e');
+        // Above or below the point, whichever keeps the label inside the
+        // plot (a peak on the top edge would otherwise sit in the switches).
+        const area = chart.chartArea;
+        const yFor = (py, preferAbove) => {
+            const up = py - 10, down = py + 18;
+            if (preferAbove) return up - 11 < area.top ? down : up;
+            return down > area.bottom - 3 ? up : down;
+        };
+        label(peakText, Math.max(area.left + 4, Math.min(pp.x, area.right - 4)), yFor(pp.y, rrMode === 'rating'),
+              pp.x > area.left + area.width * 0.6 ? 'right' : 'left', '#1a1a2e');
         if (pi !== li - 1 || data[li].y !== peak.y) {
-            label(`${fmt(data[li].y)} now`, lp.x - 2, lp.y + (rrMode === 'rating' ? 18 : -10), 'right', '#6b7280');
+            label(`${fmt(data[li].y)} now`, lp.x - 2, yFor(lp.y, rrMode !== 'rating'), 'right', '#6b7280');
         }
         ctx.restore();
     },
 };
+
+// "Sep 2024": fixed short months (en-GB now gives "Sept" in some browsers).
+const _RR_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const _rrMonth = x => { const d = new Date(x); return `${_RR_MONTHS[d.getMonth()]} ${d.getFullYear()}`; };
 
 // The best rank with how long it was held, from the step line: "#1 since
 // May 2024" (held now, "· first ..." if it was lost and regained), "#1 for
 // 8 months · from May 2023", or "#1 for 2.2 years in total · first May 2023"
 // when it was held in several spells.
 function _rrBestText(data, best) {
-    const month = x => new Date(x).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+    const month = _rrMonth;
     const spells = [];
     data.forEach((p, i) => {
         if (p.now || p.y !== best) return;
