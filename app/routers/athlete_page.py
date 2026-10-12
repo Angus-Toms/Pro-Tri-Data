@@ -1,3 +1,4 @@
+import bisect
 import math
 from datetime import date, timedelta
 from functools import lru_cache
@@ -96,6 +97,9 @@ def format_ordinal(n):
         return "***"
     suffix = "th" if 10 <= n % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
     return f"{n}{suffix}"
+
+
+templates.env.filters["ordinal"] = format_ordinal
 
 
 _GENDER_WORD = {"male": "Men", "female": "Women", "mixed": "Mixed"}
@@ -402,6 +406,9 @@ def get_athlete(request: Request, athlete_id: int,
                     ('middle', 'run'): '21.1km', ('long', 'run'): '42.2km'}
         form_rows = []
         as_of = None
+        # Each discipline's place among the athletes who also get a form card,
+        # so the equivalent times have a reference.
+        form_pool = queries.get_form_pool(course, info['gender'])
         for disc in form_discs:
             f = form.get(disc)
             if not f or f['n_obs'] < FORM_MIN_STARTS or f['last_race_date'] < form_cutoff:
@@ -413,7 +420,9 @@ def get_athlete(request: Request, athlete_id: int,
                     'leg':  legs[(dist, disc)],
                     'time': format_time(round(ref * math.exp(f['form_rel']))) if ref else '-',
                 })
-            form_rows.append({'label': disc.capitalize(), 'cells': cells})
+            pool = form_pool[disc]
+            form_rows.append({'label': disc.capitalize(), 'cells': cells,
+                              'rank': bisect.bisect_left(pool, f['form_rel']) + 1, 'pool': len(pool)})
             as_of = max(as_of, f['last_race_date']) if as_of else f['last_race_date']
         if form_rows:
             current_form = {'cols': [label for label, _ in form_cols],
@@ -810,28 +819,6 @@ def get_athlete(request: Request, athlete_id: int,
     for r in upcoming_races:
         r["career_label"] = career_label.get(r["career_key"]) if len(careers) > 1 else None
 
-    # Person header race line: the next race entered, else the latest result.
-    hero_race = None
-    if upcoming_races:
-        nxt = upcoming_races[0]
-        bits = [nxt["career_label"]] if nxt["career_label"] else []
-        if nxt["pred_pos"]:
-            bits.append(f'Predicted {format_ordinal(nxt["pred_pos"])}')
-        if nxt["win_pct"] is not None and nxt["win_pct"] >= 0.005:
-            bits.append(f'Win {nxt["win_pct"] * 100:.0f}%')
-        hero_race = {"label": "Next race", "date": nxt["race_date"], "race_id": nxt["race_id"],
-                     "name": nxt["event_name"], "bits": bits}
-    else:
-        latest = queries.get_athlete_latest_result(athlete_id)
-        if latest:
-            finished = latest["status"] == "Finished" and latest["position"]
-            bits = [f'{format_ordinal(latest["position"])} of {latest["finishers"]}' if finished else latest["status"]]
-            mine = next((p for p in queries.get_race_predictions(latest["race_id"])
-                         if p["athlete_id"] == athlete_id and not p["is_low_confidence"]), None)
-            if mine:
-                bits.append(f'predicted {format_ordinal(mine["predicted_position"])}')
-            hero_race = {"label": "Latest race", "date": latest["race_date"], "race_id": latest["race_id"],
-                         "name": latest["race_handle"], "bits": bits}
 
     return templates.TemplateResponse("athlete.html", {
         "request":        request,
@@ -843,12 +830,12 @@ def get_athlete(request: Request, athlete_id: int,
         "show_charts":          has_ratings and race_starts > 1,
         "show_rankings":        bool(current_rankings) or bool(peak_rankings),
         "is_active_athlete":    _active,
+        "low_conf_starts":      LOW_CONF_STARTS,
         "category":             category,
         "course":               course,
         "available_courses":    available_courses,
         "careers":              careers,
         "active_key":           active_key,
-        "hero_race":            hero_race,
         "has_elite":            'elite' in available_categories,
         "has_ag":               'ag' in available_categories,
         "notable_col1":        notable_col1,

@@ -144,29 +144,6 @@
     align-self: start;
 }
 
-/* Next race, or the latest result when nothing is entered: a full-width
-   strip under the header row. */
-.athlete-hero-race {
-    grid-column: 1 / -1;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0.3rem 0.9rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.12);
-    padding-top: 0.75rem;
-    font-size: 0.875rem;
-    color: rgba(255, 255, 255, 0.7);
-}
-.hero-race-label {
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.45);
-}
-.hero-race-date { color: #fff; font-weight: 600; }
-.hero-race-name { color: #fff; font-weight: 600; text-decoration: none; }
-.hero-race-name:hover { color: var(--primary-color); }
 
 /* Career cards: one per career (short course, long course, age group). They
    are the career switch and name each career's headline, so the careers not
@@ -202,39 +179,70 @@
 .career-card-title { font-weight: 700; font-size: 0.98rem; }
 .career-card-line { font-size: 0.8rem; color: var(--text-light); font-variant-numeric: tabular-nums; }
 
-/* Career header: stats line and current form for the career on screen. */
+
+/* Career header: the career's figures on the left, Current Form on the right
+   (stacked below 768). */
 .career-header {
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 1rem 2rem;
-    margin: 1.25rem 0 0.5rem;
+    gap: 1.25rem 2.5rem;
+    margin: 1.5rem 0 0.75rem;
 }
 .career-header-main { min-width: 0; }
-.career-header-title { font-size: 1.25rem; font-weight: 800; margin: 0 0 0.25rem; }
-.career-stats {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.375rem;
-    font-size: 0.9rem;
-    color: var(--text-light);
+.career-header-title-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem 0.75rem; margin-bottom: 0.6rem; }
+.career-header-title { font-size: 1.35rem; font-weight: 800; margin: 0; }
+.career-provisional {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #b45309;
+    background: rgba(245, 158, 11, 0.12);
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
 }
-.career-stat { white-space: nowrap; }
-.career-stat b { color: var(--text-color); font-weight: 700; }
-.career-pct { font-size: 0.8rem; }
-.career-dot { color: var(--border-color); }
-.career-form { min-width: 260px; }
-.career-form-label {
-    font-size: 0.7rem;
+.career-figures { display: flex; flex-wrap: wrap; gap: 0.75rem 2rem; margin: 0; }
+.career-figures div { display: flex; flex-direction: column-reverse; }
+.career-figures dd { margin: 0; font-size: 1.6rem; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.career-figures dt {
+    font-size: 0.68rem;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--text-light);
 }
-.career-form .form-table { padding: 0; }
-.career-form .form-row { grid-template-columns: 3.5rem repeat(var(--form-cols, 2), 1fr); padding: 0.3rem 0; }
+.career-form { min-width: 300px; }
+.career-form-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; margin-bottom: 0.25rem; }
+.career-form-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-light);
+}
+.career-form-date { font-size: 0.75rem; color: var(--text-light); }
+/* A plain grid, not a data table: undo the site-wide table look (navy
+   headers, zebra rows, hover highlight, fixed layout). */
+.career-form-table { width: 100%; table-layout: auto; font-variant-numeric: tabular-nums; }
+.career-form-table th, .career-form-table td,
+.career-form-table th:first-child, .career-form-table td:first-child,
+.career-form-table th:last-child, .career-form-table td:last-child {
+    background: none;
+    padding: 0.35rem 0.75rem 0.35rem 0;
+    text-align: left;
+    vertical-align: baseline;
+    cursor: default;
+}
+.career-form-table tbody tr { border-bottom: none; }
+.career-form-table tbody tr:nth-child(even) td,
+.career-form-table tr:hover td { background-color: transparent !important; }
+.career-form-table thead th { font-size: 0.68rem; color: var(--text-light); padding-bottom: 0.15rem; }
+.career-form-table thead th:hover { background: none; color: var(--text-light); }
+.career-form-table tbody tr + tr { border-top: 1px solid var(--border-color); }
+.career-form-table tbody th { color: var(--text-color); font-size: 0.85rem; font-weight: 700; text-transform: none; letter-spacing: 0; }
+.cf-time { font-weight: 700; }
+.cf-leg { display: block; font-size: 0.7rem; color: var(--text-light); }
+.career-form-table .cf-rank, .career-form-table .cf-rank:last-child { padding-right: 0; text-align: right; }
 
 /* Course tag on an upcoming race when the athlete has several careers. */
 .career-tag {
@@ -685,8 +693,9 @@ tr.sub-race-row .link:hover {
         min-width: 0;
     }
 
-    .athlete-hero-race { flex: 1 1 100%; }
     .career-form { width: 100%; min-width: 0; }
+    .career-figures { gap: 0.75rem 1.5rem; }
+    .career-figures dd { font-size: 1.35rem; }
 
     .athlete-hero-name { font-size: 1.5rem; }
 
@@ -732,10 +741,9 @@ tr.sub-race-row .link:hover {
         flex: 0 1 auto;       /* override the 320px basis from <=768 */
         align-items: center;
     }
-    /* Follow centred under the name, then the race line */
+    /* Follow centred under the name */
     .athlete-hero-actions { align-self: center; }
     .athlete-hero .btn-follow .follow-label { display: inline; }
-    .athlete-hero-race { justify-content: center; }
     /* Cards side by side as a compact switch; the span line is repeated in
        the career header, so it goes. */
     .career-cards { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.5rem; }

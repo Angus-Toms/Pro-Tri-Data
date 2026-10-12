@@ -2183,27 +2183,6 @@ def get_athlete_stats(athlete_id, category=None, course='short'):
             "first_race_date": row[4], "dnfs": row[5]}
 
 
-def get_athlete_latest_result(athlete_id):
-    """The athlete's most recent individual result in any course or category,
-    for the profile header when no race is entered. Heats nested under a final
-    are skipped. None if the athlete has no results."""
-    row = _get_conn().execute("""
-        SELECT res.race_id, r.race_date, r.race_handle, res.position, res.status, r.distance, r.category,
-               (SELECT COUNT(*) FROM results f WHERE f.race_id = res.race_id AND f.status = 'Finished') AS finishers
-        FROM results res
-        JOIN races r ON r.race_id = res.race_id
-        WHERE res.athlete_id = ?
-          AND NOT EXISTS (SELECT 1 FROM ignored_races ig
-                          WHERE ig.race_id = res.race_id AND ig.parent_race_id IS NOT NULL)
-        ORDER BY r.race_date DESC, res.race_id DESC
-        LIMIT 1
-    """, [athlete_id]).fetchone()
-    if not row:
-        return None
-    cols = ["race_id", "race_date", "race_handle", "position", "status", "distance", "category", "finishers"]
-    return dict(zip(cols, row))
-
-
 def get_athlete_best_finish(athlete_id, category='elite', course='short'):
     """Best finishing place in one career (category + course), most recent on
     ties: the fallback headline for a career with no Palmares entry."""
@@ -4089,6 +4068,31 @@ def get_athlete_form(athlete_id, course):
     """, [athlete_id]).fetchall()
     return {disc: {"form_rel": f, "n_obs": n, "last_race_date": d}
             for disc, f, n, d in rows}
+
+
+@lru_cache(maxsize=8)
+def get_form_pool(course, gender):
+    """Sorted current form_rel per discipline for the athletes the profile
+    shows form for: elite, this gender and course, 5+ observed splits and a
+    race in the last 18 months (the same gate as the Current Form card).
+    Lower is faster, so an athlete's place is bisect_left + 1."""
+    rows = _get_conn().execute(f"""
+        WITH latest AS (
+            SELECT DISTINCT ON (af.athlete_id, af.discipline)
+                   af.discipline, af.form_rel, af.n_obs, r.race_date
+            FROM athlete_form af
+            JOIN races r ON r.race_id = af.race_id
+            JOIN athletes a ON a.athlete_id = af.athlete_id
+            WHERE r.distance IN {_course_in(course)} AND r.category = 'elite' AND a.gender = ?
+            ORDER BY af.athlete_id, af.discipline, r.race_date DESC, af.race_id DESC
+        )
+        SELECT discipline, form_rel FROM latest
+        WHERE n_obs >= 5 AND race_date >= CURRENT_DATE - INTERVAL 18 MONTHS
+    """, [gender]).fetchall()
+    pool = defaultdict(list)
+    for disc, f in rows:
+        pool[disc].append(f)
+    return {disc: sorted(v) for disc, v in pool.items()}
 
 
 @lru_cache(maxsize=4)

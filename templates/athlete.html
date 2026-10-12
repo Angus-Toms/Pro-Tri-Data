@@ -131,14 +131,6 @@
             {% with follow_kind = 'athlete', follow_id = athlete.athlete_id %}{% include "_follow_button.html" %}{% endwith %}
         </div>
 
-        {% if hero_race %}
-        <div class="athlete-hero-race">
-            <span class="hero-race-label">{{ hero_race.label }}</span>
-            <span class="hero-race-date">{{ hero_race.date.year if (hero_race.date.month == 1 and hero_race.date.day == 1) else hero_race.date.strftime('%a %d %b %Y') }}</span>
-            <a href="/race/{{ hero_race.race_id }}" class="hero-race-name">{{ hero_race.name }}</a>
-            {% for b in hero_race.bits %}<span class="hero-race-bit">{{ b }}</span>{% endfor %}
-        </div>
-        {% endif %}
     </div>
 </div>
 {% endblock %}
@@ -253,38 +245,40 @@
 {# Career header: this career's numbers and form. #}
 <div class="career-header">
     <div class="career-header-main">
-        {% if careers|length > 1 %}<h2 class="career-header-title">{{ (careers|selectattr('key', 'equalto', active_key)|first).label }}</h2>{% endif %}
-        {# Each stat is one unbreakable item carrying its own trailing dot, so
-           a wrap never leaves a separator dangling at the start of a line. #}
-        <div class="career-stats">
-            <span class="career-stat"><b>{{ athlete.race_starts }}</b> start{{ '' if athlete.race_starts == 1 else 's' }}<span class="career-dot"> ·</span></span>
-            <span class="career-stat"><b>{{ athlete.win_count }}</b> win{{ '' if athlete.win_count == 1 else 's' }}{% if athlete.win_count %} <span class="career-pct">({{ "%.1f"|format(athlete.win_pct * 100) }}%)</span>{% endif %}<span class="career-dot"> ·</span></span>
-            <span class="career-stat"><b>{{ athlete.podium_count }}</b> podium{{ '' if athlete.podium_count == 1 else 's' }}{% if athlete.podium_count %} <span class="career-pct">({{ "%.1f"|format(athlete.podium_pct * 100) }}%)</span>{% endif %}<span class="career-dot"> ·</span></span>
-            <span class="career-stat"><b>{{ athlete.dnfs }}</b> DNF{% if athlete.first_year %}<span class="career-dot"> ·</span>{% endif %}</span>
-            {% if athlete.first_year %}<span class="career-stat">{{ athlete.first_year }}{% if athlete.last_year != athlete.first_year %}-{{ athlete.last_year }}{% endif %}</span>{% endif %}
-            {% if athlete.is_low_confidence %}
-            <span class="hero-lowconf" title="Provisional rating - few career starts, so ratings and predictions for this athlete are not yet settled">Provisional</span>
-            {% endif %}
+        {% if careers|length > 1 or athlete.is_low_confidence %}
+        <div class="career-header-title-row">
+            {% if careers|length > 1 %}<h2 class="career-header-title">{{ (careers|selectattr('key', 'equalto', active_key)|first).label }}</h2>{% endif %}
+            {% if athlete.is_low_confidence %}<span class="career-provisional" title="Ratings and predictions settle after {{ low_conf_starts }} starts">Provisional · {{ athlete.race_starts }} of {{ low_conf_starts }} starts</span>{% endif %}
         </div>
+        {% endif %}
+        <dl class="career-figures">
+            <div><dt>Start{{ '' if athlete.race_starts == 1 else 's' }}</dt><dd>{{ athlete.race_starts }}</dd></div>
+            <div><dt>Win{{ '' if athlete.win_count == 1 else 's' }}</dt><dd>{{ athlete.win_count }}</dd></div>
+            <div><dt>Podium{{ '' if athlete.podium_count == 1 else 's' }}</dt><dd>{{ athlete.podium_count }}</dd></div>
+            <div><dt>DNF</dt><dd>{{ athlete.dnfs }}</dd></div>
+            {% if athlete.first_year %}<div><dt>Years</dt><dd>{{ athlete.first_year }}{% if athlete.last_year != athlete.first_year %}-{{ athlete.last_year }}{% endif %}</dd></div>{% endif %}
+        </dl>
     </div>
     {% if current_form %}
-    {# Current form: equivalent race-day splits from the form model. The
-       distance is clear from each cell's leg subtitle, so no column headers. #}
+    {# Equivalent race-day splits from the form model, with each discipline's
+       place among athletes who also have a form card. #}
     <div class="career-form">
-        <div class="career-form-label">Current form · {{ current_form.as_of.strftime('%d %b %Y') }}</div>
-        <div class="form-table" style="--form-cols: {{ current_form.cols|length }}">
-            {% for row in current_form.rows %}
-            <div class="form-row">
-                <span class="form-disc">{{ row.label }}</span>
-                {% for cell in row.cells %}
-                <span class="form-cell">
-                    <span class="form-time">{{ cell.time }}</span>
-                    <span class="form-leg">{{ cell.leg }}</span>
-                </span>
-                {% endfor %}
-            </div>
-            {% endfor %}
+        <div class="career-form-head">
+            <span class="career-form-label">Current form {{ help_icon('athlete-form') }}</span>
+            <span class="career-form-date">as of {{ current_form.as_of.strftime('%d %b %Y') }}</span>
         </div>
+        <table class="career-form-table">
+            <thead><tr><th></th>{% for c in current_form.cols %}<th>{{ c }}</th>{% endfor %}<th class="cf-rank">Rank</th></tr></thead>
+            <tbody>
+                {% for row in current_form.rows %}
+                <tr>
+                    <th scope="row">{{ row.label }}</th>
+                    {% for cell in row.cells %}<td><span class="cf-time">{{ cell.time }}</span><span class="cf-leg">{{ cell.leg }}</span></td>{% endfor %}
+                    <td class="cf-rank"><b>{{ row.rank|ordinal }}</b><span class="cf-leg">of {{ "{:,}".format(row.pool) }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
     {% endif %}
 </div>

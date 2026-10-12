@@ -368,6 +368,12 @@ const HELP_TOURS = {
         { sel: '.ratings-table th.rt-change', column: true, title: '1y change',
           text: 'Rating change over the last 12 months, with a sparkline of the trajectory. Green means improving, red means declining.' },
     ],
+    'athlete-form': [
+        { sel: '.career-form-table', title: 'Current form',
+          text: 'What the athlete\'s recent races are worth at each standard distance on a typical course against a typical field. It is built from their splits relative to the field, weighted towards recent races, so it moves faster than the rating. Shown once an athlete has 5 recorded splits and has raced this course in the last 18 months.' },
+        { sel: '.career-form-table .cf-rank', column: true, title: 'Rank',
+          text: 'Where that form places the athlete among everyone of the same gender who also has a current form on this course.' },
+    ],
     'athlete-upcoming': [
         { sel: '.upcoming-races-table', title: 'Upcoming races',
           text: 'Races this athlete is entered in, with the finishing position and splits the model expects from their current rating. These are estimates made before the race - they don\'t know the course or the conditions on the day, so actual results will differ.' },
