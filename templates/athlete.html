@@ -73,21 +73,21 @@
             <div class="athlete-hero-name-row">
                 <h1 class="athlete-hero-name">
                     {{ athlete.name }}
-                    {{ flag(athlete.country_alpha3, athlete.country_full, 'flag-lg') }}
-                    {% if athlete.instagram %}
-                    <a href="https://www.instagram.com/{{ athlete.instagram }}/" class="athlete-hero-instagram" target="_blank" rel="noopener noreferrer nofollow" aria-label="{{ athlete.name }} on Instagram" title="@{{ athlete.instagram }}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
-                    </a>
-                    {% endif %}
                     {% if not athlete.active %}<span class="athlete-status-chip status-retired">Retired</span>{% endif %}
                 </h1>
             </div>
+            {# The flag sits with the country at text size; at headline size it
+               forced the name line to wrap on phones. Phones show the country
+               code and drop height, weight and nickname. #}
             <div class="athlete-hero-meta">
-                {% if athlete.country_alpha3 %}
-                    <a href="/country/{{ athlete.country_alpha3 }}" class="athlete-hero-country-link">{{ athlete.country_full }}</a>
-                {% else %}
+                <span class="hero-country">
+                    {{ flag(athlete.country_alpha3, athlete.country_full, 'flag-meta') }}
+                    {% if athlete.country_alpha3 %}
+                    <a href="/country/{{ athlete.country_alpha3 }}" class="athlete-hero-country-link"><span class="country-full">{{ athlete.country_full }}</span><span class="country-code">{{ athlete.country_alpha3 }}</span></a>
+                    {% else %}
                     {{ athlete.country_full }}
-                {% endif %}
+                    {% endif %}
+                </span>
                 {% if nationality_history|length > 1 %}
                 <details class="nat-history">
                     <summary class="nat-history-toggle" title="Nationality history">
@@ -114,13 +114,19 @@
                 <span class="hero-meta-dot">·</span> b. {{ athlete.year_of_birth|int }}
                 {% endif %}
                 {% if athlete.height_cm %}
-                <span class="hero-meta-dot">·</span> {{ "%.2f"|format(athlete.height_cm / 100) }}m
+                <span class="hero-meta-opt"><span class="hero-meta-dot">·</span> {{ "%.2f"|format(athlete.height_cm / 100) }}m</span>
                 {% endif %}
                 {% if athlete.weight_kg %}
-                <span class="hero-meta-dot">·</span> {{ athlete.weight_kg }}kg
+                <span class="hero-meta-opt"><span class="hero-meta-dot">·</span> {{ athlete.weight_kg }}kg</span>
                 {% endif %}
                 {% if athlete.nickname %}
-                <span class="hero-meta-dot">·</span> <span class="athlete-hero-nickname">"{{ athlete.nickname }}"</span>
+                <span class="hero-meta-opt"><span class="hero-meta-dot">·</span> <span class="athlete-hero-nickname">"{{ athlete.nickname }}"</span></span>
+                {% endif %}
+                {% if athlete.instagram %}
+                <span class="hero-meta-dot">·</span>
+                <a href="https://www.instagram.com/{{ athlete.instagram }}/" class="athlete-hero-instagram" target="_blank" rel="noopener noreferrer nofollow" aria-label="{{ athlete.name }} on Instagram" title="@{{ athlete.instagram }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+                </a>
                 {% endif %}
                 <span class="hero-meta-dot">·</span>
                 <a href="/athlete-compare?athlete1={{ athlete.athlete_id }}&program={{ 'ag' if category == 'ag' else 'elite-' ~ course }}" rel="nofollow" class="athlete-compare-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="compare-ic"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg><span class="athlete-compare-label">Compare</span></a>
