@@ -2155,7 +2155,8 @@ def get_athlete_long_course_notable_results(athlete_id):
 
 @lru_cache(maxsize=8192)
 def get_athlete_stats(athlete_id, category=None, course='short'):
-    """race_starts, podiums (pos 1-3), wins (pos 1), last_race_date. Course-scoped.
+    """race_starts, podiums (pos 1-3), wins (pos 1), dnfs (any non-finish),
+    first_race_date, last_race_date. Course-scoped.
     Pass category='elite' or 'ag' to restrict to that category."""
     conn = _get_conn()
     course_in = _course_in(course)
@@ -2166,7 +2167,9 @@ def get_athlete_stats(athlete_id, category=None, course='short'):
             COUNT(*)                                             AS race_starts,
             COUNT(CASE WHEN res.position <= 3 THEN 1 END)       AS podiums,
             COUNT(CASE WHEN res.position = 1  THEN 1 END)       AS wins,
-            MAX(r.race_date)                                     AS last_race_date
+            MAX(r.race_date)                                     AS last_race_date,
+            MIN(r.race_date)                                     AS first_race_date,
+            COUNT(CASE WHEN res.status <> 'Finished' THEN 1 END) AS dnfs
         FROM results res
         JOIN races r ON res.race_id = r.race_id
         WHERE res.athlete_id = ?
@@ -2176,7 +2179,46 @@ def get_athlete_stats(athlete_id, category=None, course='short'):
           AND NOT EXISTS (SELECT 1 FROM ignored_races ig
                           WHERE ig.race_id = res.race_id AND ig.parent_race_id IS NOT NULL)
     """, params).fetchone()
-    return {"race_starts": row[0], "podiums": row[1], "wins": row[2], "last_race_date": row[3]}
+    return {"race_starts": row[0], "podiums": row[1], "wins": row[2], "last_race_date": row[3],
+            "first_race_date": row[4], "dnfs": row[5]}
+
+
+def get_athlete_latest_result(athlete_id):
+    """The athlete's most recent individual result in any course or category,
+    for the profile header when no race is entered. Heats nested under a final
+    are skipped. None if the athlete has no results."""
+    row = _get_conn().execute("""
+        SELECT res.race_id, r.race_date, r.race_handle, res.position, res.status, r.distance, r.category,
+               (SELECT COUNT(*) FROM results f WHERE f.race_id = res.race_id AND f.status = 'Finished') AS finishers
+        FROM results res
+        JOIN races r ON r.race_id = res.race_id
+        WHERE res.athlete_id = ?
+          AND NOT EXISTS (SELECT 1 FROM ignored_races ig
+                          WHERE ig.race_id = res.race_id AND ig.parent_race_id IS NOT NULL)
+        ORDER BY r.race_date DESC, res.race_id DESC
+        LIMIT 1
+    """, [athlete_id]).fetchone()
+    if not row:
+        return None
+    cols = ["race_id", "race_date", "race_handle", "position", "status", "distance", "category", "finishers"]
+    return dict(zip(cols, row))
+
+
+def get_athlete_best_finish(athlete_id, category='elite', course='short'):
+    """Best finishing place in one career (category + course), most recent on
+    ties: the fallback headline for a career with no Palmares entry."""
+    row = _get_conn().execute(f"""
+        SELECT res.position, r.race_handle
+        FROM results res
+        JOIN races r ON r.race_id = res.race_id
+        WHERE res.athlete_id = ? AND r.category = ? AND r.distance IN {_course_in(course)}
+          AND res.status = 'Finished' AND res.position IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM ignored_races ig
+                          WHERE ig.race_id = res.race_id AND ig.parent_race_id IS NOT NULL)
+        ORDER BY res.position, r.race_date DESC
+        LIMIT 1
+    """, [athlete_id, category]).fetchone()
+    return {"position": row[0], "race_handle": row[1]} if row else None
 
 
 def get_athlete_race_history(athlete_id, category='elite', course='short'):

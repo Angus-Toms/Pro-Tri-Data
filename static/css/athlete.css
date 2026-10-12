@@ -83,12 +83,12 @@
     background: rgba(255, 255, 255, 0.1);
 }
 
-/* Low-confidence badge in the hero (few career starts). Brighter amber + pill
+/* Low-confidence badge in the career header (few career starts). Brighter amber + pill
    to read against the dark hero, sized to sit with the flag and status chip. */
 /* Low-confidence marker in the hero stats line: clearer as text than an icon
    (the asterisk icon still marks rows in the prediction tables). */
 .hero-lowconf {
-    color: #f0b429;
+    color: #b45309;
     font-weight: 600;
     cursor: default;
 }
@@ -136,73 +136,120 @@
 .athlete-hero-instagram:hover { color: var(--primary-color); }
 
 /* Stat numbers - white, bolder */
-.hero-stat-n {
-    font-weight: 600;
-    color: #fff;
-}
 
-.hero-stat-pct {
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 0.8rem;
-}
-.hero-stat { white-space: nowrap; }
-
-/* Actions row above the form table: the mode switcher (when an athlete has
-   more than one mode) on the left, the follow button pinned right so its
-   edge lines up with the form table's. */
+/* Right column of the person header: Follow. */
 .athlete-hero-actions {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    align-self: stretch;
+    align-self: start;
 }
-.athlete-hero-actions .btn-follow { margin-left: auto; }
 
-/* Right column of the hero: compact mode switcher (top) + current-form widget
-   below, left-aligned so the switcher, title and table share a left edge.
-   Mirrors the race hero's podium column; empty (0 width) when the athlete has
-   neither, so the grid collapses cleanly. */
-.athlete-hero-right {
+/* Next race, or the latest result when nothing is entered: a full-width
+   strip under the header row. */
+.athlete-hero-race {
+    grid-column: 1 / -1;
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.6rem;
-    align-self: center;
-}
-
-/* Unified mode switcher: pill bar with active detail strip. Kept compact so it
-   tucks neatly above the form table. */
-.athlete-mode-switcher {
-    display: flex;
-    align-items: stretch;
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
-    padding: 3px;
-    gap: 2px;
-}
-
-.athlete-mode-pill {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.25rem 0.6rem;
-    border-radius: 6px;
-    text-decoration: none;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.3rem 0.9rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    padding-top: 0.75rem;
+    font-size: 0.875rem;
     color: rgba(255, 255, 255, 0.7);
-    font-size: 0.72rem;
-    font-weight: 600;
-    white-space: nowrap;
-    transition: background var(--transition-fast), color var(--transition-fast);
+}
+.hero-race-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.45);
+}
+.hero-race-date { color: #fff; font-weight: 600; }
+.hero-race-name { color: #fff; font-weight: 600; text-decoration: none; }
+.hero-race-name:hover { color: var(--primary-color); }
+
+/* Career cards: one per career (short course, long course, age group). They
+   are the career switch and name each career's headline, so the careers not
+   on screen stay visible. */
+.career-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.75rem;
+    margin: 1.25rem 0 0;
+}
+.career-card {
+    display: grid;
+    gap: 0.15rem;
+    align-content: start;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--card-bg, #fff);
+    color: var(--text-color);
+    text-decoration: none;
+    transition: border-color var(--transition-fast);
+}
+.career-card:hover { border-color: var(--primary-color); }
+.career-card.active { border-color: var(--primary-color); box-shadow: inset 0 0 0 1px var(--primary-color); }
+.career-card-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-light);
+}
+.career-card.active .career-card-label { color: var(--primary-color); }
+.career-card-title { font-weight: 700; font-size: 0.98rem; }
+.career-card-line { font-size: 0.8rem; color: var(--text-light); font-variant-numeric: tabular-nums; }
+
+/* Career header: stats line and current form for the career on screen. */
+.career-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem 2rem;
+    margin: 1.25rem 0 0.5rem;
+}
+.career-header-main { min-width: 0; }
+.career-header-title { font-size: 1.25rem; font-weight: 800; margin: 0 0 0.25rem; }
+.career-stats {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.9rem;
+    color: var(--text-light);
+}
+.career-stat { white-space: nowrap; }
+.career-stat b { color: var(--text-color); font-weight: 700; }
+.career-pct { font-size: 0.8rem; }
+.career-dot { color: var(--border-color); }
+.career-form { min-width: 260px; }
+.career-form-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-light);
+}
+.career-form .form-table { padding: 0; }
+.career-form .form-row { grid-template-columns: 3.5rem repeat(var(--form-cols, 2), 1fr); padding: 0.3rem 0; }
+
+/* Course tag on an upcoming race when the athlete has several careers. */
+.career-tag {
+    display: inline-block;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 0.08rem 0.4rem;
+    border-radius: 4px;
+    margin-left: 0.3rem;
+    background: rgba(26, 26, 46, 0.07);
+    color: var(--text-light);
+    vertical-align: 1px;
 }
 
-.athlete-mode-pill:not(.active):hover {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.06);
-}
-
-.athlete-mode-pill.active {
-    background: #fff;
-    color: var(--navy);
-}
 
 .athlete-compare-link {
     display: inline-flex;
@@ -308,33 +355,6 @@
 /* ============================================
     CURRENT FORM - navy-header card, equivalent splits per distance
     ============================================ */
-/* Current-form widget lives in the hero right column, styled for the dark
-   navy background like the race podium (transparent, white text, faint
-   dividers). Shares the .form-table/.form-row markup, recoloured here. */
-.athlete-hero-form { min-width: 260px; }
-
-.hero-form-label {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: rgba(255, 255, 255, 0.45);
-    font-weight: 700;
-    margin-bottom: 0.15rem;
-}
-
-.athlete-hero-form .form-table { padding: 0; }
-.athlete-hero-form .form-row {
-    grid-template-columns: 3.5rem repeat(var(--form-cols, 2), 1fr);
-    padding: 0.3rem 0;
-}
-.athlete-hero-form .form-row:not(:last-child)::after {
-    left: 0;
-    right: 0;
-    background: rgba(255, 255, 255, 0.12);
-}
-.athlete-hero-form .form-disc { color: #fff; font-size: 0.8rem; }
-.athlete-hero-form .form-time { color: #fff; font-size: 0.85rem; }
-.athlete-hero-form .form-leg { color: rgba(255, 255, 255, 0.5); font-size: 0.7rem; }
 
 .form-table {
     padding: 0.25rem 0;
@@ -665,23 +685,11 @@ tr.sub-race-row .link:hover {
         min-width: 0;
     }
 
-    /* Right column drops to a full-width row below the info (like the race
-       hero podium stacking under the title). */
-    .athlete-hero-right {
-        flex: 1 1 100%;
-        align-items: flex-start;
-        gap: 0.85rem;
-    }
-    .athlete-hero-form { width: 100%; min-width: 0; }
-    .athlete-hero-form .form-row { padding: 0.5rem 0; }
+    .athlete-hero-race { flex: 1 1 100%; }
+    .career-form { width: 100%; min-width: 0; }
 
     .athlete-hero-name { font-size: 1.5rem; }
 
-    /* Shrink the action chrome so the strip reads as secondary */
-    .athlete-mode-pill {
-        font-size: 0.72rem;
-        padding: 0.3rem 0.65rem;
-    }
 
     .palmares-grid {
         flex-direction: column;
@@ -724,25 +732,17 @@ tr.sub-race-row .link:hover {
         flex: 0 1 auto;       /* override the 320px basis from <=768 */
         align-items: center;
     }
-    /* Switcher centred, then the follow button full width beneath it */
-    .athlete-hero-actions {
-        flex-direction: column;
-        align-items: center;
-        gap: 0.6rem;
-    }
-    .athlete-hero-actions .btn-follow {
-        margin-left: 0;
-        width: 100%;
-        max-width: 360px;       /* the form table's width */
-        justify-content: center;
-        padding: 0.55rem 0.8rem;
-    }
+    /* Follow centred under the name, then the race line */
+    .athlete-hero-actions { align-self: center; }
     .athlete-hero .btn-follow .follow-label { display: inline; }
-    .athlete-hero-right {
-        align-items: center;
-        width: 100%;
-    }
-    .athlete-hero-form { max-width: 360px; }
+    .athlete-hero-race { justify-content: center; }
+    /* Cards side by side as a compact switch; the span line is repeated in
+       the career header, so it goes. */
+    .career-cards { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.5rem; }
+    .career-card { padding: 0.55rem 0.65rem; }
+    .career-card-title { font-size: 0.85rem; }
+    .career-card-line { font-size: 0.72rem; }
+    .career-card-span { display: none; }
 
     .athlete-hero-name {
         font-size: 1.375rem;

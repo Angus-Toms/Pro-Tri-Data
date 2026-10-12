@@ -479,12 +479,11 @@ def get_athlete(request: Request, athlete_id: int,
     race_starts = stats["race_starts"]
     wins        = stats["wins"]
     podiums     = stats["podiums"]
-    # The Retired chip and greyed photo describe the athlete, not the selected
-    # course: an elite racing long course is not retired from short course.
-    # Category still matters, so an ex-pro now racing AG reads as retired on
-    # elite modes. No results yet (only entries) means no chip either.
-    last_any = max((d for d in (queries.get_athlete_stats(athlete_id, category, course=c)["last_race_date"]
-                                for c in ('short', 'long')) if d), default=None)
+    # The person header's Retired chip and greyed photo describe the athlete,
+    # not one career: anyone who raced anything in the last 18 months is
+    # active. Each career card says when that career last raced. No results
+    # yet (only entries) means no chip either.
+    last_any = max(queries.get_athlete_last_race_per_course(athlete_id).values(), default=None)
     active = last_any is None or last_any >= date.today() - timedelta(days=int(18 * 30.44))
     athlete_dict = {
         **info,
@@ -497,6 +496,9 @@ def get_athlete(request: Request, athlete_id: int,
         "podium_pct":    podiums / max(race_starts, 1),
         "active":        active,
         "is_low_confidence": race_starts < LOW_CONF_STARTS,
+        "dnfs":          stats["dnfs"],
+        "first_year":    stats["first_race_date"].year if stats["first_race_date"] else None,
+        "last_year":     stats["last_race_date"].year if stats["last_race_date"] else None,
     }
     if peaks and best:
         for disc in ["overall", "swim", "bike", "run", "transition"]:
@@ -728,6 +730,7 @@ def get_athlete(request: Request, athlete_id: int,
                 'pred_run_behind':     behinds.get('run'),
                 'has_pred':     bool(splits),
                 'std_class':    std_class,
+                'career_key':   'ag' if race['category'] == 'ag' else f"elite-{_rating_course[race['race_id']]}",
             })
 
     # --- charts ---
@@ -737,60 +740,98 @@ def get_athlete(request: Request, athlete_id: int,
         _build_rankings_charts(rankings_data) if has_ratings else ({}, {})
     )
 
-    # --- mode switcher summaries: elite-short | elite-long | ag -------------
-    # Each entry: {label, course, category, overall_rating, world_overall, key}
-    # key is the URL-safe identifier used by the switcher (matches active_mode).
-    mode_summaries = []
-    active_mode = None
+    # --- careers: elite-short | elite-long | ag ----------------------------
+    # The page has two layers: the person header (never swapped) and one
+    # career at a time below the career cards. A career is a (course,
+    # category) the athlete has ratings in; AG lives in whichever course has
+    # AG results. Each card names the career's headline result and its world
+    # rank, so the careers not on screen are still visible.
     cutoff_active = date.today() - timedelta(days=int(18 * 30.44))
+    palmares_by_key = {'elite-short': notable_results, 'elite-long': long_notable_results, 'ag': ag_notable_results}
 
-    def _summary(c, cat, label, key):
-        cr = queries.get_athlete_current_ratings(athlete_id, cat, course=c)
-        if not cr:
+    def _headline(key, c, cat):
+        # Top Palmares entry (already ranked on the shared tier-points
+        # scale), with its year when it is a single race; otherwise the
+        # career's best finish.
+        top = palmares_by_key[key][:1]
+        if top:
+            item = top[0]
+            if len(item["races"]) > 1:
+                return item["description"]                      # "7 x WTCS Wins"
+            race = item["races"][0]
+            if ", " in item["description"]:                     # "WTCS, 5th" -> "5th, Yokohama WTCS 21"
+                return f'{item["description"].split(", ")[1]}, {race["race_name"]}'
+            return f'{item["description"]} {race["race_date"].year}'   # "Olympic Champion 2021"
+        best_finish = queries.get_athlete_best_finish(athlete_id, cat, course=c)
+        if best_finish:
+            return f'Best: {format_ordinal(best_finish["position"])}, {best_finish["race_handle"]}'
+        return None
+
+    def _career(c, cat, label, key):
+        st = queries.get_athlete_stats(athlete_id, cat, course=c)
+        if not st["race_starts"]:
             return None
-        h = queries.get_athlete_race_history(athlete_id, cat, course=c)
-        last = h[0]["race_date"] if h else None
-        rank = None
-        if last and last >= cutoff_active:
+        world = "AG world" if cat == 'ag' else "World"
+        last = st["last_race_date"]
+        rank_line = None
+        if last >= cutoff_active:
             ar = queries.get_athlete_active_rankings(athlete_id, cat, course=c)
-            if ar:
-                rank = _make_ranking(ar.get("world_overall"))
+            if ar and ar.get("world_overall"):
+                rank_line = f'{world} #{int(ar["world_overall"])}'
+        else:
+            pk = queries.get_athlete_peak_rankings(athlete_id, cat, course=c)
+            best_rank = f'Best {world.lower()} #{int(pk["world_overall"])} · ' if pk and pk.get("world_overall") else ''
+            rank_line = f'{best_rank}last raced {last.strftime("%b %Y")}'
+        y0, y1 = st["first_race_date"].year, last.year
         return {
-            "key":            key,
-            "label":          label,
-            "course":         c,
-            "category":       cat,
-            "overall_rating": round(cr["overall_rating"]),
-            "world_overall":  rank,
+            "key":       key,
+            "label":     label,
+            "course":    c,
+            "category":  cat,
+            "headline":  _headline(key, c, cat),
+            "span":      str(y0) if y0 == y1 else f"{y0}-{y1}",
+            "starts":    st["race_starts"],
+            "wins":      st["wins"],
+            "rank_line": rank_line,
+            "last":      last,
         }
 
-    # Elite entries for each course the athlete has ratings in
-    for c, lbl in (('short', 'Short Course'), ('long', 'Long Course')):
-        if c not in available_courses:
-            continue
-        c_cats = queries.get_athlete_categories(athlete_id, course=c)
-        if 'elite' not in c_cats:
-            continue
-        s = _summary(c, 'elite', lbl, f'elite-{c}')
-        if s:
-            mode_summaries.append(s)
-
-    # AG entry: pick whichever course has AG results (prefer current course, else short, else long)
-    ag_course = None
-    for c in (course, 'short', 'long'):
-        if c in available_courses and 'ag' in queries.get_athlete_categories(athlete_id, course=c):
-            ag_course = c
-            break
+    careers = []
+    for c, lbl in (('short', 'Short course'), ('long', 'Long course')):
+        if c in available_courses and 'elite' in queries.get_athlete_categories(athlete_id, course=c):
+            careers.append(_career(c, 'elite', lbl, f'elite-{c}'))
+    ag_course = next((c for c in (course, 'short', 'long')
+                      if c in available_courses and 'ag' in queries.get_athlete_categories(athlete_id, course=c)), None)
     if ag_course:
-        s = _summary(ag_course, 'ag', 'Age Group', 'ag')
-        if s:
-            mode_summaries.append(s)
+        careers.append(_career(ag_course, 'ag', 'Age group', 'ag'))
+    careers = sorted([cr for cr in careers if cr], key=lambda cr: cr["last"], reverse=True)
+    active_key = 'ag' if category == 'ag' else f'elite-{course}'
+    career_label = {cr["key"]: cr["label"] for cr in careers}
+    for r in upcoming_races:
+        r["career_label"] = career_label.get(r["career_key"]) if len(careers) > 1 else None
 
-    # Resolve active_mode from current (category, course)
-    if category == 'ag':
-        active_mode = 'ag'
+    # Person header race line: the next race entered, else the latest result.
+    hero_race = None
+    if upcoming_races:
+        nxt = upcoming_races[0]
+        bits = [nxt["career_label"]] if nxt["career_label"] else []
+        if nxt["pred_pos"]:
+            bits.append(f'Predicted {format_ordinal(nxt["pred_pos"])}')
+        if nxt["win_pct"] is not None and nxt["win_pct"] >= 0.005:
+            bits.append(f'Win {nxt["win_pct"] * 100:.0f}%')
+        hero_race = {"label": "Next race", "date": nxt["race_date"], "race_id": nxt["race_id"],
+                     "name": nxt["event_name"], "bits": bits}
     else:
-        active_mode = f'elite-{course}'
+        latest = queries.get_athlete_latest_result(athlete_id)
+        if latest:
+            finished = latest["status"] == "Finished" and latest["position"]
+            bits = [f'{format_ordinal(latest["position"])} of {latest["finishers"]}' if finished else latest["status"]]
+            mine = next((p for p in queries.get_race_predictions(latest["race_id"])
+                         if p["athlete_id"] == athlete_id and not p["is_low_confidence"]), None)
+            if mine:
+                bits.append(f'predicted {format_ordinal(mine["predicted_position"])}')
+            hero_race = {"label": "Latest race", "date": latest["race_date"], "race_id": latest["race_id"],
+                         "name": latest["race_handle"], "bits": bits}
 
     return templates.TemplateResponse("athlete.html", {
         "request":        request,
@@ -805,8 +846,9 @@ def get_athlete(request: Request, athlete_id: int,
         "category":             category,
         "course":               course,
         "available_courses":    available_courses,
-        "mode_summaries":       mode_summaries,
-        "active_mode":          active_mode,
+        "careers":              careers,
+        "active_key":           active_key,
+        "hero_race":            hero_race,
         "has_elite":            'elite' in available_categories,
         "has_ag":               'ag' in available_categories,
         "notable_col1":        notable_col1,

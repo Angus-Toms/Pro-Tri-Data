@@ -56,7 +56,9 @@
     </div>
 </div>
 {% endif %}
-<div class="athlete-hero" id="athlete-ajax-hero">
+{# Person header: the athlete, not a career. The career switch never replaces
+   it, so identity, Follow and status cannot flip with the course. #}
+<div class="athlete-hero" id="athlete-hero">
     <div class="athlete-hero-inner">
 
         <!-- Photo -->
@@ -66,7 +68,7 @@
             class="athlete-hero-img{{ ' inactive' if not athlete.active else '' }}"
         >
 
-        <!-- Name, meta, stats -->
+        <!-- Name and meta -->
         <div class="athlete-hero-info">
             <div class="athlete-hero-name-row">
                 <h1 class="athlete-hero-name">
@@ -123,71 +125,169 @@
                 <span class="hero-meta-dot">·</span>
                 <a href="/athlete-compare?athlete1={{ athlete.athlete_id }}&program={{ 'ag' if category == 'ag' else 'elite-' ~ course }}" rel="nofollow" class="athlete-compare-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="compare-ic"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg><span class="athlete-compare-label">Compare</span></a>
             </div>
-            {# Each stat is one unbreakable item carrying its own trailing dot, so
-               a wrap never leaves a separator dangling at the start of a line. #}
-            <div class="athlete-hero-stats">
-                <span class="hero-stat"><span class="hero-stat-n">{{ athlete.race_starts }}</span> start{{ '' if athlete.race_starts == 1 else 's' }}<span class="hero-meta-dot"> ·</span></span>
-                <span class="hero-stat"><span class="hero-stat-n">{{ athlete.win_count }}</span> win{{ '' if athlete.win_count == 1 else 's' }}{% if athlete.win_count %} <span class="hero-stat-pct">({{ "%.1f"|format(athlete.win_pct * 100) }}%)</span>{% endif %}<span class="hero-meta-dot"> ·</span></span>
-                <span class="hero-stat"><span class="hero-stat-n">{{ athlete.podium_count }}</span> podium{{ '' if athlete.podium_count == 1 else 's' }}{% if athlete.podium_count %} <span class="hero-stat-pct">({{ "%.1f"|format(athlete.podium_pct * 100) }}%)</span>{% endif %}{% if athlete.is_low_confidence %}<span class="hero-meta-dot"> ·</span>{% endif %}</span>
-                {% if athlete.is_low_confidence %}
-                <span class="hero-lowconf" title="Provisional rating - few career starts, so ratings and predictions for this athlete are not yet settled">Provisional</span>
-                {% endif %}
-            </div>
         </div>
 
-        <!-- Right column: mode switcher and follow button above the
-             current-form widget (mirrors the race hero's podium column). -->
-        <div class="athlete-hero-right">
-            <div class="athlete-hero-actions">
-                {% if mode_summaries and mode_summaries|length > 1 %}
-                <div class="athlete-mode-switcher" role="tablist" aria-label="Profile mode">
-                    {% for m in mode_summaries %}
-                    {% set is_active = m.key == active_mode %}
-                    <a href="/athlete/{{ athlete.athlete_id }}?course={{ m.course }}&category={{ m.category }}"
-                       rel="nofollow"
-                       class="athlete-mode-pill{% if is_active %} active{% endif %}"
-                       role="tab"
-                       aria-selected="{{ 'true' if is_active else 'false' }}"
-                       data-ptd-nav="athlete">
-                        {{ m.label }}
-                    </a>
-                    {% endfor %}
-                </div>
-                {% endif %}
-                {% with follow_kind = 'athlete', follow_id = athlete.athlete_id %}{% include "_follow_button.html" %}{% endwith %}
-            </div>
-
-            {% if current_form %}
-            {# Current form: equivalent race-day splits from the form model,
-               styled for the dark hero like the race podium. The distance is
-               clear from each cell's leg subtitle, so no column headers. #}
-            <div class="athlete-hero-form">
-                <div class="hero-form-label">Current Form</div>
-                <div class="form-table" style="--form-cols: {{ current_form.cols|length }}">
-                    {% for row in current_form.rows %}
-                    <div class="form-row">
-                        <span class="form-disc">{{ row.label }}</span>
-                        {% for cell in row.cells %}
-                        <span class="form-cell">
-                            <span class="form-time">{{ cell.time }}</span>
-                            <span class="form-leg">{{ cell.leg }}</span>
-                        </span>
-                        {% endfor %}
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
+        <div class="athlete-hero-actions">
+            {% with follow_kind = 'athlete', follow_id = athlete.athlete_id %}{% include "_follow_button.html" %}{% endwith %}
         </div>
 
+        {% if hero_race %}
+        <div class="athlete-hero-race">
+            <span class="hero-race-label">{{ hero_race.label }}</span>
+            <span class="hero-race-date">{{ hero_race.date.year if (hero_race.date.month == 1 and hero_race.date.day == 1) else hero_race.date.strftime('%a %d %b %Y') }}</span>
+            <a href="/race/{{ hero_race.race_id }}" class="hero-race-name">{{ hero_race.name }}</a>
+            {% for b in hero_race.bits %}<span class="hero-race-bit">{{ b }}</span>{% endfor %}
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
 {% from "partials/_icons.html" import help_icon %}
+{# Upcoming races belong to the person: every career's entries, tagged. #}
+{% if upcoming_races %}
+<div class="page-section-head"><span>Upcoming Races {{ help_icon('athlete-upcoming') }}</span></div>
+<p class="page-section-sub" style="margin-bottom:0.75rem">Predicted position, splits and chance of winning, based on current ratings. Actual results may vary.</p>
+<div class="table-section results-table upcoming-races-table">
+    <table class="sortable-table">
+        <thead>
+            <tr>
+                <th class="sortable date-col"     data-sort="date">Date</th>
+                <th class="sortable race-col"     data-sort="string">Race</th>
+                <th class="sortable program-col"  data-sort="string">Program</th>
+                <th class="sortable position-col" data-sort="number">Pos</th>
+                <th class="sortable time-col"     data-sort="time">Swim</th>
+                <th class="sortable time-col"     data-sort="time">Bike</th>
+                <th class="sortable time-col"     data-sort="time">Run</th>
+                <th class="sortable time-col overall-col" data-sort="time">Overall</th>
+                <th class="sortable pct-col"      data-sort="number">Win</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in upcoming_races %}
+            <tr>
+                <td class="date-col muted-col" data-value="{{ r.race_date }}">
+                    {{ r.race_date.strftime('%d %b %Y') }}
+                </td>
+                <td class="race-col" data-value="{{ r.event_name }}">
+                    <a href="/race/{{ r.race_id }}" class="link">{{ r.event_name }}</a>
+                    {% if r.std_class %}<span class="std-pill std-pill--{{ r.std_class }}">{{ r.std_class|title }}</span>{% endif %}
+                    {% if r.career_label %}<span class="career-tag">{{ r.career_label }}</span>{% endif %}
+                    <span class="race-col-meta">{{ r.race_date.strftime('%d %b %Y') }} · {{ r.prog_name }}</span>
+                </td>
+                <td class="program-col muted-col" data-value="{{ r.prog_name }}">{{ r.prog_name }}</td>
+                <td class="position-col" data-value="{{ r.pred_pos if r.pred_pos else 9999 }}">
+                    {% if r.pred_pos == 1 %}<span class="pos-circle gold">1</span>
+                    {% elif r.pred_pos == 2 %}<span class="pos-circle silver">2</span>
+                    {% elif r.pred_pos == 3 %}<span class="pos-circle bronze">3</span>
+                    {% elif r.pred_pos %}<span class="pos-other">{{ r.pred_pos }}</span>
+                    {% else %}<span class="pos-other">-</span>{% endif %}
+                </td>
+                <td class="time-col split-col" data-value="{{ r.pred_swim or '' }}">
+                    <span class="time-disc-label">Swim</span>
+                    <span class="time-cell-main{{ ' fastest' if r.pred_swim_behind == 'fastest' else '' }}">{{ r.pred_swim or '' }}</span>
+                    {% if r.pred_swim_behind == 'fastest' %}<span class="time-cell-gap">fastest</span>
+                    {% elif r.pred_swim_behind %}<span class="time-cell-gap">{{ r.pred_swim_behind }}</span>{% endif %}
+                </td>
+                <td class="time-col split-col" data-value="{{ r.pred_bike or '' }}">
+                    <span class="time-disc-label">Bike</span>
+                    <span class="time-cell-main{{ ' fastest' if r.pred_bike_behind == 'fastest' else '' }}">{{ r.pred_bike or '' }}</span>
+                    {% if r.pred_bike_behind == 'fastest' %}<span class="time-cell-gap">fastest</span>
+                    {% elif r.pred_bike_behind %}<span class="time-cell-gap">{{ r.pred_bike_behind }}</span>{% endif %}
+                </td>
+                <td class="time-col split-col" data-value="{{ r.pred_run or '' }}">
+                    <span class="time-disc-label">Run</span>
+                    <span class="time-cell-main{{ ' fastest' if r.pred_run_behind == 'fastest' else '' }}">{{ r.pred_run or '' }}</span>
+                    {% if r.pred_run_behind == 'fastest' %}<span class="time-cell-gap">fastest</span>
+                    {% elif r.pred_run_behind %}<span class="time-cell-gap">{{ r.pred_run_behind }}</span>{% endif %}
+                </td>
+                <td class="time-col overall-col" data-value="{{ r.pred_overall or '' }}">
+                    <span class="overall-time">{{ r.pred_overall or '' }}</span>
+                    {% if r.pred_overall_behind and r.pred_overall_behind != 'fastest' %}<span class="time-cell-gap">{{ r.pred_overall_behind }}</span>{% endif %}
+                </td>
+                <td class="split-col pct-col" data-value="{{ r.win_pct if r.win_pct is not none else -1 }}">
+                    <span class="time-disc-label">Win</span>
+                    {% if r.win_pct is none %}
+                    {% elif r.win_pct < 0.005 %}
+                    <span class="time-cell-main pct-low">&lt;1%</span>
+                    {% else %}
+                    <span class="time-cell-main">{{ "%.0f%%"|format(r.win_pct * 100) }}</span>
+                    <span class="pct-bar" style="--p: {{ (r.win_pct * 100) | round(1) }}%"></span>
+                    {% endif %}
+                </td>
+                <td class="splits-toggle-col" aria-hidden="true">
+                    <button type="button" class="splits-toggle" aria-label="Show splits" aria-expanded="false">
+                        <svg class="splits-toggle-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{# Everything from here belongs to one career and is what the career switch
+   swaps (athlete.js). #}
 <div id="athlete-ajax-content">
 {% set discs = [('overall','Overall'),('swim','Swim'),('bike','Bike'),('run','Run'),('transition','Transition')] %}
+
+{% if careers|length > 1 %}
+<nav class="career-cards" aria-label="Careers">
+    {% for cr in careers %}
+    {% set is_active = cr.key == active_key %}
+    <a href="/athlete/{{ athlete.athlete_id }}?course={{ cr.course }}&category={{ cr.category }}"
+       rel="nofollow" data-ptd-nav="athlete"
+       class="career-card{% if is_active %} active{% endif %}"
+       {% if is_active %}aria-current="page"{% endif %}>
+        <span class="career-card-label">{{ cr.label }}</span>
+        {% if cr.headline %}<span class="career-card-title">{{ cr.headline }}</span>{% endif %}
+        <span class="career-card-line career-card-span">{{ cr.span }} · {{ cr.starts }} start{{ '' if cr.starts == 1 else 's' }} · {{ cr.wins }} win{{ '' if cr.wins == 1 else 's' }}</span>
+        {% if cr.rank_line %}<span class="career-card-line">{{ cr.rank_line }}</span>{% endif %}
+    </a>
+    {% endfor %}
+</nav>
+{% endif %}
+
+{# Career header: this career's numbers and form. #}
+<div class="career-header">
+    <div class="career-header-main">
+        {% if careers|length > 1 %}<h2 class="career-header-title">{{ (careers|selectattr('key', 'equalto', active_key)|first).label }}</h2>{% endif %}
+        {# Each stat is one unbreakable item carrying its own trailing dot, so
+           a wrap never leaves a separator dangling at the start of a line. #}
+        <div class="career-stats">
+            <span class="career-stat"><b>{{ athlete.race_starts }}</b> start{{ '' if athlete.race_starts == 1 else 's' }}<span class="career-dot"> ·</span></span>
+            <span class="career-stat"><b>{{ athlete.win_count }}</b> win{{ '' if athlete.win_count == 1 else 's' }}{% if athlete.win_count %} <span class="career-pct">({{ "%.1f"|format(athlete.win_pct * 100) }}%)</span>{% endif %}<span class="career-dot"> ·</span></span>
+            <span class="career-stat"><b>{{ athlete.podium_count }}</b> podium{{ '' if athlete.podium_count == 1 else 's' }}{% if athlete.podium_count %} <span class="career-pct">({{ "%.1f"|format(athlete.podium_pct * 100) }}%)</span>{% endif %}<span class="career-dot"> ·</span></span>
+            <span class="career-stat"><b>{{ athlete.dnfs }}</b> DNF{% if athlete.first_year %}<span class="career-dot"> ·</span>{% endif %}</span>
+            {% if athlete.first_year %}<span class="career-stat">{{ athlete.first_year }}{% if athlete.last_year != athlete.first_year %}-{{ athlete.last_year }}{% endif %}</span>{% endif %}
+            {% if athlete.is_low_confidence %}
+            <span class="hero-lowconf" title="Provisional rating - few career starts, so ratings and predictions for this athlete are not yet settled">Provisional</span>
+            {% endif %}
+        </div>
+    </div>
+    {% if current_form %}
+    {# Current form: equivalent race-day splits from the form model. The
+       distance is clear from each cell's leg subtitle, so no column headers. #}
+    <div class="career-form">
+        <div class="career-form-label">Current form · {{ current_form.as_of.strftime('%d %b %Y') }}</div>
+        <div class="form-table" style="--form-cols: {{ current_form.cols|length }}">
+            {% for row in current_form.rows %}
+            <div class="form-row">
+                <span class="form-disc">{{ row.label }}</span>
+                {% for cell in row.cells %}
+                <span class="form-cell">
+                    <span class="form-time">{{ cell.time }}</span>
+                    <span class="form-leg">{{ cell.leg }}</span>
+                </span>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
 
 <!-- Palmares: long-course overrides short-course; AG only applies to short-course -->
 {% if course == 'long' %}
@@ -307,86 +407,6 @@
 </div>
 {% endif %}{# has_ratings #}
 
-{% if upcoming_races %}
-<div class="page-section-head"><span>Upcoming Races {{ help_icon('athlete-upcoming') }}</span></div>
-<p class="page-section-sub" style="margin-bottom:0.75rem">Predicted position, splits and chance of winning, based on current ratings. Actual results may vary.</p>
-<div class="table-section results-table upcoming-races-table">
-    <table class="sortable-table">
-        <thead>
-            <tr>
-                <th class="sortable date-col"     data-sort="date">Date</th>
-                <th class="sortable race-col"     data-sort="string">Race</th>
-                <th class="sortable program-col"  data-sort="string">Program</th>
-                <th class="sortable position-col" data-sort="number">Pos</th>
-                <th class="sortable time-col"     data-sort="time">Swim</th>
-                <th class="sortable time-col"     data-sort="time">Bike</th>
-                <th class="sortable time-col"     data-sort="time">Run</th>
-                <th class="sortable time-col overall-col" data-sort="time">Overall</th>
-                <th class="sortable pct-col"      data-sort="number">Win</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for r in upcoming_races %}
-            <tr>
-                <td class="date-col muted-col" data-value="{{ r.race_date }}">
-                    {{ r.race_date.strftime('%d %b %Y') }}
-                </td>
-                <td class="race-col" data-value="{{ r.event_name }}">
-                    <a href="/race/{{ r.race_id }}" class="link">{{ r.event_name }}</a>
-                    {% if r.std_class %}<span class="std-pill std-pill--{{ r.std_class }}">{{ r.std_class|title }}</span>{% endif %}
-                    <span class="race-col-meta">{{ r.race_date.strftime('%d %b %Y') }} · {{ r.prog_name }}</span>
-                </td>
-                <td class="program-col muted-col" data-value="{{ r.prog_name }}">{{ r.prog_name }}</td>
-                <td class="position-col" data-value="{{ r.pred_pos if r.pred_pos else 9999 }}">
-                    {% if r.pred_pos == 1 %}<span class="pos-circle gold">1</span>
-                    {% elif r.pred_pos == 2 %}<span class="pos-circle silver">2</span>
-                    {% elif r.pred_pos == 3 %}<span class="pos-circle bronze">3</span>
-                    {% elif r.pred_pos %}<span class="pos-other">{{ r.pred_pos }}</span>
-                    {% else %}<span class="pos-other">-</span>{% endif %}
-                </td>
-                <td class="time-col split-col" data-value="{{ r.pred_swim or '' }}">
-                    <span class="time-disc-label">Swim</span>
-                    <span class="time-cell-main{{ ' fastest' if r.pred_swim_behind == 'fastest' else '' }}">{{ r.pred_swim or '' }}</span>
-                    {% if r.pred_swim_behind == 'fastest' %}<span class="time-cell-gap">fastest</span>
-                    {% elif r.pred_swim_behind %}<span class="time-cell-gap">{{ r.pred_swim_behind }}</span>{% endif %}
-                </td>
-                <td class="time-col split-col" data-value="{{ r.pred_bike or '' }}">
-                    <span class="time-disc-label">Bike</span>
-                    <span class="time-cell-main{{ ' fastest' if r.pred_bike_behind == 'fastest' else '' }}">{{ r.pred_bike or '' }}</span>
-                    {% if r.pred_bike_behind == 'fastest' %}<span class="time-cell-gap">fastest</span>
-                    {% elif r.pred_bike_behind %}<span class="time-cell-gap">{{ r.pred_bike_behind }}</span>{% endif %}
-                </td>
-                <td class="time-col split-col" data-value="{{ r.pred_run or '' }}">
-                    <span class="time-disc-label">Run</span>
-                    <span class="time-cell-main{{ ' fastest' if r.pred_run_behind == 'fastest' else '' }}">{{ r.pred_run or '' }}</span>
-                    {% if r.pred_run_behind == 'fastest' %}<span class="time-cell-gap">fastest</span>
-                    {% elif r.pred_run_behind %}<span class="time-cell-gap">{{ r.pred_run_behind }}</span>{% endif %}
-                </td>
-                <td class="time-col overall-col" data-value="{{ r.pred_overall or '' }}">
-                    <span class="overall-time">{{ r.pred_overall or '' }}</span>
-                    {% if r.pred_overall_behind and r.pred_overall_behind != 'fastest' %}<span class="time-cell-gap">{{ r.pred_overall_behind }}</span>{% endif %}
-                </td>
-                <td class="split-col pct-col" data-value="{{ r.win_pct if r.win_pct is not none else -1 }}">
-                    <span class="time-disc-label">Win</span>
-                    {% if r.win_pct is none %}
-                    {% elif r.win_pct < 0.005 %}
-                    <span class="time-cell-main pct-low">&lt;1%</span>
-                    {% else %}
-                    <span class="time-cell-main">{{ "%.0f%%"|format(r.win_pct * 100) }}</span>
-                    <span class="pct-bar" style="--p: {{ (r.win_pct * 100) | round(1) }}%"></span>
-                    {% endif %}
-                </td>
-                <td class="splits-toggle-col" aria-hidden="true">
-                    <button type="button" class="splits-toggle" aria-label="Show splits" aria-expanded="false">
-                        <svg class="splits-toggle-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-                    </button>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% endif %}
 
 {% if rivals %}
 <div class="page-section-head">Rivals</div>

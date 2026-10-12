@@ -19,21 +19,16 @@ if (!window._ptdAthleteNavBound) {
             if (!resp.ok) throw new Error(`status ${resp.status}`);
             const html = await resp.text();
             const doc = new DOMParser().parseFromString(html, 'text/html');
-            const newHero    = doc.querySelector('#athlete-ajax-hero');
-            const newContent = doc.querySelector('#athlete-ajax-content');
-            const currHero    = document.querySelector('#athlete-ajax-hero');
+            // Only the career swaps; the person header and upcoming races stay.
+            const newContent  = doc.querySelector('#athlete-ajax-content');
             const currContent = document.querySelector('#athlete-ajax-content');
-            if (!newHero || !newContent || !currHero || !currContent) {
-                throw new Error('ajax targets missing');
-            }
+            if (!newContent || !currContent) throw new Error('ajax targets missing');
             // Chart.js keeps every chart in Chart.instances until destroy(), so
             // swapping the canvases out would leak 23 instances per switch.
             Object.values(Chart.instances).forEach(c => c.destroy());
-            currHero.replaceWith(newHero);
             currContent.replaceWith(newContent);
-            // The Follow button lives in the swapped hero; it needs its click
-            // handler and the user's following state again.
-            initFollowButtons(newHero);
+            // Compare in the header presets the career on screen.
+            document.querySelector('.athlete-compare-link').href = doc.querySelector('.athlete-compare-link').getAttribute('href');
             initSortIcons();
             document.title = doc.title;
             history.pushState({}, '', url);
