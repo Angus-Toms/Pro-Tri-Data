@@ -146,7 +146,7 @@
 .athlete-hero-actions {
     display: flex;
     align-items: center;
-    align-self: start;
+    align-self: center;
 }
 
 
@@ -647,20 +647,9 @@ tr.sub-race-row .link:hover {
    RESPONSIVE
    ============================================ */
 @media (max-width: 768px) {
-    /* Flex-wrap so the actions stay on the same row when there's space (wider
-       end of this range, ~600-768) and naturally wrap to a second row only
-       when the info column would otherwise get choked. The flex-basis on
-       info acts as the "minimum width before actions drops below". */
-    .athlete-hero-inner {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 1rem 1.25rem;
-        padding: 1.25rem 0;
-        /* override desktop grid props */
-        grid-template-columns: none;
-        grid-template-areas: none;
-    }
+    /* Same three columns as desktop; Follow stays on the row, as an icon. */
+    .athlete-hero-inner { gap: 1.25rem; padding: 1.25rem 0; }
+    .athlete-hero .btn-follow .follow-label { display: none; }
 
     .athlete-hero-img {
         width: 88px;
@@ -668,7 +657,6 @@ tr.sub-race-row .link:hover {
         flex-shrink: 0;
     }
     .athlete-hero-info {
-        flex: 1 1 320px;
         min-width: 0;
     }
 
@@ -690,16 +678,9 @@ tr.sub-race-row .link:hover {
 
 @media (max-width: 480px) {
     /* One-row hero: photo, name over a short meta line, icon-only Follow. */
-    .athlete-hero-inner {
-        display: grid;
-        grid-template-columns: 56px minmax(0, 1fr) auto;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.9rem 0;
-    }
+    .athlete-hero-inner { grid-template-columns: 56px minmax(0, 1fr) auto; gap: 0.75rem; padding: 0.9rem 0; }
     .athlete-hero-img { width: 56px; height: 56px; }
-    .athlete-hero-info { flex: none; gap: 0.2rem; }
-    .athlete-hero-actions { align-self: center; }
+    .athlete-hero-info { gap: 0.2rem; }
     .athlete-hero-meta { font-size: 0.8rem; gap: 0.3rem; }
     .country-full, .hero-meta-opt { display: none; }
     .country-code { display: inline; }
