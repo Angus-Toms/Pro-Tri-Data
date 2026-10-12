@@ -278,7 +278,7 @@
 .upcoming-list { list-style: none; margin: 0; padding: 0; }
 .upcoming-item {
     display: grid;
-    grid-template-columns: 7rem minmax(0, 1fr) 2.5rem 6.5rem 4.5rem 4.5rem;
+    grid-template-columns: minmax(0, 1fr) 2.5rem 6.5rem 4.5rem 4.5rem;
     align-items: center;
     gap: 0.25rem 1rem;
     padding: 0.5rem 0;
@@ -286,13 +286,12 @@
     font-variant-numeric: tabular-nums;
 }
 .upcoming-item + .upcoming-item { border-top: 1px solid var(--border-color); }
-.upcoming-date { color: var(--text-light); font-size: 0.85rem; }
 .upcoming-race a { color: var(--text-color); font-weight: 600; text-decoration: none; }
 .upcoming-race a:hover { color: var(--primary-color); }
 .upcoming-time b { display: block; }
 .upcoming-item small { display: block; font-size: 0.7rem; color: var(--text-light); }
 .upcoming-pct .time-cell-main { font-weight: 700; }
-/* Column heads once on desktop; on phones each figure carries its own label. */
+/* Column heads once, above the rows. */
 .upcoming-item.upcoming-cols { padding: 0 0 0.2rem; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-light); }
 .upcoming-cols + .upcoming-item { border-top: 0; }
 .upcoming-pct small { display: none; }
@@ -676,12 +675,7 @@ tr.sub-race-row .link:hover {
     /* Stacked: the short, current Form first, then the longer Palmares. */
     .cs-body.two-col .cs-form { order: -1; border-left: 0; padding-left: 0; }
     .cs-body.two-col .cs-palmares { border-top: 1px solid var(--border-color); padding-top: 1rem; }
-    .upcoming-item { grid-template-columns: 2.5rem minmax(0, 1fr) 4rem 4rem; }
-    .upcoming-date { grid-column: 1 / -1; font-size: 0.78rem; }
-    .upcoming-race { grid-column: 1 / -1; }
-    .upcoming-pos { grid-column: 1; }
-    .upcoming-cols { display: none !important; }
-    .upcoming-pct small { display: block; }
+    .upcoming-item { grid-template-columns: minmax(0, 1fr) 2.5rem 4.5rem 4rem 4rem; gap: 0.25rem 0.6rem; }
     .career-ratings .rt-spark { width: 4em; margin-left: 0.35rem; }
 
     .athlete-hero-name { font-size: 1.5rem; }
@@ -712,6 +706,9 @@ tr.sub-race-row .link:hover {
     .career-card { padding: 0.55rem 0.65rem; }
     .career-card-title { font-size: 0.85rem; }
     .career-card-span, .career-card-figs span:nth-child(n+3) { display: none; }
+    .upcoming-item { grid-template-columns: minmax(0, 1fr) 1.6rem 3.9rem 2.6rem; gap: 0.25rem 0.45rem; font-size: 0.85rem; }
+    .upcoming-pct.pct-col--podium, .upcoming-cols span:last-child { display: none; }
+    .upcoming-cols span:nth-child(2) { visibility: hidden; }
     .career-card-figs b { font-size: 0.95rem; }
 
     .athlete-hero-name {

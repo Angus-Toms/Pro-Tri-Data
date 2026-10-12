@@ -145,11 +145,10 @@
 <section class="upcoming-card" aria-label="Upcoming races">
     <div class="upcoming-card-head">Upcoming {{ help_icon('athlete-upcoming') }}</div>
     <ul class="upcoming-list">
-        <li class="upcoming-item upcoming-cols" aria-hidden="true"><span></span><span></span><span>Pred</span><span>Time</span><span>Win</span><span>Podium</span></li>
+        <li class="upcoming-item upcoming-cols" aria-hidden="true"><span></span><span>Pred</span><span>Time</span><span>Win</span><span>Podium</span></li>
         {% for r in upcoming_races %}
         <li class="upcoming-item">
-            <span class="upcoming-date">{{ r.race_date.strftime('%a %d %b') }}</span>
-            <span class="upcoming-race"><a href="/race/{{ r.race_id }}">{{ r.race_handle }}</a></span>
+            <span class="upcoming-race"><a href="/race/{{ r.race_id }}">{{ r.race_handle }}</a><small>{{ r.race_date.strftime('%a %d %b') }}</small></span>
             <span class="upcoming-pos">{% if r.pred_pos %}{{ pos_marker(r.pred_pos) }}{% endif %}</span>
             <span class="upcoming-time">{% if r.pred_overall %}<b>{{ r.pred_overall }}</b>{% if r.pred_overall_behind != 'fastest' %}<small>{{ r.pred_overall_behind }}</small>{% endif %}{% endif %}</span>
             <span class="upcoming-pct">{% if r.win_pct is not none %}<small>Win</small>{{ pct(r.win_pct, "%.0f"|format(r.win_pct * 100) ~ '%') }}{% endif %}</span>
