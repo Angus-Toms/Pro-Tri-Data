@@ -1903,7 +1903,7 @@ _PARA_CAT_ID = 350
 def get_athlete_notable_results(athlete_id):
     """
     Short-course results at Olympic / WC / WTCS / World Cup / Continental Cup races.
-    Returns list of dicts: {tier, position, race_id, race_handle, race_date}.
+    Returns list of dicts: {tier, position, race_id, race_handle, race_date, venue}.
     Only short-course races are considered; long-course palmares comes from
     `get_athlete_long_course_notable_results`.
     """
@@ -1913,9 +1913,10 @@ def get_athlete_notable_results(athlete_id):
     # rollup itself may be ignored for ratings (Montreal 2022: semi times merged
     # in) but its placings are real, so it stays.
     rows = conn.execute("""
-        SELECT res.race_id, res.position, r.race_title, r.race_handle, r.cat_ids, r.race_date, r.prog_name
+        SELECT res.race_id, res.position, r.race_title, r.race_handle, r.cat_ids, r.race_date, r.prog_name, e.venue
         FROM results res
         JOIN races r ON res.race_id = r.race_id
+        JOIN events e ON r.event_id = e.event_id
         WHERE res.athlete_id = ?
           AND res.status = 'Finished'
           AND res.position IS NOT NULL
@@ -1930,7 +1931,7 @@ def get_athlete_notable_results(athlete_id):
     """, [athlete_id]).fetchall()
 
     notable = []
-    for race_id, position, race_title, race_handle, cat_ids_str, race_date, prog_name in rows:
+    for race_id, position, race_title, race_handle, cat_ids_str, race_date, prog_name, venue in rows:
         try:
             cat_ids = set(literal_eval(cat_ids_str))
         except (ValueError, SyntaxError):
@@ -1942,7 +1943,7 @@ def get_athlete_notable_results(athlete_id):
         if "French Grand Prix" in race_title:
             notable.append({"tier": "french_grand_prix", "position": position,
                              "race_id": race_id, "race_handle": race_handle,
-                             "race_date": race_date})
+                             "race_date": race_date, "venue": venue})
             continue
 
         title_lower = race_title.lower()
@@ -1951,7 +1952,7 @@ def get_athlete_notable_results(athlete_id):
         if 343 in cat_ids:
             if "olympic" in title_lower and "youth" not in title_lower:
                 notable.append({"tier": "olympic", "position": position,
-                                 "race_id": race_id, "race_handle": race_handle, "race_date": race_date})
+                                 "race_id": race_id, "race_handle": race_handle, "race_date": race_date, "venue": venue})
                 continue
             else:
                 cat_ids.discard(343)
@@ -1975,16 +1976,16 @@ def get_athlete_notable_results(athlete_id):
             else:
                 tier = "world_champs"
             notable.append({"tier": tier, "position": position,
-                             "race_id": race_id, "race_handle": race_handle, "race_date": race_date})
+                             "race_id": race_id, "race_handle": race_handle, "race_date": race_date, "venue": venue})
         elif 351 in cat_ids:
             notable.append({"tier": "wtcs", "position": position,
-                             "race_id": race_id, "race_handle": race_handle, "race_date": race_date})
+                             "race_id": race_id, "race_handle": race_handle, "race_date": race_date, "venue": venue})
         elif 349 in cat_ids:
             notable.append({"tier": "world_cup", "position": position,
-                             "race_id": race_id, "race_handle": race_handle, "race_date": race_date})
+                             "race_id": race_id, "race_handle": race_handle, "race_date": race_date, "venue": venue})
         elif 341 in cat_ids:
             notable.append({"tier": "continental_cup", "position": position,
-                             "race_id": race_id, "race_handle": race_handle, "race_date": race_date})
+                             "race_id": race_id, "race_handle": race_handle, "race_date": race_date, "venue": venue})
 
     return notable
 
@@ -1998,9 +1999,10 @@ def get_athlete_ag_notable_results(athlete_id):
     """
     conn = _get_conn()
     rows = conn.execute("""
-        SELECT res.race_id, res.position, r.race_title, r.race_handle, r.cat_ids, r.race_date
+        SELECT res.race_id, res.position, r.race_title, r.race_handle, r.cat_ids, r.race_date, e.venue
         FROM results res
         JOIN races r ON res.race_id = r.race_id
+        JOIN events e ON r.event_id = e.event_id
         WHERE res.athlete_id = ?
           AND res.status = 'Finished'
           AND res.position IS NOT NULL
@@ -2009,7 +2011,7 @@ def get_athlete_ag_notable_results(athlete_id):
     """, [athlete_id]).fetchall()
 
     notable = []
-    for race_id, position, race_title, race_handle, cat_ids_str, race_date in rows:
+    for race_id, position, race_title, race_handle, cat_ids_str, race_date, venue in rows:
         try:
             cat_ids = set(literal_eval(cat_ids_str))
         except (ValueError, SyntaxError):
@@ -2020,7 +2022,7 @@ def get_athlete_ag_notable_results(athlete_id):
 
         title_lower = (race_title or "").lower()
         common = {"position": position, "race_id": race_id,
-                  "race_handle": race_handle, "race_date": race_date}
+                  "race_handle": race_handle, "race_date": race_date, "venue": venue}
 
         # World champs first (worlds outranks continental if both somehow apply)
         if (624 in cat_ids or 348 in cat_ids
@@ -2056,14 +2058,14 @@ def get_athlete_long_course_notable_results(athlete_id):
     Independent long-course events are ignored. A worlds race only counts in
     its worlds tier, not also as a generic Ironman / 70.3.
 
-    Returns list of dicts: {tier, position, race_id, race_handle, race_date}.
+    Returns list of dicts: {tier, position, race_id, race_handle, race_date, venue}.
     Scoring and selection happen in the router; this returns every
     categorisable finish.
     """
     conn = _get_conn()
     rows = conn.execute("""
         SELECT res.race_id, res.position, r.race_title, r.race_handle, r.race_date,
-               r.distance, e.brand
+               r.distance, e.brand, e.venue
         FROM results res
         JOIN races  r ON res.race_id = r.race_id
         JOIN events e ON r.event_id  = e.event_id
@@ -2076,7 +2078,7 @@ def get_athlete_long_course_notable_results(athlete_id):
     """, [athlete_id]).fetchall()
 
     notable = []
-    for race_id, position, race_title, race_handle, race_date, distance, brand in rows:
+    for race_id, position, race_title, race_handle, race_date, distance, brand, venue in rows:
         title_lower = (race_title or "").lower()
         # Pre-2023 the full IM World Championship was held in Kona under the
         # plain "Ironman Hawaii" name (no "World Championship" suffix). Treat
@@ -2103,6 +2105,7 @@ def get_athlete_long_course_notable_results(athlete_id):
             "race_id":     race_id,
             "race_handle": race_handle,
             "race_date":   race_date,
+            "venue":       venue,
         })
 
     return notable

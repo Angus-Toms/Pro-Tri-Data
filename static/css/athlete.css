@@ -244,6 +244,55 @@
 .pal-races a { color: var(--text-light); text-decoration: none; white-space: nowrap; }
 .pal-races a:hover { color: var(--primary-color); }
 
+/* Comparison, option B: Palmares by tier. A medal table (one row per tier,
+   gold / silver / bronze counts) whose rows open to list the races. */
+.pal-compare .cs-body { margin-top: 0; padding-top: 0; border-top: 0; }
+.pal-option {
+    font-size: 0.62rem;
+    letter-spacing: 0.04em;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    background: rgba(26, 26, 46, 0.07);
+}
+.pt-head, .pt-row summary {
+    display: grid;
+    grid-template-columns: 16rem minmax(0, 1fr) repeat(3, 2.25rem) 1.25rem;
+    column-gap: 0.5rem;
+    align-items: center;
+}
+.pt-head { padding-bottom: 0.3rem; justify-items: center; }
+.pt-head span:first-child { justify-self: start; }
+.pt-dot { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 50%; flex-shrink: 0; }
+.pt-dot.m1 { background: var(--gold); }
+.pt-dot.m2 { background: var(--silver); }
+.pt-dot.m3 { background: var(--bronze); }
+.pt-row { border-top: 1px solid var(--border-color); }
+.pt-row summary { list-style: none; cursor: pointer; padding: 0.45rem 0; font-size: 0.9rem; }
+.pt-row summary::-webkit-details-marker { display: none; }
+.pt-row summary:hover .pt-name { color: var(--primary-color); }
+.pt-name { font-weight: 700; color: var(--text-color); }
+/* Collapsed rows preview the races on one line; open rows list them below. */
+.pt-preview { font-size: 0.8rem; color: var(--text-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pt-row[open] .pt-preview { visibility: hidden; }
+.pt-n { text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pt-n.zero { color: var(--text-lighter); font-weight: 400; }
+.pt-best { grid-column: span 3; text-align: center; font-size: 0.8rem; color: var(--text-light); }
+.pt-chev { display: inline-block; justify-self: end; color: var(--text-lighter); transition: transform var(--transition-fast); }
+.pt-row[open] .pt-chev { transform: rotate(90deg); }
+.pt-races {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0.6rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 1rem;
+    font-size: 0.82rem;
+}
+.pt-races li { display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
+.pt-races a { color: var(--text-light); text-decoration: none; }
+.pt-races a:hover { color: var(--primary-color); }
+.pt-pos { font-size: 0.72rem; color: var(--text-lighter); font-variant-numeric: tabular-nums; }
+
 /* Upcoming: one line per entry, athlete-level, above the career cards. */
 .upcoming-card {
     margin: 1.75rem 0 0;
@@ -667,6 +716,8 @@ tr.sub-race-row .link:hover {
 
     .career-summary { padding: 1rem 1.1rem; }
     .cs-body.two-col { grid-template-columns: minmax(0, 1fr); }
+    .pt-head, .pt-row summary { grid-template-columns: minmax(0, 1fr) repeat(3, 2.25rem) 1.25rem; }
+    .pt-preview, .pt-head span + span { display: none; }
     /* Stacked: the short, current Form first, then the longer Palmares. */
     .cs-body.two-col .cs-form { order: -1; border-left: 0; padding-left: 0; }
     .cs-body.two-col .cs-palmares { border-top: 1px solid var(--border-color); padding-top: 1rem; }
