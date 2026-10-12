@@ -1791,15 +1791,14 @@ def get_athlete_active_rankings(athlete_id, category='elite', course='short'):
             (SELECT COUNT(*) + 1 FROM active aa WHERE aa.swim       > me.swim       AND aa.country_full = me.country_full) AS national_swim,
             (SELECT COUNT(*) + 1 FROM active aa WHERE aa.bike       > me.bike       AND aa.country_full = me.country_full) AS national_bike,
             (SELECT COUNT(*) + 1 FROM active aa WHERE aa.run        > me.run        AND aa.country_full = me.country_full) AS national_run,
-            (SELECT COUNT(*) + 1 FROM active aa WHERE aa.transition > me.transition AND aa.country_full = me.country_full) AS national_transition,
-            (SELECT COUNT(*) FROM active) AS pool
+            (SELECT COUNT(*) + 1 FROM active aa WHERE aa.transition > me.transition AND aa.country_full = me.country_full) AS national_transition
         FROM me
     """, [category, athlete_id, athlete_id]).fetchone()
 
     if not row:
         return None
     cols = ["world_overall", "world_swim", "world_bike", "world_run", "world_transition",
-            "national_overall", "national_swim", "national_bike", "national_run", "national_transition", "pool"]
+            "national_overall", "national_swim", "national_bike", "national_run", "national_transition"]
     return dict(zip(cols, row))
 
 

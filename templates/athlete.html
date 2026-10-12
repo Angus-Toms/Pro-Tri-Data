@@ -224,7 +224,7 @@
         {% if current_form %}
         {# Equivalent race-day splits from the form model. #}
         <div class="cs-form">
-            <div class="cs-label">Current form {{ help_icon('athlete-form') }}</div>
+            <div class="cs-label">Current form</div>
             <table class="career-form-table">
                 <thead><tr><th></th>{% for c in current_form.cols %}<th>{{ c }}</th>{% endfor %}</tr></thead>
                 <tbody>
@@ -243,24 +243,25 @@
 </section>
 
 {% if has_ratings %}
-{# Ratings: one row per discipline. World rank leads, with the pool size,
-   because it compares across disciplines and raw ratings don't. A finished
-   career shows its best world rank and drops national rank and the 1-year
-   change. On phones each row puts national and peak on a second line, so
-   nothing hides behind a horizontal scroll. #}
+{# Ratings: one row per discipline. World rank leads because it compares
+   across disciplines and raw ratings don't. The 1-year change carries a
+   sparkline of the year. A finished career shows its best world rank and
+   drops national rank and the 1-year change. On phones each row puts
+   national and peak on a second line, so nothing hides behind a horizontal
+   scroll. #}
 {% set ag_prefix = 'AG ' if category == 'ag' else '' %}
 {% set has_change = ratings_rows|selectattr('change')|selectattr('change.formatted_str')|list %}
 <div class="page-section-head"><span>Ratings {{ help_icon('career-ratings') }}</span></div>
 
 <div class="ratings-section">
-    <table class="ratings-table career-ratings{{ ' has-change' if has_change else '' }}{{ ' has-nat' if rank_pool else '' }}">
+    <table class="ratings-table career-ratings{{ ' has-change' if has_change else '' }}{{ ' has-nat' if ranked_now else '' }}">
         <thead>
             <tr>
                 <th class="rt-disc">Discipline</th>
-                <th class="rt-rank">{{ 'Best ' if not rank_pool else '' }}{{ ag_prefix }}World</th>
+                <th class="rt-rank">{{ 'Best ' if not ranked_now else '' }}{{ ag_prefix }}World</th>
                 <th class="rt-rating">Rating</th>
                 {% if has_change %}<th class="rt-change">1 year</th>{% endif %}
-                {% if rank_pool %}<th class="rt-nat">National</th>{% endif %}
+                {% if ranked_now %}<th class="rt-nat">National</th>{% endif %}
                 <th class="rt-peak">Peak</th>
             </tr>
         </thead>
@@ -270,13 +271,13 @@
                 <td class="rt-disc">{{ r.label }}</td>
                 <td class="rt-rank">
                     {% if r.world %}
-                    {% if rank_pool %}<a href="/athlete-leaderboard?gender={{ athlete.gender }}&disc={{ r.label|lower }}&category={{ category }}&course={{ course }}" rel="nofollow" class="ranking-link">{{ r.world|ordinal }}</a><span class="rt-of">of {{ "{:,}".format(rank_pool) }}</span>
+                    {% if ranked_now %}<a href="/athlete-leaderboard?gender={{ athlete.gender }}&disc={{ r.label|lower }}&category={{ category }}&course={{ course }}" rel="nofollow" class="ranking-link">{{ r.world|ordinal }}</a>
                     {% else %}{{ r.world|ordinal }}{% endif %}
                     {% else %}<span class="no-data">-</span>{% endif %}
                 </td>
                 <td class="rt-rating">{{ "{:,}".format(r.rating) }}</td>
-                {% if has_change %}<td class="rt-change">{% if r.change and r.change.formatted_str %}<span class="rt-change-num {{ r.change.css_class }}">{{ r.change.formatted_str | safe }}</span>{% endif %}</td>{% endif %}
-                {% if rank_pool %}
+                {% if has_change %}<td class="rt-change">{% if r.change and r.change.formatted_str %}<span class="rt-change-num {{ r.change.css_class }}">{{ r.change.formatted_str | safe }}</span>{% endif %}{% if r.spark %}<svg class="rt-spark" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true"><polyline points="{{ r.spark }}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>{% endif %}</td>{% endif %}
+                {% if ranked_now %}
                 <td class="rt-nat"><span class="rt-inline-label">National </span>{% if r.national %}<a href="/athlete-leaderboard?gender={{ athlete.gender }}&disc={{ r.label|lower }}&category={{ category }}&course={{ course }}&country={{ athlete.country_full | urlencode }}" rel="nofollow" class="ranking-link">{{ r.national|ordinal }}</a>{% else %}-{% endif %}</td>
                 {% endif %}
                 <td class="rt-peak">

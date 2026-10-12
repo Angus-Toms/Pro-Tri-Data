@@ -420,8 +420,27 @@ def get_athlete(request: Request, athlete_id: int,
 
     # --- Ratings table: one row per discipline ---
     # World rank leads because it compares across disciplines, which raw
-    # ratings don't; "of N" is the active pool. A finished career shows its
-    # best world rank instead, with no national rank or 1-year change.
+    # ratings don't. A finished career shows its best world rank instead,
+    # with no national rank or 1-year change.
+    # The 1-year sparkline starts at the same race the 1-year change does
+    # (the latest race at least 365 days old), so line and number agree.
+    # Points are normalised into a 100x28 viewBox.
+    sparks = {}
+    if has_ratings and changes and _active:
+        cutoff = date.today() - timedelta(days=365)
+        window = []
+        for r in rating_hist:            # newest first
+            window.append(r)
+            if r["race_date"] <= cutoff:
+                break
+        if len(window) >= 2:
+            window.reverse()
+            W, H, PAD = 100.0, 28.0, 3.0
+            for disc in DISCS:
+                vals = [r[f"{disc}_rating"] for r in window]
+                lo, span = min(vals), (max(vals) - min(vals)) or 1.0
+                sparks[disc] = " ".join(f"{i / (len(vals) - 1) * W:.1f},{PAD + (1 - (v - lo) / span) * (H - 2 * PAD):.1f}"
+                                        for i, v in enumerate(vals))
     ratings_rows = []
     if has_ratings:
         for disc in DISCS:
@@ -434,6 +453,7 @@ def get_athlete(request: Request, athlete_id: int,
                 "world":        ranks.get(f"world_{disc}"),
                 "national":     active_ranks[f"national_{disc}"] if active_ranks else None,
                 "change":       format_1yr_rating_change(changes[f"{disc}_change_1yr"]) if changes and _active else None,
+                "spark":        sparks.get(disc),
                 "peak":         peak,
                 "at_peak":      peak == rating,
                 "peak_race":    peaks[f"max_{disc}_race"],
@@ -777,7 +797,7 @@ def get_athlete(request: Request, athlete_id: int,
         "current_form":        current_form,
         "current_ratings":     current_ratings,
         "ratings_rows":        ratings_rows,
-        "rank_pool":           active_ranks["pool"] if active_ranks else None,
+        "ranked_now":          active_ranks is not None,
         "doping_ban":          queries.get_athlete_doping_ban(athlete_id),
         "nationality_history": queries.get_athlete_nationality_history(athlete_id),
         "upcoming_races":      upcoming_races,

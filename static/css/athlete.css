@@ -336,9 +336,9 @@
 /* Proportional columns that always fill the card, so no column hoards the
    slack (Peak used to take half the table). */
 .career-ratings th.rt-disc   { width: 15%; }
-.career-ratings th.rt-rank   { width: 21%; }
+.career-ratings th.rt-rank   { width: 14%; }
 .career-ratings th.rt-rating { width: 13%; }
-.career-ratings th.rt-change { width: 12%; }
+.career-ratings th.rt-change { width: 21%; }
 .career-ratings th.rt-nat    { width: 12%; }
 .career-ratings th.rt-peak   { width: auto; }
 .career-ratings { table-layout: fixed; }
@@ -347,11 +347,10 @@
 .career-ratings td.rt-rank a,
 .career-ratings td.rt-rank { font-size: 1.15rem; font-weight: 800; color: var(--text-color); text-decoration: none; }
 .career-ratings td.rt-rank a:hover { color: var(--primary-color); }
-.career-ratings td.rt-rank .rt-of { font-size: 0.75rem; font-weight: 500; color: var(--text-light); margin-left: 0.35rem; }
 .career-ratings td.rt-rating { font-size: 0.95rem; font-weight: 600; }
 .career-ratings td.rt-disc { font-size: 0.85rem; color: var(--text-light); }
 .career-ratings .rt-row--overall td.rt-disc { color: var(--text-color); font-weight: 700; }
-.career-ratings td.rt-change { min-width: 0; }
+.career-ratings td.rt-change { min-width: 0; white-space: nowrap; }
 .career-ratings td.rt-nat a { font-weight: 700; color: var(--text-color); text-decoration: none; }
 .career-ratings td.rt-nat a:hover { color: var(--primary-color); }
 .career-ratings .rt-peak-main { display: inline; }
@@ -394,7 +393,7 @@
     .career-ratings td.rt-peak { grid-column: 2 / -1; }
     .career-ratings:not(.has-nat) td.rt-peak { grid-column: 1 / -1; }
     .career-ratings .rt-peak-main { font-size: 0.78rem; font-weight: 700; color: var(--text-color); }
-    .career-ratings .rt-peak-sub { display: none; }
+    .career-ratings .rt-peak-sub, .career-ratings .rt-spark { display: none; }
     .rt-inline-label { display: inline; }
     .career-ratings td.rt-rank, .career-ratings td.rt-rank a { font-size: 1rem; }
 }
@@ -694,6 +693,7 @@ tr.sub-race-row .link:hover {
     .upcoming-item { grid-template-columns: 6.5rem minmax(0, 1fr); }
     .upcoming-meta { grid-column: 2; gap: 1rem; }
     .cs-stats { gap: 0.2rem 1rem; }
+    .career-ratings .rt-spark { width: 4em; margin-left: 0.35rem; }
     .cs-stats b { font-size: 1.05rem; }
 
     .athlete-hero-name { font-size: 1.5rem; }

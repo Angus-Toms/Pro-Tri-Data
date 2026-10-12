@@ -358,19 +358,15 @@ const _tierText = `Tiers grade the field strength against all races of the same 
 const HELP_TOURS = {
     'career-ratings': [
         { sel: '.career-ratings th.rt-rank', column: true, title: 'World rank',
-          text: 'Where the athlete ranks among athletes of the same gender who raced this course in the last 18 months, out of the number shown. Rank, not rating, is the number to compare across disciplines. For a career that has finished, the best world rank it reached.' },
+          text: 'Where the athlete ranks among athletes of the same gender who raced this course in the last 18 months. Rank, not rating, is the number to compare across disciplines. For a career that has finished, the best world rank it reached.' },
         { sel: '.career-ratings th.rt-rating', column: true, title: 'Rating',
           text: _ratingBasics + ' Each discipline has its own scale, so compare ranks rather than ratings across columns.' },
         { sel: '.career-ratings th.rt-change', column: true, title: '1 year',
-          text: 'Rating change over the last 12 months.' },
+          text: 'Rating change over the last 12 months, with a line of the rating across that year.' },
         { sel: '.career-ratings th.rt-nat', column: true, title: 'National',
           text: 'Rank among athletes of the same nationality in the same pool. Click through to the leaderboard.' },
         { sel: '.career-ratings th.rt-peak', column: true, title: 'Peak',
           text: 'The highest rating the athlete has held in each discipline, when, and the race that took it there.' },
-    ],
-    'athlete-form': [
-        { sel: '.career-form-table', title: 'Current form',
-          text: 'What the athlete\'s recent races are worth at each standard distance on a typical course against a typical field. It is built from their splits relative to the field, weighted towards recent races, so it moves faster than the rating. Shown once an athlete has 5 recorded splits and has raced this course in the last 18 months.' },
     ],
     'athlete-upcoming': [
         { sel: '.upcoming-list', title: 'Upcoming races',
