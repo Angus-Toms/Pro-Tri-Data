@@ -2274,6 +2274,18 @@ def get_athlete_race_predictions(athlete_id):
     return {r: {"predicted_position": p, "overall_s": o} for r, p, o in rows}
 
 
+@lru_cache(maxsize=8192)
+def get_athlete_relay_starts(athlete_id):
+    """Elite mixed relay legs raced (one per relay). They sit in relay_legs,
+    not results, so get_athlete_stats never counts them."""
+    return _get_conn().execute("""
+        SELECT COUNT(DISTINCT l.race_id)
+        FROM relay_legs_corrected l
+        JOIN races r ON r.race_id = l.race_id
+        WHERE l.athlete_id = ? AND r.category = 'elite'
+    """, [athlete_id]).fetchone()[0]
+
+
 def get_athlete_relay_history(athlete_id):
     """The athlete's mixed relay legs, shaped like get_athlete_race_history rows.
 
