@@ -180,21 +180,69 @@
 .career-card-line { font-size: 0.8rem; color: var(--text-light); font-variant-numeric: tabular-nums; }
 
 
-/* Career panel: one card under the career cards with the career's figures
-   on the left and Current Form on the right, split by a rule (stacked
-   below 768). */
-.career-panel {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 1.25rem 2rem;
+/* Career summary: one card under the career cards. Stats line on top, then
+   Palmares and Current Form side by side, split by a rule (stacked below
+   768). */
+.career-summary {
     margin: 0.75rem 0 2rem;
-    padding: 1.25rem 1.5rem;
+    padding: 1.1rem 1.5rem 1.25rem;
     background: var(--white);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-lg);
 }
-.career-panel .career-form { border-left: 1px solid var(--border-color); padding-left: 2rem; }
-.career-header-main { min-width: 0; align-self: center; }
+.cs-stats {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 1.25rem;
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--text-light);
+    font-variant-numeric: tabular-nums;
+}
+.cs-stats b { font-size: 1.2rem; font-weight: 800; color: var(--text-color); margin-right: 0.15rem; }
+.cs-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem 2rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+.cs-body.two-col { grid-template-columns: minmax(0, 1fr) auto; }
+.cs-body.two-col .cs-form { border-left: 1px solid var(--border-color); padding-left: 2rem; }
+.cs-label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.4rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-light);
+}
+.cs-label-date { margin-left: auto; padding-left: 1rem; font-size: 0.75rem; font-weight: 400; letter-spacing: 0; text-transform: none; }
+
+/* Palmares: one ranked list, best first. The dot is the medal for podium
+   entries and a plain marker for placings and grouped wins below third. */
+.pal-list { list-style: none; margin: 0; padding: 0; }
+.pal-item {
+    position: relative;
+    padding: 0.4rem 0 0.4rem 1.3rem;
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+.pal-item + .pal-item { border-top: 1px solid var(--border-color); }
+.pal-medal { position: absolute; left: 0; top: 0.78rem; width: 0.7rem; height: 0.7rem; box-sizing: border-box; border-radius: 50%; border: 2px solid var(--border-color); }
+.pal-medal.m1, .pal-medal.m2, .pal-medal.m3 { border: 0; }
+.pal-medal.m1 { background: var(--gold); }
+.pal-medal.m2 { background: var(--silver); }
+.pal-medal.m3 { background: var(--bronze); }
+.pal-title { font-weight: 700; color: var(--text-color); margin-right: 0.5rem; }
+.pal-races { font-size: 0.8rem; color: var(--text-lighter); }
+.pal-races a { color: var(--text-light); text-decoration: none; white-space: nowrap; }
+.pal-races a:hover { color: var(--primary-color); }
 
 /* Upcoming: one line per entry, athlete-level, above the career cards. */
 .upcoming-card {
@@ -231,8 +279,6 @@
 .upcoming-race a:hover { color: var(--primary-color); }
 .upcoming-meta { display: flex; gap: 1.25rem; color: var(--text-light); font-size: 0.85rem; white-space: nowrap; }
 .upcoming-meta b { color: var(--text-color); }
-.career-header-title-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem 0.75rem; margin-bottom: 0.6rem; }
-.career-header-title { font-size: 1.35rem; font-weight: 800; margin: 0; }
 .career-provisional {
     font-size: 0.72rem;
     font-weight: 700;
@@ -241,26 +287,6 @@
     padding: 0.15rem 0.55rem;
     border-radius: 999px;
 }
-.career-figures { display: flex; flex-wrap: wrap; gap: 0.75rem 2rem; margin: 0; }
-.career-figures div { display: flex; flex-direction: column-reverse; }
-.career-figures dd { margin: 0; font-size: 1.6rem; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.career-figures dt {
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text-light);
-}
-.career-form { min-width: 300px; }
-.career-form-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; margin-bottom: 0.25rem; }
-.career-form-label {
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text-light);
-}
-.career-form-date { font-size: 0.75rem; color: var(--text-light); }
 /* A plain grid, not a data table: undo the site-wide table look (navy
    headers, zebra rows, hover highlight, fixed layout). */
 .career-form-table { width: 100%; table-layout: auto; font-variant-numeric: tabular-nums; }
@@ -381,152 +407,6 @@
 .athlete-compare-link:hover { color: var(--primary-color); }
 .athlete-compare-link .compare-ic { width: 0.95em; height: 0.95em; flex-shrink: 0; }
 
-/* ============================================
-    PALMARES - navy-header card, full-width in page content
-    ============================================ */
-.palmares-card {
-    background: var(--white);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-lg);
-    overflow: hidden;
-    margin-bottom: 2rem;
-}
-
-.palmares-grid {
-    display: flex;
-    padding: 0.25rem 0;
-}
-
-.palmares-col {
-    flex: 1;
-    min-width: 0;
-}
-
-.palmares-col:first-child {
-    border-right: 1px solid var(--border-color);
-}
-
-.palmares-item {
-    display: flex;
-    align-items: baseline;
-    gap: 0.45rem;
-    padding: 0.5rem 1.25rem;
-    font-size: 0.875rem;
-    position: relative;
-}
-
-/* Inset divider between items - :last-child naturally suppresses it on the final item in each column */
-.palmares-item:not(:last-child)::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 1.25rem;
-    right: 1.25rem;
-    height: 1px;
-    background: var(--border-color);
-}
-
-.palmares-item-label {
-    font-weight: 600;
-    color: var(--text-color);
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-
-.palmares-item-sep {
-    color: var(--text-lighter);
-    flex-shrink: 0;
-}
-
-.palmares-item-races {
-    color: var(--text-lighter);
-    font-size: 0.82rem;
-    min-width: 0;
-    line-height: 1.5;
-}
-
-.palmares-race-link {
-    color: var(--text-lighter);
-    text-decoration: none;
-    transition: color var(--transition-fast);
-}
-
-.palmares-race-link:hover {
-    color: var(--primary-color);
-}
-
-.palmares-race-sep {
-    color: var(--border-color);
-}
-
-
-/* ============================================
-    CURRENT FORM - navy-header card, equivalent splits per distance
-    ============================================ */
-
-.form-table {
-    padding: 0.25rem 0;
-}
-
-.form-row {
-    display: grid;
-    grid-template-columns: 6rem repeat(var(--form-cols, 2), 1fr);
-    align-items: baseline;
-    padding: 0.5rem 1.25rem;
-    position: relative;
-}
-
-.form-row:not(:last-child)::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 1.25rem;
-    right: 1.25rem;
-    height: 1px;
-    background: var(--border-color);
-}
-
-.form-row-head {
-    padding-top: 0.4rem;
-    padding-bottom: 0.4rem;
-}
-
-.form-col-label {
-    font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-lighter);
-}
-
-.form-disc {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-color);
-}
-
-.form-cell {
-    display: flex;
-    align-items: baseline;
-    gap: 0.45rem;
-    min-width: 0;
-}
-
-.form-time {
-    font-size: 0.95rem;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    color: var(--text-color);
-}
-
-.form-leg {
-    font-size: 0.75rem;
-    color: var(--text-lighter);
-}
-
-@media (max-width: 768px) {
-    .form-row { grid-template-columns: 4.5rem repeat(var(--form-cols, 2), 1fr); }
-}
 
 @media (max-width: 480px) {
     .form-time { font-size: 0.875rem; }
@@ -785,42 +665,19 @@ tr.sub-race-row .link:hover {
         min-width: 0;
     }
 
-    .career-panel { grid-template-columns: minmax(0, 1fr); }
-    .career-panel .career-form { border-left: 0; padding-left: 0; border-top: 1px solid var(--border-color); padding-top: 1rem; }
-    .career-form { width: 100%; min-width: 0; }
+    .career-summary { padding: 1rem 1.1rem; }
+    .cs-body.two-col { grid-template-columns: minmax(0, 1fr); }
+    /* Stacked: the short, current Form first, then the longer Palmares. */
+    .cs-body.two-col .cs-form { order: -1; border-left: 0; padding-left: 0; }
+    .cs-body.two-col .cs-palmares { border-top: 1px solid var(--border-color); padding-top: 1rem; }
     .upcoming-item { grid-template-columns: 6.5rem minmax(0, 1fr); }
     .upcoming-meta { grid-column: 2; gap: 1rem; }
-    .career-figures { gap: 0.75rem 1.5rem; }
-    .career-figures dd { font-size: 1.35rem; }
+    .cs-stats { gap: 0.2rem 1rem; }
+    .cs-stats b { font-size: 1.05rem; }
 
     .athlete-hero-name { font-size: 1.5rem; }
 
 
-    .palmares-grid {
-        flex-direction: column;
-    }
-
-    .palmares-col:first-child {
-        border-right: none;
-        border-bottom: 1px solid var(--border-color);
-    }
-
-    /* Stack label above races at narrow widths so each gets the full row.
-       The dash separator only makes sense as an inline divider, so drop it
-       in this layout. */
-    .palmares-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.15rem;
-    }
-    .palmares-item-label {
-        white-space: normal;
-        max-width: 100%;
-    }
-    .palmares-item-sep { display: none; }
-    .palmares-item-races {
-        flex: 1 1 auto;
-    }
 }
 
 @media (max-width: 480px) {

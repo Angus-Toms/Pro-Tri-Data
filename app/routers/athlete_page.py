@@ -187,7 +187,7 @@ def _build_notable_results(notable_raw):
             plural = desc.endswith("Win")
             desc = f"{len(races)} x {desc}{'s' if plural else ''}"
         races_sorted = sorted(races, key=lambda x: x["race_date"] or "", reverse=True)
-        formatted.append({"description": desc, "races": [
+        formatted.append({"description": desc, "pos": pos, "races": [
             {"race_id": r["race_id"], "race_name": r["race_handle"], "race_date": r["race_date"]}
             for r in races_sorted]})
     return formatted
@@ -496,23 +496,6 @@ def get_athlete(request: Request, athlete_id: int,
     ag_notable_results   = _build_notable_results(ag_notable_raw)
     long_notable_results = _build_notable_results(long_notable_raw)
 
-    def _split_columns(results):
-        # Split into two display columns balanced by visual height.
-        # Height model (×2 scaled): label row ≈ 1 line + each race row ≈ 0.5 lines → 2 + ceil(races/4)
-        heights = [2 + (len(r["races"]) + 3) // 4 for r in results]
-        total = sum(heights)
-        best_split, best_diff, cumulative = 1, float("inf"), 0
-        for i, h in enumerate(heights):
-            cumulative += h
-            if abs(cumulative - total / 2) <= best_diff:
-                best_diff = abs(cumulative - total / 2)
-                best_split = i + 1
-        return results[:best_split], results[best_split:]
-
-    notable_col1,      notable_col2      = _split_columns(notable_results)
-    ag_notable_col1,   ag_notable_col2   = _split_columns(ag_notable_results)
-    long_notable_col1, long_notable_col2 = _split_columns(long_notable_results)
-
     # --- race history table ---
     # Fetch percentile thresholds once for this athlete's gender (cached per process).
     # Build a race_id→overall_std map here so the rating history table reuses the same
@@ -795,12 +778,7 @@ def get_athlete(request: Request, athlete_id: int,
         "active_key":           active_key,
         "has_elite":            'elite' in available_categories,
         "has_ag":               'ag' in available_categories,
-        "notable_col1":        notable_col1,
-        "notable_col2":        notable_col2,
-        "ag_notable_col1":     ag_notable_col1,
-        "ag_notable_col2":     ag_notable_col2,
-        "long_notable_col1":   long_notable_col1,
-        "long_notable_col2":   long_notable_col2,
+        "palmares":            palmares_by_key[active_key],
         "current_form":        current_form,
         "current_ratings":     current_ratings,
         "ratings_rows":        ratings_rows,
