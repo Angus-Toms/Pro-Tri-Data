@@ -10,8 +10,8 @@ from app.display_helpers import flag
 from ptd_users import emails
 from ptd_users import queries as uq
 from ptd_users.auth import (
-    SESSION_COOKIE, clear_session_cookie, current_user, hash_token, new_token,
-    remembered_tokens, set_remembered_cookie, set_session_cookie,
+    LOGGED_IN_COOKIE, SESSION_COOKIE, clear_session_cookie, current_user, hash_token, new_token,
+    remembered_tokens, set_logged_in_cookie, set_remembered_cookie, set_session_cookie,
 )
 from app.routers.router_utils import avatar_tone, user_avatar
 
@@ -216,7 +216,7 @@ async def me(request: Request):
         return JSONResponse({"detail": "Not logged in"}, status_code=401,
                             headers={"Cache-Control": "no-store"})
     follows = await uq.get_follows(user["user_id"])
-    return JSONResponse({
+    response = JSONResponse({
         "user_id":      user["user_id"],
         "display_name": user["display_name"],
         "country":      user["country"],
@@ -226,3 +226,8 @@ async def me(request: Request):
         "follows":      follows,
         "unread":       await uq.unread_notification_count(user["user_id"]),
     }, headers={"Cache-Control": "no-store"})
+    # Sessions from before ptd_in existed get it here, so users.js can tell
+    # every tab that this browser is logged in
+    if LOGGED_IN_COOKIE not in request.cookies:
+        set_logged_in_cookie(response)
+    return response

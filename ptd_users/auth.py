@@ -31,6 +31,10 @@ def set_session_cookie(response, token):
         SESSION_COOKIE, token, max_age=SESSION_MAX_AGE, httponly=True,
         secure=COOKIE_SECURE, samesite="lax", path="/",
     )
+    set_logged_in_cookie(response)
+
+
+def set_logged_in_cookie(response):
     response.set_cookie(
         LOGGED_IN_COOKIE, "1", max_age=SESSION_MAX_AGE,
         secure=COOKIE_SECURE, samesite="lax", path="/",

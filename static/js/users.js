@@ -25,7 +25,11 @@ window.ptdUser = (function () {
             .then(r => r.ok ? r.json() : null)
             .then(me => {
                 if (me) sessionStorage.setItem(KEY, JSON.stringify({ t: Date.now(), me }));
-                else sessionStorage.removeItem(KEY);
+                else {
+                    sessionStorage.removeItem(KEY);
+                    // A session that ended server-side leaves ptd_in behind
+                    document.cookie = 'ptd_in=; Max-Age=0; path=/';
+                }
                 return me;
             });
         return promise;
@@ -35,6 +39,19 @@ window.ptdUser = (function () {
         sessionStorage.removeItem(KEY);
         promise = null;
     }
+
+    // A page brought back by the back button, or a tab left open while
+    // logging in or out elsewhere, still shows the account it was drawn for
+    // (the header, the home page's personal section, follow buttons). Reload
+    // it when the login cookie no longer agrees.
+    let drawnLoggedIn = null;
+    load().then(me => { drawnLoggedIn = !!me; });
+    function recheck() {
+        const loggedIn = document.cookie.split('; ').includes('ptd_in=1');
+        if (drawnLoggedIn !== null && loggedIn !== drawnLoggedIn) location.reload();
+    }
+    window.addEventListener('pageshow', e => { if (e.persisted) recheck(); });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) recheck(); });
 
     return { load, invalidate };
 })();
