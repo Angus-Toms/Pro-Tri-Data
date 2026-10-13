@@ -146,10 +146,10 @@
 {% from "partials/_race_table.html" import pct, pos_marker, th, td, time, rating, toggle, foot %}
 {# Upcoming races belong to the person: every career's entries, tagged. #}
 {% if upcoming_races %}
-{# One line per entry: date, race, course tag, predicted place and win
-   chance. The race page has the predicted splits. #}
+{# One line per entry: race and date, predicted place, time and chances.
+   The race page has the predicted splits. #}
+<div class="page-section-head"><span>Upcoming {{ help_icon('athlete-upcoming') }}</span></div>
 <section class="upcoming-card" aria-label="Upcoming races">
-    <div class="upcoming-card-head">Upcoming {{ help_icon('athlete-upcoming') }}</div>
     <ul class="upcoming-list">
         <li class="upcoming-item upcoming-cols" aria-hidden="true"><span></span><span>Pred</span><span>Time</span><span>Win</span><span>Podium</span></li>
         {% for r in upcoming_races %}
@@ -170,6 +170,8 @@
 <div id="athlete-ajax-content">
 {% set discs = [('overall','Overall'),('swim','Swim'),('bike','Bike'),('run','Run'),('transition','Transition')] %}
 
+{# One section for the career: the cards are its tabs, the summary below. #}
+<div class="page-section-head"><span>Career</span></div>
 {% if careers|length > 1 %}
 <nav class="career-cards" aria-label="Careers">
     {% for cr in careers %}

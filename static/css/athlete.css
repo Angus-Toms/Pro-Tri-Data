@@ -157,7 +157,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 0.75rem;
-    margin: 1.75rem 0 0;
+    margin: 0;
 }
 .career-card {
     display: grid;
@@ -263,22 +263,11 @@
 
 /* Upcoming: one line per entry, athlete-level, above the career cards. */
 .upcoming-card {
-    margin: 1.75rem 0 0;
+    margin: 0 0 2rem;
     padding: 0.85rem 1.25rem;
     background: var(--white);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-lg);
-}
-.upcoming-card-head {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text-light);
-    margin-bottom: 0.35rem;
 }
 .upcoming-list { list-style: none; margin: 0; padding: 0; }
 .upcoming-item {
@@ -938,7 +927,7 @@
    dense block, as in the audit's phone layout. Form folds to one line. */
 .career-card-sub, .cs-form-sum { display: none; }
 @media (max-width: 480px) {
-    .career-cards { gap: 0.4rem; margin-top: 1rem; }
+    .career-cards { gap: 0.4rem; }
     .career-card { padding: 0.45rem 0.6rem; gap: 0.05rem; }
     .career-card-best, .career-card-figs { display: none; }
     .career-card-sub { display: block; font-size: 0.7rem; color: var(--text-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

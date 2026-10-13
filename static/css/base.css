@@ -1517,13 +1517,17 @@ table td a.link:hover   { color: var(--primary-color); }
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-left: 4px solid var(--primary-color);
-    padding-left: 0.75rem;
-    margin-bottom: 1rem;
-    font-size: 1.5rem;
+    border-left: 3px solid var(--primary-color);
+    padding-left: 0.65rem;
+    margin-bottom: 0.6rem;
+    font-size: 1.2rem;
+    line-height: 1.25;
     font-weight: 700;
     color: var(--text-color);
-    letter-spacing: -0.02em;
+    letter-spacing: -0.015em;
+}
+@media (max-width: 480px) {
+    .page-section-head { font-size: 1.05rem; margin-bottom: 0.5rem; }
 }
 
 .page-section-sub {
