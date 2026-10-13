@@ -364,25 +364,42 @@ def get_race(request: Request, race_id: int, partial: bool = False):
     if predictions:
         views.append(("predictions", "Predictions"))
 
-    # Charts under the table, drawn by race.js from this. Finishers only, so
-    # bike groups (elite only) measure the gap off the bike, at the start of T2,
-    # from the first finisher there rather than from someone who later dropped out.
-    # Rating changes are per discipline, for the chart's discipline switch.
+    # Charts under the table, drawn by race.js from this. Every athlete is sent
+    # (pos is None for non-finishers): bike groups (elite only), split times
+    # and rating changes include anyone who completed the leg, the prediction
+    # chart takes finishers only. Bike groups measure the corrected gap off the
+    # bike, at the start of T2, so a rider who leads there and drops out on the
+    # run still leads the chart.
+    # Rating changes are per discipline, for the chart's discipline switch, and
+    # plotted against the place in that discipline: finishing position overall,
+    # split rank for a leg, combined T1 + T2 rank for transition.
     changes_by_id = ({r["athlete_id"]: [r[f"{d}_change"] for d in ("overall", "swim", "bike", "run", "transition")]
                       for r in ratings} if ratings and not ignored_info else {})
     finishers = [r for r in results if r["status"] not in DNF_STATUSES and r["position"] is not None]
-    bike_lead = min((r["cum"][2] for r in finishers if r["cum"][2] is not None), default=None)
+    bike_lead = min((r["cum"][2] for r in results if r["cum"][2] is not None), default=None)
+    leg_time = {
+        "swim":       lambda r: r["swim_s"] or 0,
+        "bike":       lambda r: r["bike_s"] or 0,
+        "run":        lambda r: r["run_s"] or 0,
+        "transition": lambda r: (r["t1_s"] or 0) + (r["t2_s"] or 0) if (r["t1_s"] or 0) > 0 and (r["t2_s"] or 0) > 0 else 0,
+    }
+    leg_rank = {}
+    for leg, t in leg_time.items():
+        for i, r in enumerate(sorted((r for r in results if t(r) > 0), key=t)):
+            leg_rank[(r["athlete_id"], leg)] = i + 1
     chart_athletes = [{
         "id":       r["athlete_id"],
         "name":     r["name"],
         "country":  r["country_alpha3"],
         "img":      bool(r["profile_img"]),
-        "pos":      r["position"],
+        "pos":      r["position"] if r in finishers else None,
+        "status":   r["status"],
         "splits":   [r["swim_s"] or 0, r["bike_s"] or 0, r["run_s"] or 0, r["overall_s"] or 0],
         "bike_gap": r["cum"][2] - bike_lead if r["cum"][2] is not None else None,
         "chg":      changes_by_id.get(r["athlete_id"]),
+        "dpos":     [r["position"] if r in finishers else None] + [leg_rank.get((r["athlete_id"], leg)) for leg in leg_time],
         "pred":     pred_rows[r["athlete_id"]]["predicted_position"] if r["athlete_id"] in pred_rows else None,
-    } for r in finishers]
+    } for r in results]
 
     # Prediction scorecard, beside the predicted vs actual chart. Biggest beat and
     # miss use places as published, to match the arrows in the table; accuracy
@@ -429,7 +446,7 @@ def get_race(request: Request, race_id: int, partial: bool = False):
         "show": {
             "groups":      is_elite and sum(a["bike_gap"] is not None for a in chart_athletes) >= 6,
             "splits":      sum(a["splits"][0] > 0 for a in chart_athletes) >= 3,
-            "ratings":     sum(a["chg"] is not None for a in chart_athletes) >= 3,
+            "ratings":     sum(a["chg"] is not None and a["pos"] is not None for a in chart_athletes) >= 3,
             "predictions": scorecard is not None,
         },
     }

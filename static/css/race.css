@@ -712,7 +712,12 @@
 .sc-row dd .link { color: var(--text-color); text-decoration: none; }
 .sc-row dd .link:hover { color: var(--primary-color); }
 .sc-sub { display: block; font-size: 0.75rem; font-weight: 400; color: var(--text-lighter); }
-.rc-beat { fill: var(--highlight); }
+/* Predicted vs actual, as the athlete page's Versus prediction chart */
+.rc-beat { fill: rgba(5, 150, 105, 0.06); }
+.rc-diag { stroke: rgba(0, 0, 0, 0.3); stroke-width: 1; stroke-dasharray: 4 4; }
+.rc-zone { font-size: 11px; font-weight: 600; }
+.rc-zone-beat { fill: rgba(4, 120, 87, 0.8); }
+.rc-zone-miss { fill: rgba(185, 28, 28, 0.7); }
 .rc-band { fill: #f2f4f6; }
 .race-chart-legend {
     display: flex;
@@ -751,6 +756,7 @@
 .rc-label   { fill: var(--text-color); font-size: 12px; font-weight: 600; }
 .rc-group   { fill: var(--text-light); font-size: 11px; font-weight: 600; }
 .rc-dot     { fill: #c3c6cc; stroke: var(--white); stroke-width: 1.5; }
+.rc-dot.rc-dnf { fill: var(--white); stroke: #9ca3af; }
 .rc-up      { fill: var(--success-color); stroke: var(--white); stroke-width: 1.5; }
 .rc-down    { fill: var(--error-color); stroke: var(--white); stroke-width: 1.5; }
 .rc-ring    { fill: none; stroke: var(--text-color); stroke-width: 1.5; }

@@ -529,9 +529,13 @@ function _chartTip(target, html) {
 // A finisher's dot: podium in gold / silver / bronze, drawn bigger with a ring
 // in its own darker tone, everyone else grey. A larger transparent circle on
 // top is the hover target.
+const _isPod = a => !!a.pos && a.pos <= 3;
+// Where the athlete ended up: their place, or DNF / DQ etc.
+const _finish = a => a.pos ? 'finished ' + _ordinal(a.pos) : a.status;
+
 function _finisherDot(svg, a, cx, cy, r, tipHtml) {
-    const pod = a.pos <= 3;
-    _svg('circle', { cx, cy, r: pod ? r + 1.5 : r, class: pod ? `rc-pod pod-${a.pos}` : 'rc-dot' }, svg);
+    const pod = _isPod(a);
+    _svg('circle', { cx, cy, r: pod ? r + 1.5 : r, class: pod ? `rc-pod pod-${a.pos}` : a.pos ? 'rc-dot' : 'rc-dot rc-dnf' }, svg);
     _chartTip(_svg('circle', { cx, cy, r: r + 4, class: 'rc-hit' }, svg), tipHtml);
 }
 
@@ -577,7 +581,7 @@ function _drawGroups(chart, athletes) {
     const reached = athletes.filter(a => a.bike_gap !== null).sort((a, b) => a.bike_gap - b.bike_gap);
     const far = _farOutliers(reached.map(a => a.bike_gap));
     const pts = reached.filter(a => !far.has(a.bike_gap));
-    _offScaleNote(chart, reached.filter(a => far.has(a.bike_gap)).map(a => `${escapeHtml(a.name)} +${formatTime(a.bike_gap)} (${_ordinal(a.pos)})`));
+    _offScaleNote(chart, reached.filter(a => far.has(a.bike_gap)).map(a => `${escapeHtml(a.name)} +${formatTime(a.bike_gap)} (${a.pos ? _ordinal(a.pos) : a.status})`));
     // Riders within the race's group gap (10s short course, 15s long) of the
     // next one off the bike ride together
     const groupGap = +chart.dataset.groupGap;
@@ -640,9 +644,9 @@ function _drawGroups(chart, athletes) {
     });
 
     // Podium last so it sits on top
-    for (const a of [...pts].sort((p, q) => (p.pos <= 3) - (q.pos <= 3))) {
+    for (const a of [...pts].sort((p, q) => _isPod(p) - _isPod(q))) {
         _finisherDot(svg, a, a._x, base - a._lvl * step, R,
-            () => `<b>${escapeHtml(a.name)}</b> · finished ${_ordinal(a.pos)}<br>Off the bike: ${a.bike_gap ? '+' + formatTime(a.bike_gap) : 'leading'}`);
+            () => `<b>${escapeHtml(a.name)}</b> · ${_finish(a)}<br>Off the bike: ${a.bike_gap ? '+' + formatTime(a.bike_gap) : 'leading'}`);
     }
 
     // Each group's gap to the leader and to the group ahead, measured from the
@@ -654,8 +658,9 @@ function _drawGroups(chart, athletes) {
         '<div class="rg-row rg-head"><span>Group</span><span>Athletes</span><span>Behind leader</span><span>Behind group ahead</span><span>Finished</span></div>' +
         named.map(({ name, g }, i) => {
             const ahead = i ? named[i - 1].g : null;
-            const places = g.map(a => a.pos).sort((p, q) => p - q)
-                .map(p => p <= 3 ? `<span class="pod-text pod-${p}">${p}</span>` : p).join(', ');
+            const places = [...g.map(a => a.pos).filter(p => p).sort((p, q) => p - q)
+                .map(p => p <= 3 ? `<span class="pod-text pod-${p}">${p}</span>` : p),
+                ...g.filter(a => !a.pos).map(a => a.status)].join(', ');
             return `<div class="rg-row"><span class="rg-name">${name}</span>` +
                 cell(g.length, g.length === 1 ? 'athlete' : 'athletes') +
                 cell(i ? _clock(g[0].bike_gap) : null, 'behind the leader') +
@@ -671,6 +676,7 @@ function _drawSplits(chart, athletes) {
     const R = narrow ? 3 : 3.6, step = 2 * R + 1;
     const x0 = narrow ? 56 : 72, x1 = W - 10;
     const rows = [['Swim', 0], ['Bike', 1], ['Run', 2], ['Overall', 3]].map(([label, i]) => {
+        // Non-finishers keep the legs they completed (no overall time)
         const all = athletes.filter(a => a.splits[i] > 0).map(a => ({ a, v: a.splits[i] }));
         const far = _farOutliers(all.map(p => p.v));
         return { label, all: all.map(p => p.v).sort((a, b) => a - b),
@@ -679,7 +685,7 @@ function _drawSplits(chart, athletes) {
     _offScaleNote(chart, rows.flatMap(r => r.off.map(p => `${escapeHtml(p.a.name)} ${r.label.toLowerCase()} ${formatTime(p.v)}`)));
 
     plot.innerHTML = '';
-    const svg = _svg('svg', { width: W, role: 'img', 'aria-label': 'Swim, bike, run and overall times of every finisher' }, plot);
+    const svg = _svg('svg', { width: W, role: 'img', 'aria-label': 'Swim, bike, run and overall times of every athlete' }, plot);
     let y = 6;
     for (const row of rows) {
         const vals = row.pts.map(p => p.v).sort((a, b) => a - b);
@@ -710,10 +716,10 @@ function _drawSplits(chart, athletes) {
         _svg('text', { x: medX, y: axisY + 14, 'text-anchor': 'middle', class: 'rc-axis rc-median-label' }, svg, medText);
         if (medX - medW / 2 > x0 + endW) _svg('text', { x: x0, y: axisY + 14, class: 'rc-axis' }, svg, formatTime(lo));
         if (medX + medW / 2 < x1 - endW) _svg('text', { x: x1, y: axisY + 14, 'text-anchor': 'end', class: 'rc-axis' }, svg, formatTime(hi));
-        for (const p of [...placed].sort((p, q) => (p.a.pos <= 3) - (q.a.pos <= 3))) {
+        for (const p of [...placed].sort((p, q) => _isPod(p.a) - _isPod(q.a))) {
             const rank = row.all.indexOf(p.v) + 1;
             _finisherDot(svg, p.a, p.x, cy + off(p.k), R,
-                () => `<b>${escapeHtml(p.a.name)}</b> · finished ${_ordinal(p.a.pos)}<br>${row.label}: ${formatTime(p.v)} (${_ordinal(rank)})`);
+                () => `<b>${escapeHtml(p.a.name)}</b> · ${_finish(p.a)}<br>${row.label}: ${formatTime(p.v)} (${_ordinal(rank)})`);
         }
         y = axisY + 26;
     }
@@ -764,7 +770,12 @@ function _drawRatings(chart, athletes) {
     // The discipline switch above the chart picks which change to plot
     const d = +chart.dataset.disc;
     const disc = _DISCS[d];
-    const all = athletes.filter(a => a.chg && a.chg[d] !== null).map(a => ({ ...a, c: a.chg[d] }));
+    // x is the place in this discipline: finishing position overall, split
+    // rank for a leg (so a rider who dropped out on the run still has a bike place)
+    const all = athletes.filter(a => a.chg && a.chg[d] !== null && a.dpos[d] !== null)
+        .map(a => ({ ...a, c: a.chg[d], p: a.dpos[d] }));
+    const placeLabel = d ? `${disc} position` : 'Finishing position';
+    const where = a => d ? `${disc} ${_ordinal(a.p)}, ${_finish(a)}` : `Finished ${_ordinal(a.p)}`;
     const standoutsEl = chart.querySelector('.race-chart-standouts');
     if (all.length < 3) {
         plot.innerHTML = `<p class="race-chart-empty">No ${disc.toLowerCase()} rating changes for this race.</p>`;
@@ -774,11 +785,11 @@ function _drawRatings(chart, athletes) {
     }
     const far = _farOutliers(all.map(a => a.c));
     const pts = all.filter(a => !far.has(a.c));
-    _offScaleNote(chart, all.filter(a => far.has(a.c)).map(a => `${escapeHtml(a.name)} ${_change(a.c)} (${_ordinal(a.pos)})`));
+    _offScaleNote(chart, all.filter(a => far.has(a.c)).map(a => `${escapeHtml(a.name)} ${_change(a.c)} (${_ordinal(a.p)})`));
     const m = { l: 40, r: 12, t: 22, b: 38 };
     const H = narrow ? 260 : 340;
     const R = narrow ? 3.5 : 4.5;
-    const maxPos = Math.max(...all.map(a => a.pos));
+    const maxPos = Math.max(...all.map(a => a.p));
     const lo = Math.min(0, ...pts.map(a => a.c)), hi = Math.max(0, ...pts.map(a => a.c));
     const tick = [5, 10, 25, 50, 100, 250, 500, 1000].find(s => (hi - lo) / s <= 8) || 1000;
     const yLo = Math.floor(lo / tick) * tick, yHi = Math.ceil(hi / tick) * tick;
@@ -787,14 +798,14 @@ function _drawRatings(chart, athletes) {
 
     plot.innerHTML = '';
     const svg = _svg('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'img',
-                              'aria-label': `${disc} rating change against finishing position` }, plot);
+                              'aria-label': `${disc} rating change against ${placeLabel.toLowerCase()}` }, plot);
     for (let v = yLo; v <= yHi; v += tick) {
         _svg('line', { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), class: v === 0 ? 'rc-zero' : 'rc-grid' }, svg);
         _svg('text', { x: m.l - 8, y: y(v) + 4, 'text-anchor': 'end', class: 'rc-axis' }, svg, _signed(v) || '0');
     }
     for (const p of _positionTicks(maxPos))
         _svg('text', { x: x(p), y: H - m.b + 16, 'text-anchor': 'middle', class: 'rc-axis' }, svg, p);
-    _svg('text', { x: (m.l + W - m.r) / 2, y: H - 4, 'text-anchor': 'middle', class: 'rc-axis' }, svg, 'Finishing position');
+    _svg('text', { x: (m.l + W - m.r) / 2, y: H - 4, 'text-anchor': 'middle', class: 'rc-axis' }, svg, placeLabel);
 
     // Stand-out performances: the three biggest gains and losses, whether or
     // not they fit on the scale (the list below always names them)
@@ -803,24 +814,24 @@ function _drawRatings(chart, athletes) {
     const worst = byChange.filter(a => a.c < 0).slice(-3).reverse();
     const standouts = new Set([...best, ...worst]);
 
-    const tipHtml = a => () => `<b>${escapeHtml(a.name)}</b><br>Finished ${_ordinal(a.pos)}` +
+    const tipHtml = a => () => `<b>${escapeHtml(a.name)}</b><br>${where(a)}` +
         (a.pred ? `, predicted ${_ordinal(a.pred)}` : '') + `<br>${disc} rating change ${_change(a.c)}`;
     for (const a of pts) {
-        const cx = x(a.pos), cy = y(a.c);
+        const cx = x(a.p), cy = y(a.c);
         _svg('circle', { cx, cy, r: R, class: a.c >= 0 ? 'rc-up' : 'rc-down' }, svg);
         if (standouts.has(a)) _svg('circle', { cx, cy, r: R + 3.5, class: 'rc-ring' }, svg);
         _chartTip(_svg('circle', { cx, cy, r: R + 5, class: 'rc-hit' }, svg), tipHtml(a));
     }
     // Labels may use the top and right margins, not the axis labels
     if (!narrow) _placeLabels(svg,
-        [...best, ...worst].filter(a => !far.has(a.c)).map(a => ({ text: a.name, cx: x(a.pos), cy: y(a.c) })),
-        pts.map(a => [x(a.pos), y(a.c)]), { l: m.l, r: W, t: 0, b: H - m.b + 2 }, R);
+        [...best, ...worst].filter(a => !far.has(a.c)).map(a => ({ text: a.name, cx: x(a.p), cy: y(a.c) })),
+        pts.map(a => [x(a.p), y(a.c)]), { l: m.l, r: W, t: 0, b: H - m.b + 2 }, R);
 
     const imgBase = window.STATIC_BASE_URL || '/static/';
     const item = a => `<li class="standout-item">` +
         `<img class="profile-img standout-img" src="${imgBase}${a.img ? `athlete_imgs/128/${a.id}.webp` : 'imgs/default_user_64.webp'}" alt="" loading="lazy">` +
         `<span class="standout-who"><a class="link" href="/athlete/${a.id}">${escapeHtml(a.name)}</a>${flagImg(a.country)}` +
-        `<span class="standout-meta">Finished ${_ordinal(a.pos)}${a.pred ? `, predicted ${_ordinal(a.pred)}` : ''}</span></span>` +
+        `<span class="standout-meta">${where(a)}${a.pred ? `, predicted ${_ordinal(a.pred)}` : ''}</span></span>` +
         `${_change(a.c)}</li>`;
     standoutsEl.innerHTML =
         (best.length ? `<div><h5>Biggest gains</h5><ul class="standout-list">${best.map(item).join('')}</ul></div>` : '') +
@@ -834,7 +845,7 @@ function _drawPredictions(chart, athletes, data) {
     const plot = chart.querySelector('.race-chart-plot');
     const W = plot.clientWidth;
     const narrow = W < 480;
-    const pts = athletes.filter(a => a.pred);
+    const pts = athletes.filter(a => a.pred && a.pos);
     const dnf = data.dnf;
     const R = narrow ? 3.5 : 4.5;
     const m = { l: 44, r: 12, t: 12, b: 40 };
@@ -857,9 +868,13 @@ function _drawPredictions(chart, athletes, data) {
     }
     for (const p of _positionTicks(maxPred))
         _svg('text', { x: x(p), y: H - m.b + 16, 'text-anchor': 'middle', class: 'rc-axis' }, svg, p);
-    _svg('line', { x1: x(1), y1: y(1), x2: x(diag), y2: y(diag), class: 'rc-median' }, svg);
-    _svg('text', { x: W - m.r - 4, y: m.t + 12, 'text-anchor': 'end', class: 'rc-group' }, svg, 'Beat prediction');
-    _svg('text', { x: m.l + 6, y: plotB - 6, class: 'rc-group' }, svg, 'Off the pace');
+    _svg('line', { x1: x(1), y1: y(1), x2: x(diag), y2: y(diag), class: 'rc-diag' }, svg);
+    // Corner names as on the athlete page's Versus prediction chart, left out
+    // on the narrowest charts
+    if (W >= 380) {
+        _svg('text', { x: W - m.r - 6, y: m.t + 14, 'text-anchor': 'end', class: 'rc-zone rc-zone-beat' }, svg, 'Beat prediction');
+        _svg('text', { x: m.l + 6, y: plotB - 8, class: 'rc-zone rc-zone-miss' }, svg, 'Missed');
+    }
     _svg('text', { x: (m.l + W - m.r) / 2, y: H - 4, 'text-anchor': 'middle', class: 'rc-axis' }, svg, 'Predicted');
     _svg('text', { x: 10, y: (m.t + plotB) / 2, 'text-anchor': 'middle', class: 'rc-axis',
                    transform: `rotate(-90 10 ${(m.t + plotB) / 2})` }, svg, 'Finished');
@@ -877,7 +892,7 @@ function _drawPredictions(chart, athletes, data) {
 
     const byGain = [...pts].sort((a, b) => (b.pred - b.pos) - (a.pred - a.pos));
     const movers = [...byGain.slice(0, 2).filter(a => a.pred > a.pos), ...byGain.slice(-2).filter(a => a.pred < a.pos)];
-    for (const a of [...pts].sort((p, q) => (p.pos <= 3) - (q.pos <= 3))) {
+    for (const a of [...pts].sort((p, q) => _isPod(p) - _isPod(q))) {
         const cx = x(a.pred), cy = y(a.pos);
         _finisherDot(svg, a, cx, cy, R, () => `<b>${escapeHtml(a.name)}</b><br>Predicted ${_ordinal(a.pred)}, finished ${_ordinal(a.pos)}`);
         if (movers.includes(a)) _svg('circle', { cx, cy, r: R + 4, class: 'rc-ring' }, svg);

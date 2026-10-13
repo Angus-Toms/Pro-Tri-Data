@@ -295,7 +295,7 @@
 <!-- Result charts: drawn by race.js initResultCharts from race-chart-data -->
 {% macro podium_legend() -%}
 <div class="race-chart-legend">
-    {% for a in chart_data.athletes if a.pos <= 3 %}
+    {% for a in chart_data.athletes if a.pos and a.pos <= 3 %}
     <span class="race-chart-key"><i class="key-dot pod-{{ a.pos }}"></i>{{ ordinal(a.pos) }} {{ a.name }}</span>
     {% endfor %}
 </div>
@@ -317,7 +317,7 @@
 {% endif %}
 {% if chart_data.show.ratings %}
 <div class="page-section-head">Rating Changes</div>
-<p class="page-section-sub race-chart-sub">Rating change by finishing position.</p>
+<p class="page-section-sub race-chart-sub">Rating change by position in the discipline: finishing place overall, split rank for each leg.</p>
 <div class="race-chart" data-chart="ratings" data-disc="0">
     <div class="race-chart-head">
         <div class="race-chart-legend">
@@ -341,7 +341,7 @@
 <div class="race-chart-pair">
     <div class="race-chart" data-chart="predictions">
         <div class="race-chart-legend">
-            {% for a in chart_data.athletes if a.pos <= 3 %}
+            {% for a in chart_data.athletes if a.pos and a.pos <= 3 %}
             <span class="race-chart-key"><i class="key-dot pod-{{ a.pos }}"></i>{{ ordinal(a.pos) }}</span>
             {% endfor %}
         </div>
