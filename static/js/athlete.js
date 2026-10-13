@@ -126,7 +126,7 @@ function _positionTooltip(tooltipEl, chart, tooltip) {
 if (!window._ptdChartTipScrollBound) {
     window._ptdChartTipScrollBound = true;
     window.addEventListener('scroll', () => {
-        ['ratings-chart-tooltip', 'world-ranking-tooltip', 'national-ranking-tooltip', 'pct-behind-tooltip', 'vp-tooltip']
+        ['ratings-chart-tooltip', 'world-ranking-tooltip', 'national-ranking-tooltip', 'vp-tooltip']
             .forEach(id => { const el = document.getElementById(id); if (el) el.style.opacity = '0'; });
     }, { passive: true });
 }
@@ -859,150 +859,8 @@ function rrRender() {
     }));
 })();
 
-// % Behind Leader chart -------------------------------------------------------
-const pctBehindData = getJSON('pct-behind-chart-data');
-let activePctDisc = 'overall';
-let mainPctChart  = null;
-
-const pctTooltipEl = (() => {
-    const existing = document.getElementById('pct-behind-tooltip');
-    if (existing) return existing;
-    const el = document.createElement('div');
-    el.id = 'pct-behind-tooltip';
-    Object.assign(el.style, {
-        position: 'fixed', pointerEvents: 'none', opacity: '0',
-        background: '#1a1a2e', borderRadius: '10px',
-        fontFamily: "'Plus Jakarta Sans', sans-serif",
-        border: '1px solid rgba(255,255,255,0.1)',
-        boxShadow: '0 6px 24px rgba(0,0,0,0.4)',
-        transition: 'opacity 0.12s', width: '220px', zIndex: '100',
-        overflow: 'hidden',
-    });
-    document.body.appendChild(el);
-    return el;
-})();
-
-function pctExternalTooltip(context) {
-    const { chart, tooltip } = context;
-    if (tooltip.opacity === 0) { pctTooltipEl.style.opacity = '0'; return; }
-    const d     = tooltip.dataPoints[0].raw;
-    const color = DISC_COLORS[activePctDisc];
-    const label = DISC_LABELS[activePctDisc];
-    const date  = new Date(d.x).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-    const raceLink = `<a href="/race/${d.race_id}" style="color:#fff;text-decoration:none;font-weight:700;font-size:13px;line-height:1.2;display:block" onmouseover="this.style.color='#E87722'" onmouseout="this.style.color='#fff'">${escapeHtml(d.race_name)}</a>`;
-    const pctDisplay = d.y === 0
-        ? `<span style="color:#5eead4;font-size:22px;font-weight:800;line-height:1">Leader</span>`
-        : `<span style="color:${color};font-size:22px;font-weight:800;line-height:1">+${d.y.toFixed(1)}%</span>`;
-    pctTooltipEl.innerHTML = `
-        <div style="padding:7px 12px;border-bottom:1px solid rgba(255,255,255,0.08)">
-            <div style="margin-bottom:1px">${raceLink}</div>
-            <span style="font-size:11px;color:rgba(255,255,255,0.4)">${date}</span>
-        </div>
-        <div style="padding:10px 12px">
-            ${pctDisplay}
-            <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px">${label} % behind leader</div>
-        </div>
-    `;
-    _positionTooltip(pctTooltipEl, chart, tooltip);
-}
-
-function buildMainPctBehindChart(disc) {
-    const canvas = document.getElementById('pct-behind-main-canvas');
-    if (mainPctChart) mainPctChart.destroy();
-    const hex  = DISC_COLORS[disc];
-    const data = pctBehindData[disc];
-    const delayPerPoint = Math.min(600 / Math.max(data.length, 1), 30);
-    const prevY = (ctx) => ctx.index === 0
-        ? ctx.chart.scales.y.getPixelForValue(data[0]?.y ?? 0)
-        : ctx.chart.getDatasetMeta(0).data[ctx.index - 1]?.getProps(['y'], true).y;
-    mainPctChart = new Chart(canvas, {
-        type: 'line',
-        data: {
-            datasets: [{
-                data,
-                borderColor: hex, backgroundColor: 'transparent',
-                pointBackgroundColor: hex,
-                pointHoverBackgroundColor: '#fff', pointHoverBorderColor: hex, pointHoverBorderWidth: 2,
-                borderWidth: 2, pointRadius: 3, pointHoverRadius: 5,
-                fill: false, showLine: false, clip: false,
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            interaction: { mode: 'nearest', axis: 'x', intersect: false },
-            onClick: (e, els) => { if (els.length) location.href = '/race/' + data[els[0].index].race_id; },
-            animation: {
-                x: { type: 'number', easing: 'linear', duration: delayPerPoint, from: NaN,
-                     delay: (ctx) => { if (ctx.type !== 'data' || ctx.xStarted) return 0; ctx.xStarted = true; return ctx.index * delayPerPoint; } },
-                y: { type: 'number', easing: 'linear', duration: delayPerPoint, from: prevY,
-                     delay: (ctx) => { if (ctx.type !== 'data' || ctx.yStarted) return 0; ctx.yStarted = true; return ctx.index * delayPerPoint; } },
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: { enabled: false, external: pctExternalTooltip },
-            },
-            scales: {
-                x: { type: 'time', grid: { display: false }, ticks: { display: false } },
-                y: {
-                    min: 0,
-                    grid: { color: 'rgba(0,0,0,0.05)' },
-                    afterBuildTicks: s => applyNiceTicks(s),
-                    ticks: { color: '#999', autoSkip: false, callback: v => +v.toFixed(2) + '%' },
-                }
-            }
-        }
-    });
-}
-
-function buildMiniPctBehindChart(disc) {
-    const canvas = document.getElementById(`pct-behind-mini-${disc}`);
-    if (!canvas) return;
-    new Chart(canvas, {
-        type: 'line',
-        data: {
-            datasets: [{
-                data: pctBehindData[disc],
-                borderColor: DISC_COLORS[disc], borderWidth: 1.5,
-                pointRadius: 0, tension: 0, fill: false, backgroundColor: 'transparent', clip: false,
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false }, tooltip: { enabled: false }, yearBands: false },
-            scales: {
-                x: { type: 'time', display: false },
-                y: { min: 0, display: false, grid: { display: false }, border: { display: false } },
-            },
-            animation: false,
-        }
-    });
-}
-
-function switchPctBehindDisc(disc) {
-    if (disc === activePctDisc) return;
-    ['overall', 'swim', 'bike', 'run'].forEach(d => {
-        const existing = Chart.getChart(document.getElementById(`pct-behind-mini-${d}`));
-        if (existing) existing.destroy();
-    });
-    const card = document.getElementById('pct-behind-main-canvas').closest('.collapsible-card');
-    card.querySelectorAll('.ratings-mini').forEach(el => el.classList.remove('active'));
-    card.querySelector(`.ratings-mini[data-disc="${disc}"]`).classList.add('active');
-    activePctDisc = disc;
-    const heading = document.getElementById('pct-behind-section-title');
-    if (heading) heading.textContent = `% Behind Leader - ${DISC_LABELS[disc]}`;
-    buildMainPctBehindChart(disc);
-    ['overall', 'swim', 'bike', 'run'].forEach(buildMiniPctBehindChart);
-}
-
-// Init
-if (pctBehindData) {
-    buildMainPctBehindChart('overall');
-    ['overall', 'swim', 'bike', 'run'].forEach(buildMiniPctBehindChart);
-}
-
 // Expose functions referenced from inline HTML onclick attributes. The IIFE
 // wrap above makes these locally scoped, so we hoist them back onto window.
-window.switchPctBehindDisc = switchPctBehindDisc;
 window.toggleNotableResults = toggleNotableResults;
 
 })(); // end IIFE

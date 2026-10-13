@@ -532,26 +532,11 @@
 </div>
 <script id="vp-chart-data" type="application/json">{{ vs_prediction | tojson }}</script>
 {% endif %}
-
-<div class="page-section-head" id="pct-behind-section-title">% Behind Leader - Overall</div>
-<div class="collapsible-card ratings-history-section">
-    <div class="ratings-main-chart">
-        <canvas id="pct-behind-main-canvas"></canvas>
-    </div>
-    <div class="ratings-mini-row">
-        {% for disc in ['overall', 'swim', 'bike', 'run'] %}
-        <div class="ratings-mini {% if disc == 'overall' %}active{% endif %}" data-disc="{{ disc }}" data-label="{{ disc.capitalize() }}" onclick="switchPctBehindDisc('{{ disc }}')">
-            <canvas id="pct-behind-mini-{{ disc }}"></canvas>
-        </div>
-        {% endfor %}
-    </div>
-</div>
 {% endif %}{# show_charts #}
 {% endif %}{# has_ratings #}
 
 {% if show_charts %}
 <script id="ratings-chart-data" type="application/json">{{ ratings_chart | tojson }}</script>
-<script id="pct-behind-chart-data" type="application/json">{{ pct_behind_chart | tojson }}</script>
 <script id="world-rankings-chart-data" type="application/json">{{ world_rankings_chart | tojson }}</script>
 <script id="national-rankings-chart-data" type="application/json">{{ national_rankings_chart | tojson }}</script>
 <script id="ranks-now-data" type="application/json">{{ ranks_now | tojson }}</script>

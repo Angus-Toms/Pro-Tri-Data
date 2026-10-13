@@ -234,23 +234,6 @@ def _build_ratings_chart(ratings_data):
     return result
 
 
-def _build_pct_behind_chart(times_data):
-    """Build flat per-discipline % behind leader data for the new ratings-style chart."""
-    result = {}
-    for disc in ["overall", "swim", "bike", "run"]:
-        result[disc] = [
-            {
-                "x":         str(r["race_date"])[:10],
-                "y":         round(r[f"{disc}_pct_behind"] * 100, 2),
-                "race_name": r["race_title"],
-                "race_id":   r["race_id"],
-            }
-            for r in times_data
-            if r[f"{disc}_pct_behind"] is not None
-        ]
-    return result
-
-
 def _build_rankings_charts(rankings_data):
     """Build per-discipline ranking history for world and national charts."""
     world    = {}
@@ -353,7 +336,6 @@ def get_athlete(request: Request, athlete_id: int,
             race_hist = sorted(race_hist + relay_hist,
                                key=lambda r: (r["race_date"], r["race_id"]), reverse=True)
     rating_hist  = queries.get_athlete_rating_history(athlete_id, category, course=course) if has_ratings else []
-    times_data    = queries.get_athlete_times_data(athlete_id, category, course=course)    if has_ratings else []
     ratings_data  = queries.get_athlete_ratings_data(athlete_id, category, course=course)  if has_ratings else []
     rankings_data = queries.get_athlete_rankings_data(athlete_id, category, course=course) if has_ratings else []
 
@@ -717,7 +699,6 @@ def get_athlete(request: Request, athlete_id: int,
             })
 
     # --- charts ---
-    pct_behind      = _build_pct_behind_chart(times_data) if has_ratings else None
     ratings_chart   = _build_ratings_chart(ratings_data)  if has_ratings else None
     world_rankings_charts, national_rankings_charts = (
         _build_rankings_charts(rankings_data) if has_ratings else ({}, {})
@@ -896,7 +877,6 @@ def get_athlete(request: Request, athlete_id: int,
         "has_preds":           any(e["pred"] for e in race_history),
         "vs_prediction":       vs_prediction,
         "ratings_chart":           ratings_chart,
-        "pct_behind_chart":        pct_behind,
         "world_rankings_chart":    world_rankings_charts,
         "national_rankings_chart": national_rankings_charts,
     })
