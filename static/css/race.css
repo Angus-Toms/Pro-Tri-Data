@@ -719,6 +719,39 @@
 .rc-zone-beat { fill: rgba(4, 120, 87, 0.8); }
 .rc-zone-miss { fill: rgba(185, 28, 28, 0.7); }
 .rc-band { fill: #f2f4f6; }
+
+/* Win chances on a start list: name, a podium bar with the win bar over it,
+   then both figures */
+.win-chances { list-style: none; margin: 0; padding: 0; }
+.win-chances li {
+    display: grid;
+    grid-template-columns: minmax(0, 13rem) minmax(0, 1fr) 4.5rem;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.4rem 0;
+}
+.win-chances li + li { border-top: 1px solid var(--border-color); }
+.wc-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-color);
+    text-decoration: none;
+}
+.wc-name:hover { color: var(--primary-color); }
+.wc-track { position: relative; height: 10px; border-radius: 5px; background: #f2f4f6; overflow: hidden; }
+.wc-track i { position: absolute; inset: 0 auto 0 0; border-radius: 5px; }
+.wc-pod, .key-dot.wc-key-pod { background: rgba(232, 93, 4, 0.25); }
+.wc-win, .key-dot.wc-key-win { background: var(--primary-color); }
+.wc-val { display: flex; align-items: baseline; justify-content: flex-end; gap: 0.4rem; font-variant-numeric: tabular-nums; }
+.wc-val b { font-size: 0.9rem; font-weight: 700; color: var(--text-color); }
+.wc-val small { font-size: 0.75rem; color: var(--text-light); }
+@media (max-width: 480px) {
+    .win-chances li { grid-template-columns: minmax(0, 8rem) minmax(0, 1fr) 4rem; gap: 0.5rem; }
+}
 .race-chart-legend {
     display: flex;
     flex-wrap: wrap;

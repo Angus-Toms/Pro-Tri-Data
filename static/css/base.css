@@ -2935,44 +2935,12 @@ body.help-tour-open { overflow: hidden; }
     height: 60px !important;
 }
 
-.chart-container-compact {
-    position: relative;
-    width: 100%;
-    height: 300px;
-}
-
-.chart-container-compact canvas {
-    width: 100% !important;
-    height: 100% !important;
-}
-
 /* 2 col grid for less important graphs */
 .charts-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 20px;
     width: 100%;
-}
-
-.mini-chart {
-    margin-bottom: 1.5rem;
-    min-width: 0; /* Prevent grid blowout */
-}
-
-/* For overall rating histogram - span both graph columns */
-.mini-chart.full-width {
-    grid-column: 1 / -1;
-}
-
-.mini-chart:last-child {
-    margin-bottom: 0;
-}
-
-.mini-chart h4 {
-    margin: 0 0 0.5rem 0;
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-color);
 }
 
 /* ============================================
@@ -4444,6 +4412,24 @@ body.help-tour-open { overflow: hidden; }
     .race-table td.athlete-col,
     .race-table td.race-col { display: block; flex: 1 1 0; min-width: 0; padding-right: 0.75rem; }
     .race-table td.vc.on.hl { display: block; order: 1; text-align: right; }
+    .race-table td.vc.on.ph {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        order: 1;
+        min-width: 2.3rem;
+        padding-left: 0.4rem;
+        line-height: 1.2;
+    }
+    .race-table td.vc.on.ph .cell-label {
+        display: block;
+        font-size: 0.58rem;
+        font-weight: 500;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--text-lighter);
+    }
+    .race-table td.vc.on.ph .pct-bar { display: none; }
     .race-table .hl .race-rating { justify-content: flex-end; }
     .race-table td.toggle-col { display: block; order: 2; }
     .race-table .wide-only { display: none; }
@@ -4452,7 +4438,7 @@ body.help-tour-open { overflow: hidden; }
     .race-table tr.expanded::after { content: ''; flex-basis: 100%; height: 0; order: 3; }
     /* The drawer is a three-column grid: the view's other columns still on
        screen at this width, plus any marked .drawer (predicted splits) */
-    .race-table tr.expanded td.vc.on:not(.hl):not(.hide-768):not(.hide-1024),
+    .race-table tr.expanded td.vc.on:not(.hl):not(.ph):not(.hide-768):not(.hide-1024),
     .race-table tr.expanded td.vc.on.drawer {
         display: flex;
         flex: 0 0 calc((100% - 0.4rem) / 3);

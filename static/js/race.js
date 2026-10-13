@@ -34,68 +34,6 @@ function initSortableListeners() {
     });
 }
 
-// Start-list histograms (predicted times, current ratings) - destroys existing
-// instances before recreating
-function initRaceCharts() {
-    const charts = [
-        // Time histograms
-        { id: 'overall-times-canvas', data: 'overall-time-hist-data', label: 'Overall Time', fmt: 'time' },
-        { id: 'swim-times-canvas',    data: 'swim-time-hist-data',    label: 'Swim Time',    fmt: 'time' },
-        { id: 'bike-times-canvas',    data: 'bike-time-hist-data',    label: 'Bike Time',    fmt: 'time' },
-        { id: 'run-times-canvas',     data: 'run-time-hist-data',     label: 'Run Time',     fmt: 'time' },
-        // Rating histograms
-        { id: 'overall-ratings-canvas',    data: 'overall-ratings-hist-data',    label: 'Overall Rating',    fmt: 'rating' },
-        { id: 'swim-ratings-canvas',       data: 'swim-ratings-hist-data',       label: 'Swim Rating',       fmt: 'rating' },
-        { id: 'bike-ratings-canvas',       data: 'bike-ratings-hist-data',       label: 'Bike Rating',       fmt: 'rating' },
-        { id: 'run-ratings-canvas',        data: 'run-ratings-hist-data',        label: 'Run Rating',        fmt: 'rating' },
-        { id: 'transition-ratings-canvas', data: 'transition-ratings-hist-data', label: 'Transition Rating', fmt: 'rating' },
-    ];
-
-    charts.forEach(({ id, data: dataId, label, fmt }) => {
-        const canvas = document.getElementById(id);
-        if (!canvas) return;
-        const existing = Chart.getChart(canvas);
-        if (existing) existing.destroy();
-        const data = getJSON(dataId);
-        if (!data || !data.datasets) return;
-
-        new Chart(canvas, {
-            type: 'bar',
-            data,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                parsing: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        mode: 'index',
-                        callbacks: {
-                            title: ctx => ctx[0].raw.label,
-                            label: ctx => `Athletes: ${ctx.raw.y}`,
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        beginAtZero: false,
-                        type: 'linear',
-                        title: { display: true, text: label },
-                        ticks: fmt === 'time'
-                            ? { callback: v => isNaN(+v) ? v : formatTime(+v) }
-                            : { stepSize: 100, callback: v => Math.round(v) }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        type: 'linear',
-                        title: { display: true, text: 'Number of Athletes' }
-                    }
-                }
-            }
-        });
-    });
-}
-
 // ============================================================
 //  ATHLETE PREDICTION
 // ============================================================
@@ -669,7 +607,7 @@ function _drawGroups(chart, athletes) {
         }).join('');
 }
 
-function _drawSplits(chart, athletes) {
+function _drawSplits(chart, athletes, data) {
     const plot = chart.querySelector('.race-chart-plot');
     const W = plot.clientWidth;
     const narrow = W < 560;
@@ -685,7 +623,7 @@ function _drawSplits(chart, athletes) {
     _offScaleNote(chart, rows.flatMap(r => r.off.map(p => `${escapeHtml(p.a.name)} ${r.label.toLowerCase()} ${formatTime(p.v)}`)));
 
     plot.innerHTML = '';
-    const svg = _svg('svg', { width: W, role: 'img', 'aria-label': 'Swim, bike, run and overall times of every athlete' }, plot);
+    const svg = _svg('svg', { width: W, role: 'img', 'aria-label': `${data.predicted ? 'Predicted swim' : 'Swim'}, bike, run and overall times of every athlete` }, plot);
     let y = 6;
     for (const row of rows) {
         const vals = row.pts.map(p => p.v).sort((a, b) => a - b);
@@ -719,7 +657,7 @@ function _drawSplits(chart, athletes) {
         for (const p of [...placed].sort((p, q) => _isPod(p.a) - _isPod(q.a))) {
             const rank = row.all.indexOf(p.v) + 1;
             _finisherDot(svg, p.a, p.x, cy + off(p.k), R,
-                () => `<b>${escapeHtml(p.a.name)}</b> · ${_finish(p.a)}<br>${row.label}: ${formatTime(p.v)} (${_ordinal(rank)})`);
+                () => `<b>${escapeHtml(p.a.name)}</b> · ${data.predicted ? 'predicted ' + _ordinal(p.a.pos) : _finish(p.a)}<br>${row.label}: ${formatTime(p.v)} (${_ordinal(rank)})`);
         }
         y = axisY + 26;
     }

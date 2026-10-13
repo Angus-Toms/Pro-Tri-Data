@@ -68,7 +68,6 @@
 <script src="{{ STATIC_BASE_URL }}js/share.js?v={{ ASSET_VERSION }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    initRaceCharts();
     initSortableListeners();
     initPrediction();
     initRaceTable();
@@ -89,7 +88,6 @@ async function switchRace(raceId) {
 
     initSortIcons();
     initSortableListeners();
-    initRaceCharts();
     initPrediction();
     initRaceTable();
     initResultCharts();

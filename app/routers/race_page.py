@@ -1,5 +1,4 @@
 
-import numpy as np
 import pycountry
 
 from datetime import date
@@ -111,12 +110,10 @@ def _build_breadcrumb(race, race_id, recurring_meta):
 def _prediction_rows(stored, people, extra=()):
     """Format stored prediction rows (queries.get_race_predictions) for the
     template. people maps athlete_id -> results/start-list dict supplying
-    name/country/year_of_birth (+ any `extra` keys). Returns (rows, raw_times)
-    with raw_times keyed by discipline for the upcoming-page histograms."""
+    name/country/year_of_birth (+ any `extra` keys)."""
     DISCS = ['overall', 'swim', 'bike', 'run']
     best = {d: min((r[f'{d}_s'] for r in stored if r[f'{d}_s']), default=None) for d in DISCS}
     rows = []
-    raw_times = {d: [] for d in DISCS}
     for r in stored:
         p = people.get(r['athlete_id'])
         if p is None:
@@ -147,92 +144,10 @@ def _prediction_rows(stored, people, extra=()):
             else:
                 row[f'{disc}_fastest']  = bool(raw and b and raw == b)
                 row[f'{disc}_behind_s'] = format_time_behind(raw - b) if (raw and b and raw != b) else ''
-            if raw:
-                raw_times[disc].append(raw)
         rows.append(row)
-    return rows, raw_times
+    return rows
 
 
-def _build_time_histograms(time_values, bins=20):
-    """
-    Build Chart.js histogram data from raw time arrays.
-    time_values: dict of discipline -> list of seconds values.
-    """
-    discipline_details = {
-        "overall": {"background": "#357ABD", "display_name": "Overall"},
-        "swim":    {"background": "#4CAF50", "display_name": "Swim"},
-        "bike":    {"background": "#FF9800", "display_name": "Bike"},
-        "run":     {"background": "#E91E63", "display_name": "Run"},
-    }
-    chart_data = {}
-    for disc, values in time_values.items():
-        if not values:
-            chart_data[disc] = {}
-            continue
-        counts, bin_edges = np.histogram(values, bins=bins)
-        bin_centers = [(bin_edges[i] + bin_edges[i + 1]) / 2 for i in range(len(counts))]
-        bin_labels = []
-        for i in range(len(bin_edges) - 1):
-            if round(bin_edges[i + 1]) - round(bin_edges[i]) <= 1:
-                bin_labels.append(format_time(round(bin_edges[i])))
-            else:
-                bin_labels.append(f"{format_time(int(bin_edges[i]))} - {format_time(int(bin_edges[i + 1]))}")
-        chart_data[disc] = {
-            "labels": bin_centers,
-            "datasets": [{
-                "label": discipline_details[disc]["display_name"],
-                "data": [
-                    {"x": c, "y": int(n), "label": lbl}
-                    for c, n, lbl in zip(bin_centers, counts, bin_labels)
-                ],
-                "backgroundColor": discipline_details[disc]["background"],
-                "borderWidth": 0,
-                "barPercentage": 1.0,
-            }],
-        }
-    return chart_data
-
-
-def _build_rating_histograms(rating_values, bins=20):
-    """Build Chart.js histogram data from raw rating arrays."""
-    discipline_details = {
-        "overall":    {"background": "#357ABD"},
-        "swim":       {"background": "#4CAF50"},
-        "bike":       {"background": "#FF9800"},
-        "run":        {"background": "#E91E63"},
-        "transition": {"background": "#9C27B0"},
-    }
-    chart_data = {}
-    for disc, values in rating_values.items():
-        if not values:
-            chart_data[disc] = {}
-            continue
-        counts, bin_edges = np.histogram(values, bins=bins)
-        bin_centers = [(bin_edges[i] + bin_edges[i + 1]) / 2 for i in range(len(counts))]
-        bin_labels = [
-            f"{int(bin_edges[i])} - {int(bin_edges[i + 1])}"
-            for i in range(len(bin_edges) - 1)
-        ]
-        chart_data[disc] = {
-            "labels": bin_centers,
-            "datasets": [{
-                "label": disc.capitalize(),
-                "data": [
-                    {"x": c, "y": int(n), "label": lbl}
-                    for c, n, lbl in zip(bin_centers, counts, bin_labels)
-                ],
-                "backgroundColor": discipline_details[disc]["background"],
-                "borderWidth": 0,
-                "barPercentage": 1.0,
-            }],
-        }
-    return chart_data
-
-
-# Legacy URL scheme: upcoming races used to live at /upcoming/race/<id> and
-# now share /race/<id>. Google indexed the old URLs (start-list queries earn
-# clicks pre-race), so hand that equity to the current URL instead of 404ing.
-@router.get("/upcoming/race/{race_id}")
 def get_upcoming_race_legacy(race_id: int):
     return RedirectResponse(f"/race/{race_id}", status_code=301)
 
@@ -296,7 +211,7 @@ def get_race(request: Request, race_id: int, partial: bool = False):
         stored = queries.get_race_predictions(race_id)
         if stored:
             people = {r["athlete_id"]: r for r in results}
-            predictions, _ = _prediction_rows(stored, people)
+            predictions = _prediction_rows(stored, people)
             pred_pos_map = {r["athlete_id"]: r["predicted_position"] for r in stored}
             pos_diffs = {}
             for r in results:
@@ -748,12 +663,12 @@ def _get_upcoming_race(request: Request, race, partial: bool):
     upcoming_rank_total = queries.get_race_rankings_total(race['gender'], rank_bucket)
 
     # Predictions precomputed at build time; join names/images from entries.
-    predictions, pred_raw_times = None, {}
+    predictions, stored = None, []
     if is_elite:
         stored = queries.get_race_predictions(race_id)
         if stored:
             people = {e['athlete_id']: e for e in entries}
-            predictions, pred_raw_times = _prediction_rows(stored, people, extra=('profile_img',))
+            predictions = _prediction_rows(stored, people, extra=('profile_img',))
 
     current_year = date.today().year
     for e in entries:
@@ -799,11 +714,22 @@ def _get_upcoming_race(request: Request, race, partial: bool):
         return 'beginner'
     race_standard_classes = {d: _classify(standards[d], thresholds[d]) for d in standards}
 
-    time_hists   = _build_time_histograms(pred_raw_times)
-    rating_hists = _build_rating_histograms({
-        disc: [e[f'{disc}_rating'] for e in entries if e.get(f'{disc}_rating')]
-        for disc in ['overall', 'swim', 'bike', 'run', 'transition']
-    })
+    # Charts under the start list, drawn by race.js like a finished race's:
+    # the Split Times chart from the predicted splits, and the contenders'
+    # win and podium chances (anyone given 1% or more to win, at most 12).
+    entry_of = {e['athlete_id']: e for e in entries}
+    chart_data = {
+        "predicted": True,
+        "athletes": [{
+            "id":      r['athlete_id'],
+            "name":    entry_of[r['athlete_id']]['name'],
+            "country": entry_of[r['athlete_id']]['country_alpha3'],
+            "img":     bool(entry_of[r['athlete_id']]['profile_img']),
+            "pos":     r['predicted_position'],
+            "splits":  [r['swim_s'] or 0, r['bike_s'] or 0, r['run_s'] or 0, r['overall_s'] or 0],
+        } for r in stored if r['athlete_id'] in entry_of],
+    }
+    contenders = sorted((r for r in predictions or [] if r['win_pct'] >= 0.01), key=lambda r: -r['win_pct'])[:12]
 
     race_date = race['race_date']
     days_until = (race_date - date.today()).days if hasattr(race_date, 'year') else None
@@ -836,15 +762,8 @@ def _get_upcoming_race(request: Request, race, partial: bool):
         "predictions":           predictions,
         "rows":                  rows,
         "views":                 views,
-        "overall_time_hist":     time_hists.get("overall", {}),
-        "swim_time_hist":        time_hists.get("swim", {}),
-        "bike_time_hist":        time_hists.get("bike", {}),
-        "run_time_hist":         time_hists.get("run", {}),
-        "overall_rating_hist":   rating_hists.get("overall", {}),
-        "swim_rating_hist":      rating_hists.get("swim", {}),
-        "bike_rating_hist":      rating_hists.get("bike", {}),
-        "run_rating_hist":       rating_hists.get("run", {}),
-        "transition_rating_hist": rating_hists.get("transition", {}),
+        "chart_data":            chart_data,
+        "contenders":            contenders,
         "race_distance":         queries.get_upcoming_race_distance_type(race_id),
         "days_until":            days_until,
         "entry_count":           len(entries),

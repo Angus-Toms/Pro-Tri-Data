@@ -86,8 +86,8 @@
                 {{ th('pr-bike', 'Bike', 'predictions', dv, 'time', 'hide-768 drawer') }}
                 {{ th('pr-run', 'Run', 'predictions', dv, 'time', 'hide-768 drawer') }}
                 {{ th('pr-overall', 'Overall', 'predictions', dv, 'time', 'hl') }}
-                {{ th('pr-win', 'Win', 'predictions', dv, 'number', 'mid', 'desc') }}
-                {{ th('pr-pod', 'Podium', 'predictions', dv, 'number', 'mid', 'desc') }}
+                {{ th('pr-win', 'Win', 'predictions', dv, 'number', 'mid ph', 'desc') }}
+                {{ th('pr-pod', 'Podium', 'predictions', dv, 'number', 'mid ph', 'desc') }}
                 {% endif %}
                 {{ th('r-overall', 'Overall', 'ratings', dv, 'rating', 'hl', 'desc') }}
                 {{ th('r-swim', 'Swim', 'ratings', dv, 'rating', '', 'desc') }}
@@ -109,8 +109,8 @@
                 {% call td('predictions', dv, p[d ~ '_s'] if p else none, label, 'hide-768 drawer') %}{{ time(p[d ~ '_s'], p[d ~ '_fastest'], p[d ~ '_behind_s']) if p else time(none) }}{% endcall %}
                 {% endfor %}
                 {% call td('predictions', dv, p.overall_s if p else none, 'Overall', 'hl') %}{% if p and p.overall_s %}<span class="overall-time">{{ p.overall_s }}</span>{% if p.overall_behind_s %}<span class="time-cell-gap">{{ p.overall_behind_s }}</span>{% endif %}{% else %}<span class="no-value">-</span>{% endif %}{% endcall %}
-                {% call td('predictions', dv, p.win_pct if p else none, 'Win', 'mid') %}{{ pct(p.win_pct, p.win_pct_label) if p else time(none) }}{% endcall %}
-                {% call td('predictions', dv, p.podium_pct if p else none, 'Podium', 'mid') %}{{ pct(p.podium_pct, p.podium_pct_label, true) if p else time(none) }}{% endcall %}
+                {% call td('predictions', dv, p.win_pct if p else none, 'Win', 'mid ph') %}{{ pct(p.win_pct, p.win_pct_label) if p else time(none) }}{% endcall %}
+                {% call td('predictions', dv, p.podium_pct if p else none, 'Podium', 'mid ph') %}{{ pct(p.podium_pct, p.podium_pct_label, true) if p else time(none) }}{% endcall %}
                 {% endif %}
                 {% for d, label, cls in [('overall', 'Overall', 'hl'), ('swim', 'Swim', ''), ('bike', 'Bike', ''), ('run', 'Run', ''), ('transition', 'Transition', 'hide-768')] %}
                 {% call td('ratings', dv, a[d ~ '_rating'], label, cls) %}{{ rating(a[d ~ '_rating'], none, d == 'overall') }}{% endcall %}
@@ -123,64 +123,44 @@
 </div>
 {{ foot() }}
 
-<!-- Predicted Time Distributions -->
+<!-- Charts: drawn by race.js initResultCharts from race-chart-data, as on a finished race -->
 {% if predictions %}
-<div class="page-section-head">Predicted Time Distributions</div>
-<div class="charts-grid">
-    <div class="mini-chart">
-        <h4>Overall Times</h4>
-        <div class="chart-container-compact"><canvas id="overall-times-canvas"></canvas></div>
+<div class="page-section-head">Predicted Split Times</div>
+<div class="race-chart" data-chart="splits">
+    <div class="race-chart-legend">
+        {% for a in chart_data.athletes if a.pos <= 3 %}
+        <span class="race-chart-key"><i class="key-dot pod-{{ a.pos }}"></i>{{ ordinal(a.pos) }} {{ a.name }}</span>
+        {% endfor %}
     </div>
-    <div class="mini-chart">
-        <h4>Swim Times</h4>
-        <div class="chart-container-compact"><canvas id="swim-times-canvas"></canvas></div>
+    <div class="race-chart-plot"></div>
+</div>
+<script id="race-chart-data" type="application/json">{{ chart_data | tojson }}</script>
+
+{% if contenders %}
+{# Bars scale to the best podium chance, so the favourite's fills the track #}
+{% set top = contenders | map(attribute='podium_pct') | max %}
+<div class="page-section-head">Win Chances</div>
+<p class="page-section-sub race-chart-sub">Everyone given at least a 1% chance of winning, with their podium chance behind.</p>
+<div class="race-chart">
+    <div class="race-chart-legend">
+        <span class="race-chart-key"><i class="key-dot wc-key-win"></i>Win</span>
+        <span class="race-chart-key"><i class="key-dot wc-key-pod"></i>Podium</span>
     </div>
-    <div class="mini-chart">
-        <h4>Bike Times</h4>
-        <div class="chart-container-compact"><canvas id="bike-times-canvas"></canvas></div>
-    </div>
-    <div class="mini-chart">
-        <h4>Run Times</h4>
-        <div class="chart-container-compact"><canvas id="run-times-canvas"></canvas></div>
-    </div>
+    <ol class="win-chances">
+        {% for r in contenders %}
+        <li>
+            <a class="wc-name" href="/athlete/{{ r.athlete_id }}">{{ r.name }} {{ flag(r.country_alpha3) }}</a>
+            <span class="wc-track" aria-hidden="true">
+                <i class="wc-pod" style="width: {{ (r.podium_pct / top * 100) | round(1) }}%"></i>
+                <i class="wc-win" style="width: {{ (r.win_pct / top * 100) | round(1) }}%"></i>
+            </span>
+            <span class="wc-val"><b>{{ r.win_pct_label }}</b><small>{{ r.podium_pct_label }}</small></span>
+        </li>
+        {% endfor %}
+    </ol>
 </div>
 {% endif %}
-
-<!-- Rating Distributions -->
-<div class="page-section-head">Rating Distributions</div>
-<div class="charts-grid">
-    <div class="mini-chart full-width">
-        <h4>Overall Ratings</h4>
-        <div class="chart-container-compact"><canvas id="overall-ratings-canvas"></canvas></div>
-    </div>
-    <div class="mini-chart">
-        <h4>Swim Ratings</h4>
-        <div class="chart-container-compact"><canvas id="swim-ratings-canvas"></canvas></div>
-    </div>
-    <div class="mini-chart">
-        <h4>Bike Ratings</h4>
-        <div class="chart-container-compact"><canvas id="bike-ratings-canvas"></canvas></div>
-    </div>
-    <div class="mini-chart">
-        <h4>Run Ratings</h4>
-        <div class="chart-container-compact"><canvas id="run-ratings-canvas"></canvas></div>
-    </div>
-    <div class="mini-chart">
-        <h4>Transition Ratings</h4>
-        <div class="chart-container-compact"><canvas id="transition-ratings-canvas"></canvas></div>
-    </div>
-</div>
-
-<!-- Chart data (read by race.js initRaceCharts) -->
-<script id="overall-time-hist-data" type="application/json">{{ overall_time_hist | tojson }}</script>
-<script id="swim-time-hist-data" type="application/json">{{ swim_time_hist | tojson }}</script>
-<script id="bike-time-hist-data" type="application/json">{{ bike_time_hist | tojson }}</script>
-<script id="run-time-hist-data" type="application/json">{{ run_time_hist | tojson }}</script>
-<script id="overall-ratings-hist-data" type="application/json">{{ overall_rating_hist | tojson }}</script>
-<script id="swim-ratings-hist-data" type="application/json">{{ swim_rating_hist | tojson }}</script>
-<script id="bike-ratings-hist-data" type="application/json">{{ bike_rating_hist | tojson }}</script>
-<script id="run-ratings-hist-data" type="application/json">{{ run_rating_hist | tojson }}</script>
-<script id="transition-ratings-hist-data" type="application/json">{{ transition_rating_hist | tojson }}</script>
+{% endif %}
 {% endif %}
 
 <!-- Comments: empty host, partial fetched client-side so race HTML stays anonymous -->
