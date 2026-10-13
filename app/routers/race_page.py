@@ -716,7 +716,8 @@ def _get_upcoming_race(request: Request, race, partial: bool):
 
     # Charts under the start list, drawn by race.js like a finished race's:
     # the Split Times chart from the predicted splits, and the contenders'
-    # win and podium chances (anyone given 1% or more to win, at most 12).
+    # win and podium chances: everyone whose win chance shows as at least 1%
+    # in the start list, which rounds to whole percents.
     entry_of = {e['athlete_id']: e for e in entries}
     chart_data = {
         "predicted": True,
@@ -729,7 +730,7 @@ def _get_upcoming_race(request: Request, race, partial: bool):
             "splits":  [r['swim_s'] or 0, r['bike_s'] or 0, r['run_s'] or 0, r['overall_s'] or 0],
         } for r in stored if r['athlete_id'] in entry_of],
     }
-    contenders = sorted((r for r in predictions or [] if r['win_pct'] >= 0.01), key=lambda r: -r['win_pct'])[:12]
+    contenders = sorted((r for r in predictions or [] if r['win_pct'] >= 0.005), key=lambda r: -r['win_pct'])
 
     race_date = race['race_date']
     days_until = (race_date - date.today()).days if hasattr(race_date, 'year') else None
