@@ -35,9 +35,12 @@ _TIER_POINTS = {
     "sprint_world_champs":    900,
     "wtcs":                   800,
     "u23_world_champs":       750,
+    "continental_champs":     550,
     "world_cup":              500,
     "junior_world_champs":    300,
+    "u23_continental_champs": 250,
     "continental_cup":        200,
+    "junior_continental_champs": 120,
     "french_grand_prix":      150,
     "ag_world_champs":       1000,
     "ag_continental_champs":  500,
@@ -45,6 +48,7 @@ _TIER_POINTS = {
     "im_world_champs":       1500,
     "im_703_world_champs":   1000,
     "t100":                   800,
+    "long_distance_champs":   700,
     "im":                     700,
     "im_703":                 400,
     "challenge":              300,
@@ -66,10 +70,14 @@ _CHAMPIONSHIP_LABELS = {
     "junior_world_champs":   ("Junior World Champion",     "Junior World Championship",  "Junior World Championships"),
     "sprint_world_champs":   ("Sprint World Champion",     "Sprint World Championship",  "Sprint World Championships"),
     "grand_final":           ("Grand Final Win",           "Grand Final",                "Grand Final"),
+    "continental_champs":        ("Continental Champion",        "Continental Championship",        "Continental Championships"),
+    "u23_continental_champs":    ("U23 Continental Champion",    "U23 Continental Championship",    "U23 Continental Championships"),
+    "junior_continental_champs": ("Junior Continental Champion", "Junior Continental Championship", "Junior Continental Championships"),
     "ag_world_champs":       ("AG World Champion",         "AG World Championship",      "AG World Championships"),
     "ag_continental_champs": ("AG Continental Champion",   "AG Continental",             "AG Continental Championships"),
     "im_world_champs":       ("Ironman World Champion",    "Ironman World Championship", "Ironman World Championships"),
     "im_703_world_champs":   ("Ironman 70.3 World Champion", "Ironman 70.3 World Championship", "Ironman 70.3 World Championships"),
+    "long_distance_champs":  ("Long Distance World Champion", "Long Distance World Championship", "Long Distance World Championships"),
 }
 _TIER_LABELS = {
     "wtcs":              "WTCS",
@@ -155,8 +163,15 @@ def _format_position(tier, pos):
 # Words a palmares tier row already says, stripped from race handles so the
 # races read as places: "IM 70.3 Oceanside 26" -> "Oceanside 26".
 _HANDLE_NOISE = re.compile(
-    r"\b(?:IM 70\.3|IM|Challenge|T100|AG|Junior|U23|WTCS|WC|BG|CC|FGP|Olympics|Grand Final"
-    r"|World Champs|World Championships?|Conti Champs)\b|\s-\s|\s\d{2}$")
+    r"\b(?:IM 70\.3|IM|Challenge|T100|AG|Elite|Junior|U23|Youth|WTCS|WC|BG|CC|FGP|Olympics|Grand Final"
+    r"|World Champs|World Championships?|Conti Champs|ITU Long Distance|WT Long Distance Championships)\b|\s-\s|\s\d{2}$")
+
+
+def _palmares_race_name(r):
+    # Old ITU Long Distance races have neither a place in the handle nor a
+    # venue, so they read as the year alone
+    place = " ".join(_HANDLE_NOISE.sub(" ", r["race_handle"]).split()) or r["venue"].split(",")[0]
+    return f'{place} {r["race_date"]:%y}' if place else str(r["race_date"].year)
 
 
 def _build_palmares_tiers(notable_raw):
@@ -191,7 +206,7 @@ def _build_palmares_tiers(notable_raw):
             "best":   best,
             "races":  [{"race_id": r["race_id"], "position": r["position"],
                         "handle": r["race_handle"], "year": r["race_date"].year,
-                        "name": f'{" ".join(_HANDLE_NOISE.sub(" ", r["race_handle"]).split()) or r["venue"].split(",")[0]} {r["race_date"]:%y}'}
+                        "name": _palmares_race_name(r)}
                        for r in shown],
         })
     if not rows:
