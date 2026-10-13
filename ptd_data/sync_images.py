@@ -129,7 +129,10 @@ def download_images(athletes: list[tuple[int, str]]) -> None:
     downloaded = 0
     for athlete_id, url in athletes:
         dest = RAW_DIR / f"{athlete_id}.jpg"
-        if dest.exists():
+        # Already processed counts too: the nightly build starts with the
+        # box's WebPs but none of the 3.5GB of raw JPEGs behind them
+        done = all((RUNTIME_ATHLETE_IMAGES_DIR / str(s) / f"{athlete_id}.webp").exists() for s in SIZES)
+        if dest.exists() or done:
             continue
         try:
             r = requests.get(url, timeout=15)

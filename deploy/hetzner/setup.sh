@@ -31,10 +31,10 @@ export PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64
 /opt/ptd/.venv/bin/playwright install-deps chromium
 sudo -u ptd env PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64 /opt/ptd/.venv/bin/playwright install chromium
 
-# ptd can restart its own service from deploy.sh without a password
+# ptd can restart its own service from the nightly workflow without a password
 echo "ptd ALL=(root) NOPASSWD: /bin/systemctl restart ptd" > /etc/sudoers.d/ptd
 chmod 440 /etc/sudoers.d/ptd
-# deploy.sh ssh's in as ptd with the same key as root
+# The nightly workflow ssh's in as ptd; add its deploy key to authorized_keys
 mkdir -p /home/ptd/.ssh && cp /root/.ssh/authorized_keys /home/ptd/.ssh/
 chown -R ptd:ptd /home/ptd/.ssh && chmod 700 /home/ptd/.ssh
 
@@ -49,4 +49,4 @@ systemctl restart caddy
 
 ufw allow OpenSSH; ufw allow 80; ufw allow 443; ufw --force enable
 
-echo "Done. Now scp the DB: ./scripts/deploy.sh --no-git --no-static"
+echo "Done. Now scp a DB to /var/lib/ptd/ptd.duckdb, or run the nightly workflow."

@@ -10,7 +10,7 @@
 <div class="adm-wrap">
     {% include "partials/admin_nav.html" %}
 
-    {% if saved %}<p class="adm-hint" style="color: var(--success-color); font-weight: 600;">Saved {{ saved }}. It ships with the next weekly build.</p>{% endif %}
+    {% if saved %}<p class="adm-hint" style="color: var(--success-color); font-weight: 600;">Saved {{ saved }}. It ships with tonight's build.</p>{% endif %}
 
     <form method="post" action="/admin/startlist/review" class="adm-card">
         <h2>Race</h2>

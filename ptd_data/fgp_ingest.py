@@ -7,7 +7,7 @@ the shared DB schema alongside WT short-course data.
 Usage:
     python -m ptd_data.fgp_ingest
 
-Runs after the WT ingest and before the PTO ingest (see scripts/build_db.sh):
+Runs after the WT ingest and before the PTO ingest (see scripts/build.sh):
 FGP athletes must exist before PTO matching scans unlinked rows, and FGP
 matching itself wants the freshest WT roster.
 

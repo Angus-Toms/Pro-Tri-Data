@@ -95,5 +95,5 @@ phase and read the ratings table). The live site and the social-media post
 generator call the same prediction code, so they agree.
 
 Predicted times and the win/podium columns are then precomputed per race into
-`race_predictions` by `python -m ptd_data.predictions` (step 11 of
-`scripts/build_db.sh`), which wipes and repopulates the whole table every run.
+`race_predictions` by `python -m ptd_data.predictions` (run by
+`scripts/build.sh`), which wipes and repopulates the whole table every run.

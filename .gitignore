@@ -18,7 +18,7 @@ __pycache__/
 .wrangler/
 debug
 
-# Local secrets sourced by scripts/deploy.sh (RENDER_API_KEY etc)
+# Old local secrets file (no longer read by any script)
 scripts/.env
 
 # Google service-account private key for the Search Console API

@@ -7,7 +7,7 @@ shared DB schema alongside WT / FGP short-course data.
 Usage:
     python -m ptd_data.bundesliga_ingest
 
-Runs after the FGP ingest and before the PTO ingest (see scripts/build_db.sh):
+Runs after the FGP ingest and before the PTO ingest (see scripts/build.sh):
 same rationale as FGP — Bundesliga athletes must exist before PTO matching scans
 unlinked rows, and matching wants the freshest WT + FGP roster (many Bundesliga
 starters also race the French Grand Prix and World Triathlon).

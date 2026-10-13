@@ -299,7 +299,7 @@ Notifications
   comment directly above a reply gets "X replied to your comment on Y race"; each
   tagged user gets "X mentioned you in a comment". Nobody is notified about their
   own comment, and a parent author who is also tagged gets only the reply.
-- Liked-race kinds, written by the update-email script after each weekly build:
+- Liked-race kinds, written by the update-email script each time it runs:
   'startlist' each time a liked upcoming race's start list changes (first list
   out, or entries in or out; a race the script has never seen is only recorded).
   Elite races are stored as soon as WT lists them, before any entries, so they
@@ -318,7 +318,7 @@ Emails (`ptd_users/emails.py`, templates in `templates/emails/`)
 - Table-based HTML with inline styles in the site palette, plus a plain-text part.
   Sent through Resend from `EMAIL_FROM` (default login@protridata.com).
 - Login: subject "Your login link", one button to the confirm page.
-- Follow updates: `scripts/send_update_emails.py`, run after the weekly build
+- Follow updates: `scripts/send_update_emails.py`, run by hand after a nightly build
   against the production database. One email per opted-in user listing new
   results for followed athletes (last 14 days, with rating change), new start-list
   entries with a predicted finish (rank by rating, as the site's predicted podium),
@@ -334,7 +334,7 @@ Emails (`ptd_users/emails.py`, templates in `templates/emails/`)
 ## 6. Extras worth adding
 
 - Podium picks: before a followed upcoming race, the user picks a podium; after the
-  weekly build the picks are scored against results and against the model's own
+  nightly build the picks are scored against results and against the model's own
   prediction. One table `podium_picks (user_id, race_id, picks, score)`, a pick widget
   on the upcoming race page, a "your picks" strip on the feed and a per-season user
   leaderboard. Gives a reason to return before and after every race.

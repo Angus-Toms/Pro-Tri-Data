@@ -400,7 +400,7 @@ def create_schema(conn):
     """)
 
     # Precomputed race predictions (see ptd_data/predictions.py). Rebuilt on
-    # every weekly build; predictions are a pure function of the read-only DB
+    # every build; predictions are a pure function of the read-only DB
     # so serving from this table replaces the expensive request-time compute.
     # Covers completed elite races and upcoming races with start lists.
     # Raw seconds, 0 = unavailable (format_time(0) renders empty). Names /
@@ -1293,7 +1293,7 @@ def load_instagram_csv(conn):
 
 def merge_instagram_pending(pending_path):
     """Fold the admin tool's append-only pending file (pulled from prod by
-    refresh.sh) into data/instagram.csv. Later rows win per athlete, so a
+    the nightly workflow) into data/instagram.csv. Later rows win per athlete, so a
     re-entered handle or an undo-then-redo resolves to the last action. An
     undo row (empty name and handle) that ends up last drops the athlete
     entirely, putting them back in the queue."""
@@ -1320,7 +1320,7 @@ STARTLISTS_DIR = _DATA_DIR / 'startlists'
 
 def load_manual_startlists(conn):
     """Load hand-entered long-course start lists (data/startlists/*.json,
-    written by /admin/startlist and pulled by refresh.sh) into events /
+    written by /admin/startlist and pulled by the nightly workflow) into events /
     upcoming_races / start_list_entries so they flow through predictions and
     the upcoming pages like WT start lists. Ids are minted the way pto_ingest
     mints them (slug_id of the PTO race slug + year + gender), so when the

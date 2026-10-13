@@ -8,7 +8,7 @@ Liked-race updates go to the bell first, for everyone who liked the race
 whether or not they take emails, and the email then picks up the ones it
 hasn't sent, so the bell and the inbox always agree.
 
-Run after the weekly build, against the production DATABASE_URL:
+Run by hand after a nightly build, against the production DATABASE_URL:
     .venv/bin/python -m scripts.send_update_emails
 """
 

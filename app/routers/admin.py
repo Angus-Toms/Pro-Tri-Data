@@ -4,16 +4,16 @@ responses are no-store so Cloudflare never caches them.
 
 /admin/instagram: collate athletes' Instagram handles. Suggests the next
 athlete in priority order (recent elite starts, then rank), saves a handle
-or a skip to an append-only pending CSV in RUNTIME_DATA_DIR. refresh.sh pulls
-that file into data/instagram.csv, so entries reach the DB (and athlete
-pages) on the next build + deploy.
+or a skip to an append-only pending CSV in RUNTIME_DATA_DIR. The nightly
+workflow pulls that file into data/instagram.csv, so entries reach the DB
+(and athlete pages) that night.
 
 /admin/startlist: paste pro men's / women's start lists for long-course
 races nobody publishes programmatically. Names are matched against the DB
 (accent-folded, either name order), unmatched ones can be minted as new
 athletes, and the result is one JSON per event in RUNTIME_DATA_DIR/
-startlists_pending/. refresh.sh pulls those into data/startlists/ and the
-build loads them like WT start lists.
+startlists_pending/. The nightly workflow pulls those into data/startlists/
+and the build loads them like WT start lists.
 """
 import csv
 import hmac
