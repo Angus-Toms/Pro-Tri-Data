@@ -126,7 +126,6 @@ def index(request: Request):
         "total_athletes": counts["athletes"],
         "total_races":    counts["races"],
         "total_results":  counts["results"],
-        "updated":        queries.get_latest_race_date(),
     # The race cards carry like and comment counts, so five minutes at the
     # edge rather than the default hour
     }, headers={"Cache-Control": "public, max-age=0, s-maxage=300"})
