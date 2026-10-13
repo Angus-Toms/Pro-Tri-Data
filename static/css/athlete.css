@@ -377,7 +377,7 @@
     /* White rows with thin inset dividers, as in Head-to-head: the rows sit
        in from the card's edges and carry the divider, cells drop their side
        padding so text still lines up under the header. */
-    .career-ratings tbody tr { margin: 0 0.6rem; background: none; }
+    .career-ratings tbody tr { margin: 0 0.6rem; background: none; border-bottom: 0; }  /* the site's row border doubled the divider */
     .career-ratings tbody tr + tr { border-top: 1px solid var(--border-color); }
     .career-ratings tbody tr td, .career-ratings tbody tr:nth-child(even) td { background: none; }
     .career-ratings tbody td, .career-ratings tbody td:first-child, .career-ratings tbody td:last-child { padding-left: 0; padding-right: 0; }
