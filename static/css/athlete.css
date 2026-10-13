@@ -926,7 +926,16 @@
 
 /* Phones: the career cards become a slim switch and the career summary a
    dense block, as in the audit's phone layout. Form folds to one line. */
-.career-card-sub, .cs-form-sum { display: none; }
+.career-card-sub, .cf-phone { display: none; }
+/* Phone form grid: a plain grid, not a data table. */
+.cf-phone { width: 100%; table-layout: auto; font-variant-numeric: tabular-nums; }
+.cf-phone th, .cf-phone td,
+.cf-phone th:first-child, .cf-phone td:first-child,
+.cf-phone th:last-child, .cf-phone td:last-child { background: none; padding: 0.2rem 0.4rem 0.2rem 0; text-align: left; cursor: default; }
+.cf-phone thead th { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-light); }
+.cf-phone tbody tr:nth-child(even) td, .cf-phone tr:hover td { background: transparent !important; }
+.cf-phone tbody th { font-size: 0.78rem; font-weight: 600; color: var(--text-light); text-transform: none; letter-spacing: 0; }
+.cf-phone tbody td { font-size: 0.88rem; font-weight: 700; color: var(--text-color); }
 @media (max-width: 480px) {
     .career-cards { gap: 0.4rem; }
     .career-card { padding: 0.45rem 0.6rem; gap: 0.05rem; }
@@ -936,18 +945,8 @@
     .career-summary { padding: 0.6rem 0.8rem; margin-top: 0.5rem; }
     .cs-body { gap: 0.6rem; }
     .cs-body.two-col .cs-palmares { padding-top: 0.6rem; }
-    .cs-form-sum {
-        display: flex; align-items: center; gap: 0.5rem; width: 100%; padding: 0.15rem 0;
-        font: inherit; font-size: 0.8rem; color: var(--text-color); text-align: left;
-        background: none; border: 0; cursor: pointer; font-variant-numeric: tabular-nums;
-    }
-    .cs-form-sum > span:nth-child(2) { flex: 1; min-width: 0; line-height: 1.35; }
-    .cs-form-sum b { white-space: nowrap; }
-    .cs-form-sum b { font-weight: 700; }
-    .cs-form-sum svg { flex-shrink: 0; color: var(--text-lighter); transition: transform var(--transition-fast); }
-    .cs-form-sum[aria-expanded="true"] svg { transform: rotate(180deg); }
-    .cs-form:not(.open) .career-form-table { display: none; }
-    .cs-form.open .career-form-table { margin-top: 0.3rem; }
+    .cs-form .career-form-table { display: none; }
+    .cf-phone { display: table; }
     .pt-head { padding-bottom: 0.2rem; }
     .pt-total { padding: 0.35rem 0.5rem; margin: 0 -0.5rem; font-size: 0.85rem; }
     .pt-row summary { padding: 0.32rem 0; font-size: 0.84rem; }

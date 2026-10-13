@@ -191,11 +191,6 @@ function toggleNotableResults(button, targetId) {
     button.classList.toggle('open', !expanded);
 }
 
-// Phones: the one-line Form summary opens the full table.
-document.querySelectorAll('.cs-form-sum').forEach(btn => btn.addEventListener('click', () => {
-    btn.setAttribute('aria-expanded', btn.closest('.cs-form').classList.toggle('open') ? 'true' : 'false');
-}));
-
 // Races table: Times, Ratings and Predictions views of every start in the
 // career. Find, distance and result filters show every match; unfiltered it
 // shows the latest 20 until Show all. While sorted by date, a divider row
