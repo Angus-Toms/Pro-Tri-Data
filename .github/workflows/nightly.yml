@@ -65,11 +65,17 @@ jobs:
           echo "77.42.41.185 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBFEgEd+idK8v/TSqTO8brxclnfxx/FlKmJ3uutAU3i4" > ~/.ssh/known_hosts
 
       # Accounts, comments and follows live only in the box's Postgres, so a
-      # dump a night, kept 14 days, before anything new is deployed
+      # dump a night before anything new is deployed: 14 days kept on the box,
+      # and a copy in the private ptd-backups bucket (expired after 90 days by
+      # a bucket lifecycle rule) in case the box itself goes
       - name: Back up the users DB
         run: |
-          ssh "$PROD" "mkdir -p $DATA/backups && pg_dump -Fc ptd_users > $DATA/backups/ptd_users-\$(date +%F).dump \
+          DUMP=ptd_users-$(date -u +%F).dump
+          ssh "$PROD" "mkdir -p $DATA/backups && pg_dump -Fc ptd_users > $DATA/backups/$DUMP \
             && ls -1t $DATA/backups/ptd_users-*.dump | tail -n +15 | xargs -r rm"
+          scp -q "$PROD:$DATA/backups/$DUMP" "$DUMP"
+          aws s3 cp "$DUMP" "s3://ptd-backups/users/$DUMP" --endpoint-url "$R2" --only-show-errors
+          rm "$DUMP"
 
       - name: Pull the live DB, images and admin entries
         run: |
