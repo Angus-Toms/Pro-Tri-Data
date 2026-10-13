@@ -813,15 +813,17 @@ function rrRender() {
                       color: '#6b7280', font: { size: 11, weight: '600' } } },
     });
 
+    const medal = ctx => disc === 'overall' && MEDAL[ctx.raw?.pos];
     load(disc);
     const chart = new Chart(canvas, {
         type: 'scatter',
         data: { datasets: [
             { data: st.pts, clip: false,
-              pointRadius: ctx => (ctx.raw?.pos <= 3 ? 5.5 : 4),
-              pointHoverRadius: ctx => (ctx.raw?.pos <= 3 ? 7 : 5.5),
-              pointBackgroundColor: ctx => MEDAL[ctx.raw?.pos] || 'rgba(107, 114, 128, 0.6)',
-              pointBorderColor: ctx => (ctx.raw?.pos <= 3 ? 'rgba(0,0,0,0.25)' : 'transparent'),
+              // Medal colours for overall podiums only; legs are plain dots.
+              pointRadius: ctx => (medal(ctx) ? 5.5 : 4),
+              pointHoverRadius: ctx => (medal(ctx) ? 7 : 5.5),
+              pointBackgroundColor: ctx => medal(ctx) || 'rgba(107, 114, 128, 0.6)',
+              pointBorderColor: ctx => (medal(ctx) ? 'rgba(0,0,0,0.25)' : 'transparent'),
               pointBorderWidth: 1 },
             { data: st.dnf, clip: false,
               pointRadius: 4, pointHoverRadius: 5.5, pointBackgroundColor: '#fff',
