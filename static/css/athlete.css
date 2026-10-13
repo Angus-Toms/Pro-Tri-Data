@@ -368,8 +368,9 @@
     .career-ratings.has-change tr { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .career-ratings thead tr { background: var(--navy); }
     .career-ratings thead th { background: none; white-space: normal; }
-    .career-ratings tbody tr { border-top: 1px solid var(--border-color); }
-    .career-ratings tbody tr:nth-child(even) td { background: none; }
+    /* Zebra rows as elsewhere; the grid rows carry the shading. */
+    .career-ratings tbody tr:nth-child(even) { background: #f2f4f6; }
+    .career-ratings tbody tr td { background: none; }
     .career-ratings th, .career-ratings td,
     .career-ratings th.rt-rank, .career-ratings td.rt-rank,
     .career-ratings th.rt-change, .career-ratings td.rt-change,
