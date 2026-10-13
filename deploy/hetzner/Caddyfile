@@ -1,6 +1,14 @@
 # Cloudflare proxies protridata.com and talks to this origin over TLS using a
 # Cloudflare Origin CA cert (SSL mode: Full (strict)). No Let's Encrypt needed.
-protridata.com, www.protridata.com {
+# The site lives on www (the canonical host). The bare domain only redirects
+# there: served as two hosts, each kept its own login cookies, so logging out
+# on one left the other logged in.
+protridata.com {
+    tls /etc/caddy/origin.pem /etc/caddy/origin.key
+    redir https://www.protridata.com{uri} permanent
+}
+
+www.protridata.com {
     tls /etc/caddy/origin.pem /etc/caddy/origin.key
     encode zstd gzip
     reverse_proxy 127.0.0.1:8000

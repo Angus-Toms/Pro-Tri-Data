@@ -42,7 +42,7 @@ STATIC_BASE_URL = (
     else "/static/"
 )
 SITE_BASE_URL = (
-    "https://protridata.com"
+    "https://www.protridata.com"
     if ENV in {"prod", "production"}
     else "http://localhost:8000"
 )
