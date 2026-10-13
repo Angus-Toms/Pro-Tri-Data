@@ -38,14 +38,14 @@
                 <div class="account-photo-main">
                     <span class="account-label">Photo</span>
                     <div class="account-photo-actions">
-                        <form method="post" action="/account/avatar" enctype="multipart/form-data">
+                        <form method="post" action="/account/avatar" enctype="multipart/form-data" onsubmit="window.ptdUser.invalidate()">
                             <label class="btn-secondary btn-small">
                                 {{ 'Change photo' if user.avatar_version else 'Upload photo' }}
                                 <input type="file" name="photo" accept="image/*" class="account-photo-input" onchange="this.form.submit()">
                             </label>
                         </form>
                         {% if user.avatar_version %}
-                        <form method="post" action="/account/avatar/remove">
+                        <form method="post" action="/account/avatar/remove" onsubmit="window.ptdUser.invalidate()">
                             <button type="submit" class="comment-action">Remove</button>
                         </form>
                         {% endif %}
