@@ -16,11 +16,18 @@ curl -fsSL https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt \
     > /etc/apt/sources.list.d/caddy-stable.list
 apt-get update && apt-get install -y caddy
 
+# Postgres for the user system (accounts, comments, follows). The app
+# connects over the local socket as ptd, so no password:
+#   DATABASE_URL=postgresql:///ptd_users?host=/var/run/postgresql
+apt-get install -y postgresql
+
 # App user, code, venv
 id ptd &>/dev/null || useradd -m -s /bin/bash ptd
 mkdir -p /var/lib/ptd/athlete_imgs
 chown -R ptd:ptd /var/lib/ptd
 mkdir -p /opt/ptd && chown ptd:ptd /opt/ptd
+sudo -u postgres psql -tAc "select 1 from pg_roles where rolname='ptd'" | grep -q 1 || sudo -u postgres createuser ptd
+sudo -u postgres psql -tAc "select 1 from pg_database where datname='ptd_users'" | grep -q 1 || sudo -u postgres createdb -O ptd ptd_users
 [ -d /opt/ptd/.git ] || sudo -u ptd git clone https://github.com/Angus-Toms/Pro-Tri-Data.git /opt/ptd
 [ -d /opt/ptd/.venv ] || sudo -u ptd python3 -m venv /opt/ptd/.venv
 sudo -u ptd /opt/ptd/.venv/bin/pip install -q -r /opt/ptd/requirements.txt
@@ -49,4 +56,5 @@ systemctl restart caddy
 
 ufw allow OpenSSH; ufw allow 80; ufw allow 443; ufw --force enable
 
-echo "Done. Now scp a DB to /var/lib/ptd/ptd.duckdb, or run the nightly workflow."
+echo "Done. Now put DATABASE_URL, SECRET_KEY and RESEND_API_KEY in /opt/ptd/.env (mode 600),"
+echo "then scp a DB to /var/lib/ptd/ptd.duckdb, or run the nightly workflow."

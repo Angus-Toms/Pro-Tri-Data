@@ -64,6 +64,13 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           echo "77.42.41.185 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBFEgEd+idK8v/TSqTO8brxclnfxx/FlKmJ3uutAU3i4" > ~/.ssh/known_hosts
 
+      # Accounts, comments and follows live only in the box's Postgres, so a
+      # dump a night, kept 14 days, before anything new is deployed
+      - name: Back up the users DB
+        run: |
+          ssh "$PROD" "mkdir -p $DATA/backups && pg_dump -Fc ptd_users > $DATA/backups/ptd_users-\$(date +%F).dump \
+            && ls -1t $DATA/backups/ptd_users-*.dump | tail -n +15 | xargs -r rm"
+
       - name: Pull the live DB, images and admin entries
         run: |
           scp -q "$PROD:$DATA/ptd.duckdb" ptd_data/ptd.duckdb
