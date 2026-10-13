@@ -35,6 +35,10 @@ data/
 *.duckdb.wal
 *.duckdb.bak*
 *.csv
+# ...except the hand-kept source CSVs the build reads, but not the ingest's
+# merge-candidate review files written next to them
+!ptd_data/data/*.csv
+ptd_data/data/*merge_candidates.csv
 *.log
 *.numbers
 

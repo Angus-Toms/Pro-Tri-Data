@@ -1,0 +1,26 @@
+slug,name,tier,continent,sort_order,description
+world-championships,World Championships,championship,,10,Annual ITU/World Triathlon World Championships (Elite, U23, Junior, Youth).
+im-world-championships,Ironman World Championships,im-worlds,,11,Ironman World Championships - historically Kona; St George in 2022; Kona / Nice alternating men/women from 2023.
+im-703-world-championships,Ironman 70.3 World Championships,im-703-worlds,,12,Ironman 70.3 World Championships - annual middle-distance world championship.
+wt-long-distance-championships,World Triathlon Long Distance Championships,championship,,13,World Triathlon Long Distance Championships - annual long-course world championship at a different venue each year.
+t100,T100 Triathlon World Tour,t100,,15,T100 Triathlon World Tour and its predecessor PTO Open events (PTO US/Canadian/Asian/European Open).
+olympic-games,Olympic Games,olympic-games,,20,Summer Olympic Games triathlon.
+commonwealth-games,Commonwealth Games,commonwealth-games,,21,Commonwealth Games triathlon (including Commonwealth Youth Games).
+fisu-games,FISU World University Games,fisu-games,,22,FISU World University Triathlon Championships.
+wtcs,World Triathlon Championship Series,wtcs,,30,World Triathlon Championship Series (regular rounds and Grand Final).
+world-cup,World Cup,world-cup,,40,World Triathlon Cup circuit.
+dev-regional-cup,Development Regional Cup,world-cup,,41,World Triathlon Development Regional Cup circuit (regional development tier below the World Cup).
+european-champs,European Championships,continental-championship,Europe,45,Europe Triathlon continental championships (Elite, U23, Junior, Youth).
+african-champs,African Championships,continental-championship,Africa,46,Africa Triathlon continental championships.
+americas-champs,Americas Championships,continental-championship,Americas,47,Americas Triathlon continental championships (Pan-American, South American, Central American, etc.).
+asian-champs,Asian Championships,continental-championship,Asia,48,Asia Triathlon continental championships.
+oceania-champs,Oceania Championships,continental-championship,Oceania,49,Oceania Triathlon continental championships.
+european-cup,European Cup,continental-cup,Europe,50,Europe Triathlon continental cup circuit.
+african-cup,African Cup,continental-cup,Africa,51,Africa Triathlon continental cup circuit.
+americas-cup,Americas Cup,continental-cup,Americas,52,Americas Triathlon continental cup circuit.
+asian-cup,Asian Cup,continental-cup,Asia,53,Asia Triathlon continental cup circuit.
+oceania-cup,Oceania Cup,continental-cup,Oceania,54,Oceania Triathlon continental cup circuit.
+french-grand-prix,French Grand Prix,national-series,Europe,55,"French Grand Prix (Triathlon Séries) - FFTRI Division 1 and 2 club championship, draft-legal sprint races."
+german-triathlon-bundesliga,German Triathlon Bundesliga,national-series,Europe,56,"1. Triathlon-Bundesliga - the German draft-legal short-course club league (DTU), since 1996."
+ag-world-champs,Age-Group World Championships,ag-championship,,60,Age-Group World Triathlon Championships (amateur categories).
+ag-european-champs,Age-Group European Championships,ag-championship,Europe,61,Europe Triathlon Age-Group Championships (amateur categories).
