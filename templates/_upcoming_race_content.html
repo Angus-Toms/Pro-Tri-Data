@@ -140,7 +140,6 @@
 {# Bars scale to the best podium chance, so the favourite's fills the track #}
 {% set top = contenders | map(attribute='podium_pct') | max %}
 <div class="page-section-head">Win Chances</div>
-<p class="page-section-sub race-chart-sub">Everyone given at least a 1% chance of winning, with their podium chance behind.</p>
 <div class="race-chart">
     <div class="race-chart-legend">
         <span class="race-chart-key"><i class="key-dot wc-key-win"></i>Win</span>
