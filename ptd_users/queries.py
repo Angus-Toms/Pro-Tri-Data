@@ -187,16 +187,23 @@ async def comment_counts(race_ids):
 
 
 async def toggle_follow(user_id, kind, ref_id):
-    """Returns True if now following, False if the toggle removed the follow."""
+    """Returns True if now following, False if the toggle removed the follow.
+    Following a person tells them in the bell, once per follower."""
     deleted = await db.pool.fetchval("""
         delete from follows where user_id = $1 and kind = $2 and ref_id = $3
         returning true
     """, user_id, kind, ref_id)
     if deleted:
         return False
-    await db.pool.execute("""
-        insert into follows (user_id, kind, ref_id) values ($1, $2, $3)
-    """, user_id, kind, ref_id)
+    async with db.pool.acquire() as conn, conn.transaction():
+        await conn.execute("""
+            insert into follows (user_id, kind, ref_id) values ($1, $2, $3)
+        """, user_id, kind, ref_id)
+        if kind == "user":
+            await conn.execute("""
+                insert into notifications (user_id, kind, actor_id) values ($1, 'follow', $2)
+                on conflict (user_id, actor_id) where kind = 'follow' do nothing
+            """, ref_id, user_id)
     return True
 
 
@@ -407,15 +414,16 @@ async def unread_notification_count(user_id):
 
 
 async def list_notifications(user_id, limit=20):
-    """Latest notifications, newest first: replies and tags with who acted,
-    and start-list and results updates for liked races. A comment removed
-    since keeps its notification out of the list."""
+    """Latest notifications, newest first: replies, tags and new followers with
+    who acted, and start-list and results updates for liked races. A comment
+    removed since keeps its notification out of the list."""
     rows = await db.pool.fetch("""
         select n.notification_id, n.kind, n.created_at, n.read_at, n.detail,
-               coalesce(c.race_id, n.race_id) as race_id, c.comment_id, u.display_name
+               coalesce(c.race_id, n.race_id) as race_id, c.comment_id, n.actor_id,
+               u.display_name
         from notifications n
         left join comments c using (comment_id)
-        left join users u on u.user_id = c.user_id
+        left join users u on u.user_id = coalesce(c.user_id, n.actor_id)
         where n.user_id = $1
           and (n.comment_id is null or (c.hidden_at is null and c.deleted_at is null))
         order by n.created_at desc

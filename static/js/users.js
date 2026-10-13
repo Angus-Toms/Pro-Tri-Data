@@ -519,12 +519,13 @@ function initNotifications(me) {
                 mention:   () => `<strong>${escHtml(n.actor)}</strong> mentioned you in a comment`,
                 startlist: () => `<strong>${escHtml(n.race)}</strong>: ${escHtml(n.change)}`,
                 results:   () => `Results are in for <strong>${escHtml(n.race)}</strong>`,
+                follow:    () => `<strong>${escHtml(n.actor)}</strong> started following you`,
             }[n.kind]();
             return `<a class="notif-item${n.unread ? ' unread' : ''}" href="${n.url}">
                 <span class="notif-text">${text}</span>
                 <span class="notif-when">${escHtml(n.when)}</span>
             </a>`;
-        }).join('') : '<div class="notif-empty">No notifications yet. Replies, tags and news on races you like appear here.</div>';
+        }).join('') : '<div class="notif-empty">No notifications yet. Replies, tags, new followers and news on races you like appear here.</div>';
         if (!badge.hidden) {
             badge.hidden = true;
             await fetch('/notifications/read', { method: 'POST' });

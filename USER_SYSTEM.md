@@ -299,6 +299,8 @@ Notifications
   comment directly above a reply gets "X replied to your comment on Y race"; each
   tagged user gets "X mentioned you in a comment". Nobody is notified about their
   own comment, and a parent author who is also tagged gets only the reply.
+- 'follow', written with the follow: "X started following you", linking to X's
+  profile. Once per follower, so unfollowing and following again stays quiet.
 - Liked-race kinds, written by the update-email script each time it runs:
   'startlist' each time a liked upcoming race's start list changes (first list
   out, or entries in or out; a race the script has never seen is only recorded).

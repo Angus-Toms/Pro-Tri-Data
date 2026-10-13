@@ -275,7 +275,9 @@ async def notifications(request: Request):
     out = []
     for n in notes:
         race = races.get(n["race_id"])
-        if n["comment_id"]:
+        if n["kind"] == "follow":
+            out.append({"kind": "follow", "actor": n["display_name"], "url": f"/user/{n['actor_id']}"})
+        elif n["comment_id"]:
             out.append({"kind": n["kind"], "actor": n["display_name"],
                         "race": race["race_title"] if race else None,
                         "url": f"/race/{n['race_id']}#comment-{n['comment_id']}"})

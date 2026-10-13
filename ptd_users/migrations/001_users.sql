@@ -73,16 +73,39 @@ create table comment_reactions (
     primary key (comment_id, user_id)         -- one reaction per person per comment
 );
 
+-- The bell. Replies and tags point at a comment, a new follower at the person
+-- following. Race likes double as "keep me posted": every start-list change
+-- for a liked upcoming race, and its results once, land here too, and the
+-- update email reads the same rows, so the bell and the inbox never disagree.
 create table notifications (
     notification_id bigint generated always as identity primary key,
     user_id    bigint not null references users on delete cascade,     -- recipient
-    comment_id bigint not null references comments on delete cascade,  -- the reply or mention
-    kind       text not null check (kind in ('reply', 'mention')),
+    kind       text not null check (kind in ('reply', 'mention', 'follow', 'startlist', 'results')),
+    comment_id bigint references comments on delete cascade,           -- reply / mention
+    actor_id   bigint references users on delete cascade,              -- follow: the follower
+    race_id    bigint,                    -- startlist / results: DuckDB race id
+    detail     jsonb,                     -- startlist: {entries, added, removed, first}
     created_at timestamptz not null default now(),
     read_at    timestamptz,
-    unique (user_id, comment_id)
+    unique (user_id, comment_id),
+    constraint notifications_target check (
+        (kind in ('reply', 'mention')) = (comment_id is not null)
+        and (kind = 'follow') = (actor_id is not null)
+        and (kind in ('startlist', 'results')) = (race_id is not null))
 );
 create index notifications_by_user on notifications (user_id, created_at desc);
+-- Results are announced once per race, and a follower once per person:
+-- unfollowing and following again doesn't notify twice.
+create unique index notifications_results_once on notifications (user_id, race_id) where kind = 'results';
+create unique index notifications_follow_once on notifications (user_id, actor_id) where kind = 'follow';
+
+-- The start list every upcoming race had at the last update run, so the next
+-- run can tell what changed. Rows go once a race has left the upcoming list.
+create table race_startlists (
+    race_id     bigint primary key,
+    athlete_ids bigint[] not null,
+    seen_at     timestamptz not null default now()
+);
 
 -- "Continue as" on the login page: a one-time token stored in a browser cookie
 -- at logout, so that browser can log straight back in without an email link.
