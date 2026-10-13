@@ -1,6 +1,6 @@
 """Build-time precompute of race predictions and course conditions.
 
-Predictions are a pure function of the weekly read-only DB (pre-race ratings,
+Predictions are a pure function of the built DB (pre-race ratings,
 form, prediction models, start lists), so they are computed once per build and
 served straight from the race_predictions / race_course_conditions tables.
 The anchor/form logic here previously lived in app/routers/race_page.py and
@@ -11,8 +11,19 @@ Covers:
   - upcoming races with start lists (race page, event podium, athlete page)
   - course conditions, pooled per event across its elite races
 
-Run as the build step after ratings: python3 -m ptd_data.predictions
+Run as the build step after ratings:
+    python -m ptd_data.predictions             # every race (the full build)
+    python -m ptd_data.predictions --days 30   # nightly: events with a race in the
+                                               # last 30 days, plus every upcoming race
+
+A completed race's prediction only changes when ratings before it do, and the
+nightly ratings run only rewrites them from the earliest new race on, so older
+events keep their rows. They miss the nightly refit of the prediction models
+until the next full build.
 """
+
+import argparse
+from datetime import date, timedelta
 
 import math
 
@@ -354,8 +365,9 @@ def _prediction_rows(race_id, preds, ordered_ids, course, target_date=None):
     return rows
 
 
-def rebuild(conn=None):
-    """Wipe and repopulate race_predictions + race_course_conditions."""
+def rebuild(conn=None, days=None):
+    """Repopulate race_predictions + race_course_conditions: every race, or
+    with `days`, only events with a race in that many days plus upcoming races."""
     if conn is None:
         conn = db.get_conn()
     queries.use_connection(conn)
@@ -368,12 +380,14 @@ def rebuild(conn=None):
     cond_rows = []
 
     # --- completed elite races, grouped by event so course conditions pool once ---
+    since = date.today() - timedelta(days=days) if days else date.min
     events = conn.execute("""
         SELECT event_id, list(race_id ORDER BY race_id)
         FROM races
         WHERE distance != 'relay'
         GROUP BY event_id
-    """).fetchall()
+        HAVING max(race_date) >= ?
+    """, [since]).fetchall()
 
     for event_id, race_ids in tqdm(events, desc="completed races"):
         elite_ids = [rid for rid in race_ids if queries.get_race_category(rid) == 'elite']
@@ -442,8 +456,21 @@ def rebuild(conn=None):
         pred_rows.extend(_prediction_rows(
             rid, preds, [e['athlete_id'] for e in entries], course))
 
-    conn.execute("DELETE FROM race_predictions")
-    conn.execute("DELETE FROM race_course_conditions")
+    if days:
+        # Every race rebuilt here, and anything no longer a race or upcoming
+        # (a cancelled start list)
+        rebuilt = [rid for _, ids in events for rid in ids] + upcoming_ids
+        conn.execute("CREATE TEMP TABLE rebuilt AS SELECT unnest(?::BIGINT[]) AS race_id", [rebuilt])
+        for table in ("race_predictions", "race_course_conditions"):
+            conn.execute(f"""
+                DELETE FROM {table} WHERE race_id IN (SELECT race_id FROM rebuilt)
+                   OR (race_id NOT IN (SELECT race_id FROM races)
+                       AND race_id NOT IN (SELECT race_id FROM upcoming_races))
+            """)
+        conn.execute("DROP TABLE rebuilt")
+    else:
+        conn.execute("DELETE FROM race_predictions")
+        conn.execute("DELETE FROM race_course_conditions")
     conn.executemany(
         "INSERT INTO race_predictions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", pred_rows)
     if cond_rows:
@@ -457,4 +484,7 @@ def rebuild(conn=None):
 
 
 if __name__ == "__main__":
-    rebuild()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--days", type=int, metavar="N",
+                        help="only events with a race in the last N days, plus upcoming races")
+    rebuild(days=parser.parse_args().days)

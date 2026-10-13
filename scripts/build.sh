@@ -55,7 +55,7 @@ if $FULL; then
 else
     step "Ratings and rankings";        python -m ptd_data.ratings --extend
 fi
-step "Predictions";                   python -m ptd_data.predictions
+step "Predictions";                   python -m ptd_data.predictions $WINDOW
 # Ratings, rankings and form are rewritten every run and DuckDB never shrinks
 # the file in place.
 step "Compact";                       python -m ptd_data.compact

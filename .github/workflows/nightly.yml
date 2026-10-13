@@ -165,8 +165,10 @@ jobs:
           rsync -a --remove-source-files "$PROD:$DATA/startlists_pending/" ptd_data/data/startlists/
           git add ptd_data/data/instagram.csv ptd_data/data/startlists
           if ! git diff --cached --quiet; then
-            git -c user.name="ptd-nightly" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-              commit -q -m "Nightly: admin Instagram handles and start lists"
+            # The rebase below writes commits too, so the identity is set for both
+            git config user.name "ptd-nightly"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -q -m "Nightly: admin Instagram handles and start lists"
             git pull -q --rebase --autostash origin main
             git push -q origin HEAD:main
           fi
