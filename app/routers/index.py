@@ -52,8 +52,8 @@ async def _race_counts(race_ids):
 def index(request: Request):
 
     # --- latest results: the latest weekend's biggest elite events, two
-    # programmes each (men first); the template shows the fourth on wide screens ---
-    recent = queries.get_headline_events(4)
+    # programmes each (men first); the template shows the fourth and fifth on wide screens ---
+    recent = queries.get_headline_events(5)
     for e in recent:
         e["races"] = _pair(e["races"])
 

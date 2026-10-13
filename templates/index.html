@@ -68,7 +68,7 @@
             <span>Latest results</span>
             <a href="/recent" class="section-link">All results</a>
         </div>
-        {# A fourth event, and a second blog post, only where there's room #}
+        {# A fourth and fifth event, and a second blog post, only where there's room #}
         {% for e in recent %}{{ event_block(e, cls='home-wide-only' if loop.index > 3) }}{% endfor %}
     </section>
 

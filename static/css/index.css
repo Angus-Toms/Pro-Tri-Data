@@ -331,7 +331,7 @@
 
 /* ── Responsive: the site's three breakpoints, 1024 / 768 / 480 ── */
 @media (max-width: 1024px) {
-    /* The fourth latest event and the second blog post fill wide screens only */
+    /* The fourth and fifth latest events and the second blog post fill wide screens only */
     .home-wide-only { display: none; }
     .home-layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
     .home-side { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 2rem; }
