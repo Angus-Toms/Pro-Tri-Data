@@ -253,7 +253,7 @@
             {# Phones: the same times turned round, a distance per row and a
                discipline per column, so it stays three short lines. #}
             <table class="cf-phone">
-                <thead><tr><th class="cs-label">Form</th>{% for row in current_form.rows %}<th>{{ row.label }}</th>{% endfor %}</tr></thead>
+                <thead><tr><th class="cs-label">Current form</th>{% for row in current_form.rows %}<th>{{ row.label }}</th>{% endfor %}</tr></thead>
                 <tbody>
                     {% for c in current_form.cols %}{% set ci = loop.index0 %}
                     <tr><th scope="row">{{ c }}</th>{% for row in current_form.rows %}<td>{{ row.cells[ci].time }}</td>{% endfor %}</tr>

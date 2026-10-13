@@ -203,14 +203,17 @@
 }
 .cs-body.two-col { grid-template-columns: minmax(0, 1fr) auto; }
 .cs-body.two-col .cs-form { border-left: 1px solid var(--border-color); padding-left: 2rem; }
-/* Each column's label sits in its own header row, beside the column heads. */
+/* Each column's sub-heading ("Current form", "Palmares") sits in its own
+   header row beside the column heads: sentence case in the text colour, so
+   it reads as a small heading, while the column heads stay quiet. */
 .cs-label,
-.career-form-table thead th.cs-label {
-    font-size: 0.68rem;
+.career-form-table thead th.cs-label,
+.cf-phone thead th.cs-label {
+    font-size: 0.9rem;
     font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text-light);
+    letter-spacing: -0.005em;
+    text-transform: none;
+    color: var(--text-color);
 }
 
 /* Palmares: a medal table, one row per tier with gold / silver / bronze
@@ -224,13 +227,14 @@
 .pt-head { padding-bottom: 0.35rem; justify-items: center; }
 .pt-head span:first-child { justify-self: start; }
 /* "All races": the career's stats as the table's first row. */
-.pt-total { padding: 0.5rem 0.6rem; margin: 0 -0.6rem; background: var(--bg-color); border-radius: 6px; font-size: 0.9rem; }
+.pt-total { padding: 0.5rem 0; font-size: 0.9rem; }
 /* The label takes the preview column too, so the stats have room. */
 .pt-total .pt-name { grid-column: 1 / 3; }
 .pt-sub { display: block; font-size: 0.78rem; font-weight: 400; color: var(--text-light); font-variant-numeric: tabular-nums; }
 .pt-sub > span { white-space: nowrap; }
 .pt-sub .career-provisional { margin-left: 0.3rem; }
-.pt-total + .pt-row { border-top: 0; }
+/* A slightly stronger divider sets "All races" apart from the title rows. */
+.pt-total + .pt-row { border-top: 1px solid #cfd4db; }
 .pt-dot { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 50%; flex-shrink: 0; }
 .pt-dot.m1 { background: var(--gold); }
 .pt-dot.m2 { background: var(--silver); }
@@ -313,7 +317,7 @@
 .career-form-table tbody tr { border-bottom: none; }
 .career-form-table tbody tr:nth-child(even) td,
 .career-form-table tr:hover td { background-color: transparent !important; }
-.career-form-table thead th { font-size: 0.68rem; color: var(--text-light); padding-bottom: 0.15rem; }
+.career-form-table thead th { font-size: 0.75rem; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--text-lighter); padding-bottom: 0.15rem; }
 .career-form-table thead th:hover { background: none; color: var(--text-light); }
 .career-form-table tbody tr + tr { border-top: 1px solid var(--border-color); }
 .career-form-table tbody th { color: var(--text-color); font-size: 0.85rem; font-weight: 700; text-transform: none; letter-spacing: 0; }
@@ -933,7 +937,7 @@
 .cf-phone th, .cf-phone td,
 .cf-phone th:first-child, .cf-phone td:first-child,
 .cf-phone th:last-child, .cf-phone td:last-child { background: none; padding: 0.2rem 0.4rem 0.2rem 0; text-align: left; cursor: default; }
-.cf-phone thead th { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-light); }
+.cf-phone thead th { font-size: 0.75rem; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--text-lighter); }
 .cf-phone tbody tr:nth-child(even) td, .cf-phone tr:hover td { background: transparent !important; }
 .cf-phone tbody th { font-size: 0.78rem; font-weight: 600; color: var(--text-light); text-transform: none; letter-spacing: 0; }
 .cf-phone tbody td { font-size: 0.88rem; font-weight: 700; color: var(--text-color); }
@@ -949,6 +953,6 @@
     .cs-form .career-form-table { display: none; }
     .cf-phone { display: table; }
     .pt-head { padding-bottom: 0.2rem; }
-    .pt-total { padding: 0.35rem 0.5rem; margin: 0 -0.5rem; font-size: 0.85rem; }
+    .pt-total { padding: 0.35rem 0; font-size: 0.85rem; }
     .pt-row summary { padding: 0.32rem 0; font-size: 0.84rem; }
 }
