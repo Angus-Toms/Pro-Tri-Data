@@ -716,12 +716,12 @@ function rrRender() {
                 ctx.fillStyle = 'rgba(26, 26, 46, 0.05)';
                 ctx.fillRect(a.left, yd - 10, a.right - a.left, 20);
             }
-            // Corner names, inside the shaded triangle and below the diagonal,
-            // clear of the podium row (left out on the narrowest charts).
+            // Corner names, top right in the shaded triangle and bottom left
+            // below the diagonal (left out on the narrowest charts).
             if (chart.width >= 380) {
                 ctx.font = "600 11px 'Plus Jakarta Sans', sans-serif";
                 ctx.fillStyle = 'rgba(4, 120, 87, 0.8)'; ctx.textAlign = 'right';
-                ctx.fillText('Beat prediction', a.right - 6, y.getPixelForValue(top * 0.6));
+                ctx.fillText('Beat prediction', a.right - 6, a.top + 14);
                 ctx.fillStyle = 'rgba(185, 28, 28, 0.7)'; ctx.textAlign = 'left';
                 ctx.fillText('Missed', a.left + 6, y.getPixelForValue(top) - 8);
             }
@@ -732,7 +732,9 @@ function rrRender() {
             ctx.save();
             ctx.font = "600 11px 'Plus Jakarta Sans', sans-serif";
             ctx.lineJoin = 'round';
-            const placed = [];
+            // The corner name counts as placed, so labels steer around it.
+            const cw = ctx.measureText('Beat prediction').width;
+            const placed = chart.width >= 380 ? [{ x: a.right - 6 - cw, y: a.top + 14, w: cw }] : [];
             pts.forEach((pt, i) => {
                 if (!ringed.has(pt)) return;
                 const el = meta.data[i];
