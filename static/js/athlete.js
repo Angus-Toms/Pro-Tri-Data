@@ -677,40 +677,71 @@ function rrRender() {
 })();
 
 // Versus prediction ---------------------------------------------------------
-// Predicted place (across) against finishing place (down, 1st at the top).
-// The diagonal is "as predicted"; the shaded side above it is beating the
-// prediction. Podium finishes take their medal colour.
+// Each race's places gained on its pre-race prediction (above zero: beat it),
+// in date order, so the biggest beats read straight off the height. Non-
+// finishes sit on a DNF row underneath, as on the race page. Podium finishes
+// take their medal colour; the two biggest beats and misses are ringed.
 (function initVsPrediction() {
-    const pts = getJSON('vp-chart-data');
+    const data = getJSON('vp-chart-data');
     const canvas = document.getElementById('vp-canvas');
-    if (!pts || !canvas) return;
-    // Log scales on both axes, as for ranks: places 1 to 10 get room and the
-    // diagonal stays straight.
-    const max = Math.max(...pts.map(p => Math.max(p.x, p.y)));
-    const STEPS = [1, 2, 3, 5, 10, 20, 50, 100, 200];
-    const top = STEPS.find(v => v >= max) || max;
+    if (!data || !canvas) return;
+    const pts = data.points, dnf = data.dnf;
     const MEDAL = { 1: '#f5c842', 2: '#c8d8e0', 3: '#d4a870' };
     const tipEl = _makeRankTooltipEl('vp-tooltip');
     const ord = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : { 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th');
+    const ys = pts.map(p => p.y);
+    const hi = Math.max(2, ...ys), lo = Math.min(-2, ...ys);
+    const span = hi - lo;
+    // The DNF row sits a clear gap below the lowest finish.
+    const dnfY = lo - Math.max(2, span * 0.14);
+    const step = [1, 2, 5, 10, 20].find(v => span / v <= 8) || 50;
+    const byGain = [...pts].sort((a, b) => b.y - a.y);
+    const ringed = new Set([...byGain.slice(0, 2).filter(p => p.y > 0), ...byGain.slice(-2).filter(p => p.y < 0)]);
 
     const guide = {
         id: 'vpGuide',
         beforeDatasetsDraw(chart) {
-            const { ctx, scales: { x, y } } = chart;
-            const p = (a, b) => [x.getPixelForValue(a), y.getPixelForValue(b)];
+            const { ctx, chartArea: a, scales: { y } } = chart;
+            const y0 = y.getPixelForValue(0);
             ctx.save();
-            // Above the diagonal: finished ahead of the prediction.
             ctx.fillStyle = 'rgba(5, 150, 105, 0.06)';
-            ctx.beginPath(); ctx.moveTo(...p(1, 1)); ctx.lineTo(...p(top, 1)); ctx.lineTo(...p(top, top)); ctx.closePath(); ctx.fill();
-            ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.setLineDash([4, 4]);
-            ctx.beginPath(); ctx.moveTo(...p(1, 1)); ctx.lineTo(...p(top, top)); ctx.stroke();
-            ctx.setLineDash([]);
+            ctx.fillRect(a.left, a.top, a.right - a.left, y0 - a.top);
+            if (dnf.length) {
+                const yd = y.getPixelForValue(dnfY);
+                ctx.fillStyle = 'rgba(26, 26, 46, 0.05)';
+                ctx.fillRect(a.left, yd - 10, a.right - a.left, 20);
+            }
+            ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(a.left, y0); ctx.lineTo(a.right, y0); ctx.stroke();
             ctx.font = "600 11px 'Plus Jakarta Sans', sans-serif";
-            ctx.fillStyle = 'rgba(4, 120, 87, 0.8)'; ctx.textAlign = 'right';
-            const area = chart.chartArea;
-            ctx.fillText('Beat prediction', area.right - 6, area.top + area.height * 0.45);
-            ctx.fillStyle = 'rgba(185, 28, 28, 0.7)'; ctx.textAlign = 'left';
-            ctx.fillText('Missed', area.left + 6, area.bottom - 8);
+            if (chart.width >= 480) {
+                ctx.fillStyle = 'rgba(4, 120, 87, 0.8)'; ctx.textAlign = 'right';
+                ctx.fillText('Beat prediction', a.right - 6, y0 - 8);
+            }
+            ctx.restore();
+        },
+        afterDatasetsDraw(chart) {
+            const meta = chart.getDatasetMeta(0), ctx = chart.ctx, a = chart.chartArea;
+            ctx.save();
+            ctx.font = "600 11px 'Plus Jakarta Sans', sans-serif";
+            ctx.lineJoin = 'round';
+            pts.forEach((p, i) => {
+                if (!ringed.has(p)) return;
+                const el = meta.data[i];
+                ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 1.3;
+                ctx.beginPath(); ctx.arc(el.x, el.y, 9, 0, Math.PI * 2); ctx.stroke();
+                if (chart.width < 480) return;
+                const text = `${ord(p.pred)} → ${ord(p.pos)}`;
+                const right = el.x > a.left + a.width * 0.75;
+                // Above a beat and below a miss, flipped if that leaves the plot.
+                let ty = p.y > 0 ? el.y - 13 : el.y + 21;
+                if (ty - 10 < a.top) ty = el.y + 21;
+                if (ty > a.bottom - 2) ty = el.y - 13;
+                ctx.textAlign = right ? 'right' : 'left';
+                const tx = el.x + (right ? -4 : 4);
+                ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.strokeText(text, tx, ty);
+                ctx.fillStyle = '#1a1a2e'; ctx.fillText(text, tx, ty);
+            });
             ctx.restore();
         },
     };
@@ -718,50 +749,72 @@ function rrRender() {
     function tooltip(context) {
         const { chart, tooltip: t } = context;
         if (t.opacity === 0 || !t.dataPoints.length) { tipEl.style.opacity = '0'; return; }
-        const d = t.dataPoints[0].raw, diff = d.x - d.y;
-        const verdict = diff > 0 ? `<span style="color:#5eead4">${diff} place${diff === 1 ? '' : 's'} better</span>`
-                      : diff < 0 ? `<span style="color:#f87171">${-diff} place${diff === -1 ? '' : 's'} worse</span>`
-                      : '<span style="color:rgba(255,255,255,0.6)">As predicted</span>';
+        const d = t.dataPoints[0].raw;
         const row = (k, v) => `<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="color:rgba(255,255,255,0.5);font-size:11px">${k}</span><span style="color:#fff;font-size:13px;font-weight:600">${v}</span></div>`;
+        let verdict = '';
+        if (d.status) verdict = `<span style="color:#f87171">${d.status}</span>`;
+        else verdict = d.y > 0 ? `<span style="color:#5eead4">${d.y} place${d.y === 1 ? '' : 's'} better</span>`
+                     : d.y < 0 ? `<span style="color:#f87171">${-d.y} place${d.y === -1 ? '' : 's'} worse</span>`
+                     : '<span style="color:rgba(255,255,255,0.6)">As predicted</span>';
         tipEl.innerHTML = `
             <div style="padding:7px 12px;border-bottom:1px solid rgba(255,255,255,0.08)">
                 <div style="color:#fff;font-weight:700;font-size:13px;line-height:1.2">${escapeHtml(d.race)}</div>
                 <div style="font-size:11px;color:rgba(255,255,255,0.4)">${d.date}</div>
             </div>
             <div style="padding:8px 12px;display:flex;flex-direction:column;gap:4px">
-                ${row('Predicted', ord(d.x) + (d.win_pct != null ? ` · win ${(d.win_pct * 100).toFixed(0)}%` : ''))}
-                ${row('Finished', ord(d.y))}
+                ${row('Predicted', ord(d.pred) + (d.win_pct != null ? ` · win ${(d.win_pct * 100).toFixed(0)}%` : ''))}
+                ${row('Finished', d.status ? d.status : ord(d.pos))}
+                ${d.chg != null ? row('Rating', fmtChangeArrow(d.chg) || '0') : ''}
                 <div style="font-size:12px;font-weight:600">${verdict}</div>
             </div>`;
         _positionTooltip(tipEl, chart, t);
     }
 
-    const ticks = { color: '#999', autoSkip: false, callback: v => v };
-    const setTicks = sc => { sc.ticks = STEPS.filter(v => v <= top).map(v => ({ value: v })); };
     new Chart(canvas, {
         type: 'scatter',
-        data: { datasets: [{
-            data: pts,
-            pointRadius: ctx => (ctx.raw?.y <= 3 ? 5.5 : 4),
-            pointHoverRadius: ctx => (ctx.raw?.y <= 3 ? 7 : 5.5),
-            pointBackgroundColor: ctx => MEDAL[ctx.raw?.y] || 'rgba(107, 114, 128, 0.55)',
-            pointBorderColor: ctx => (ctx.raw?.y <= 3 ? 'rgba(0,0,0,0.25)' : 'transparent'),
-            pointBorderWidth: 1,
-        }] },
+        data: { datasets: [
+            { data: pts,
+              pointRadius: ctx => (ctx.raw?.pos <= 3 ? 5.5 : 4),
+              pointHoverRadius: ctx => (ctx.raw?.pos <= 3 ? 7 : 5.5),
+              pointBackgroundColor: ctx => MEDAL[ctx.raw?.pos] || 'rgba(107, 114, 128, 0.6)',
+              pointBorderColor: ctx => (ctx.raw?.pos <= 3 ? 'rgba(0,0,0,0.25)' : 'transparent'),
+              pointBorderWidth: 1 },
+            { data: dnf.map(p => ({ ...p, y: dnfY })),
+              pointRadius: 4, pointHoverRadius: 5.5, pointBackgroundColor: '#fff',
+              pointBorderColor: 'rgba(107, 114, 128, 0.8)', pointBorderWidth: 1.5 },
+        ] },
         options: {
-            responsive: true, maintainAspectRatio: true, aspectRatio: 1,
+            responsive: true, maintainAspectRatio: false,
             animation: { duration: 500 },
-            onClick: (e, els) => { if (els.length) location.href = '/race/' + pts[els[0].index].race_id; },
+            layout: { padding: { top: 6, right: 8 } },
+            interaction: { mode: 'nearest', intersect: true },
+            onClick: (e, els) => {
+                if (!els.length) return;
+                const p = chart.data.datasets[els[0].datasetIndex].data[els[0].index];
+                location.href = '/race/' + p.race_id;
+            },
             plugins: { legend: { display: false }, yearBands: false, tooltip: { enabled: false, external: tooltip } },
             scales: {
-                x: { type: 'logarithmic', min: 0.85, max: top * 1.12, grid: { color: 'rgba(0,0,0,0.05)' }, ticks, afterBuildTicks: setTicks,
-                     title: { display: true, text: 'Predicted place', color: '#6b7280', font: { size: 11, weight: '600' } } },
-                y: { type: 'logarithmic', min: 0.85, max: top * 1.12, reverse: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks, afterBuildTicks: setTicks,
-                     title: { display: true, text: 'Finished', color: '#6b7280', font: { size: 11, weight: '600' } } },
+                // Plain year ticks under the axis: the year bands' labels would
+                // sit on the DNF row.
+                x: { type: 'time', time: { unit: 'year', displayFormats: { year: 'yyyy' } },
+                     grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#999', maxRotation: 0 } },
+                y: { min: dnf.length ? dnfY - (span * 0.06 + 1) : lo - 1, max: hi + Math.max(1, span * 0.06),
+                     grid: { color: 'rgba(0,0,0,0.05)' },
+                     afterBuildTicks: s => {
+                         const t = [];
+                         for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) t.push({ value: v });
+                         if (dnf.length) t.push({ value: dnfY });
+                         s.ticks = t;
+                     },
+                     ticks: { color: '#999', autoSkip: false,
+                              callback: v => (v === dnfY ? 'DNF' : v > 0 ? '+' + v : v) },
+                     title: { display: true, text: 'Places vs prediction', color: '#6b7280', font: { size: 11, weight: '600' } } },
             },
         },
         plugins: [guide],
     });
+    const chart = Chart.getChart(canvas);
 })();
 
 // % Behind Leader chart -------------------------------------------------------
