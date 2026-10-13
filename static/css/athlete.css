@@ -361,10 +361,11 @@
     .career-ratings, .career-ratings thead, .career-ratings tbody { display: block; }
     .career-ratings tr {
         display: grid;
-        grid-template-columns: minmax(5.5rem, 1fr) 6rem 4rem;
+        /* Even columns: the discipline no longer takes the slack. */
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         align-items: baseline;
     }
-    .career-ratings.has-change tr { grid-template-columns: minmax(5.5rem, 1fr) 6rem 4rem 3.75rem; }
+    .career-ratings.has-change tr { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .career-ratings thead tr { background: var(--navy); }
     .career-ratings thead th { background: none; white-space: normal; }
     .career-ratings tbody tr { border-top: 1px solid var(--border-color); }
