@@ -1009,3 +1009,20 @@
 .startlist-pending p { margin: 0 0 var(--spacing-md); max-width: 60ch; font-size: 0.9rem; color: var(--text-light); }
 /* The site hides follow labels on phones; this button is the page's one action */
 .startlist-pending .btn-follow .follow-label { display: inline; }
+
+/* Race standards (finished and upcoming): proportional columns that fill the
+   card, the tier pill beside the standard. The finished race's five columns
+   still scroll sideways on a phone; the start list's three always fit. */
+.ratings-table.std-table { min-width: 0; table-layout: fixed; }
+.std-table th.rt-disc   { width: 14%; }
+.std-table th.rt-rating { width: 21%; }
+.std-table th.rt-rank   { width: 13%; }
+.std-table th.rt-best,
+.std-table th.rt-cond   { width: auto; }
+.std-table--short th.rt-disc   { width: 30%; }
+.std-table--short th.rt-rating { width: 40%; }
+.std-table--short th.rt-rank   { width: auto; }
+@media (max-width: 480px) {
+    .ratings-table.std-table { min-width: 660px; }
+    .ratings-table.std-table--short { min-width: 0; }
+}

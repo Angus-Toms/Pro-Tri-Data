@@ -397,7 +397,7 @@ const HELP_TOURS = {
     'race-standards': [
         { sel: '.ratings-table th.rt-rating', column: true, title: 'Race standard',
           text: 'A weighted average of the pre-race ratings of everyone who finished each leg - a measure of how strong the field actually was. Stronger athletes count for more, and only athletes who raced the leg are included. Higher means a deeper, stronger field.' },
-        { sel: '.ratings-table th.rt-tier', column: true, title: 'Tier',
+        { sel: '.ratings-table .std-pill', title: 'Tier',
           text: _tierText },
         { sel: '.ratings-table th.rt-rank', column: true, title: 'Race rank',
           text: 'Where this race\'s field ranks all-time among races of the same gender and course. Click through for the full race leaderboard.' },

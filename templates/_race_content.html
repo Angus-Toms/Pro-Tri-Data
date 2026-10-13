@@ -19,12 +19,11 @@
 <div class="page-section-head"><span>Standards {{ help_icon('race-standards') }}</span></div>
 <div class="ratings-section">
     <div class="ratings-table-scroll">
-        <table class="ratings-table">
+        <table class="ratings-table std-table">
             <thead>
                 <tr>
                     <th class="rt-disc">Discipline</th>
                     <th class="rt-rating">Standard</th>
-                    <th class="rt-tier">Tier</th>
                     {% if has_rank %}<th class="rt-rank">Race Rank</th>{% endif %}
                     {% if has_best %}<th class="rt-best">Best Performance</th>{% endif %}
                     {% if has_cond %}<th class="rt-cond">Course Conditions</th>{% endif %}
@@ -37,11 +36,8 @@
                 {% if race_standards[disc] %}
                 <tr class="rt-row rt-row--{{ disc }}">
                     <td class="rt-disc"><span class="rt-disc-name">{{ label }}</span></td>
-                    <td class="rt-rating">{{ race_standards[disc] }}</td>
-                    <td class="rt-tier">
-                        {% if race_standard_classes[disc] %}
-                        <span class="std-pill std-pill--{{ race_standard_classes[disc] }}">{{ race_standard_classes[disc]|title }}</span>
-                        {% else %}<span class="no-data">-</span>{% endif %}
+                    <td class="rt-rating">
+                        {{ race_standards[disc] }}{% if race_standard_classes[disc] %}<span class="std-pill std-pill--{{ race_standard_classes[disc] }}">{{ race_standard_classes[disc]|title }}</span>{% endif %}
                     </td>
                     {% if has_rank %}
                     <td class="rt-rank">

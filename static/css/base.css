@@ -2306,8 +2306,6 @@ sup.ordinal-suffix {
 .ratings-table td.rt-disc { width: 6em; }
 .ratings-table th.rt-rating,
 .ratings-table td.rt-rating { width: 5.5em; }
-.ratings-table th.rt-tier,
-.ratings-table td.rt-tier { width: 8em; white-space: nowrap; }
 .ratings-table th.rt-rank,
 .ratings-table td.rt-rank { width: 7em; white-space: nowrap; }
 .ratings-table th.rt-change,
