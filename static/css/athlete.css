@@ -354,10 +354,9 @@
     color: var(--success-color);
     margin-left: 0.4rem;
 }
-.rt-inline-label { display: none; }
 
-/* On phones each row is one grid line (discipline, rank, rating, change)
-   with national and peak on a second line under it. */
+/* On phones each row is one grid line: discipline, world rank, rating and
+   1-year change. */
 @media (max-width: 480px) {
     .career-ratings, .career-ratings thead, .career-ratings tbody { display: block; }
     .career-ratings tr {
@@ -378,15 +377,11 @@
     .career-ratings th.rt-disc, .career-ratings td.rt-disc,
     .career-ratings th:first-child, .career-ratings td:first-child,
     .career-ratings th:last-child, .career-ratings td:last-child { width: auto; border-top: 0; padding: 0.55rem 0.6rem; }
-    .career-ratings thead th.rt-nat, .career-ratings thead th.rt-peak { display: none; }
-    .career-ratings td.rt-nat, .career-ratings td.rt-peak { padding-top: 0; font-size: 0.78rem; color: var(--text-light); }
-    .career-ratings td.rt-nat { grid-column: 1; }
-    .career-ratings td.rt-peak { grid-column: 2 / -1; }
-    .career-ratings:not(.has-nat) td.rt-peak { grid-column: 1 / -1; }
-    .career-ratings .rt-peak-main { font-size: 0.78rem; font-weight: 700; color: var(--text-color); }
-    .career-ratings .rt-peak-sub, .career-ratings .rt-spark { display: none; }
+    /* National and peak stay on wider screens; a phone row is one line. */
+    .career-ratings th.rt-nat, .career-ratings td.rt-nat,
+    .career-ratings th.rt-peak, .career-ratings td.rt-peak,
+    .career-ratings .rt-spark { display: none; }
     .pt-years { display: none; }
-    .rt-inline-label { display: inline; }
     .career-ratings td.rt-rank, .career-ratings td.rt-rank a { font-size: 1rem; }
 }
 
