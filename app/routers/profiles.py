@@ -20,6 +20,9 @@ templates.env.globals["render_comment_body"] = render_comment_body
 templates.env.globals["format_time"]   = format_time
 
 PAGE_SIZE = 30
+# A person can rename themselves or comment at any moment, so profiles and
+# their hover cards only sit in the edge cache for a minute, never in the browser.
+PROFILE_CACHE = {"Cache-Control": "public, max-age=0, s-maxage=60"}
 # Reactions shown as badges in the profile header, in this order.
 RECEIVED_ORDER = [("up", "Thumbs up"), ("rapid", "Rapid"), ("paincave", "Pain cave"), ("podium", "Podium")]
 
@@ -63,7 +66,7 @@ async def profile(request: Request, user_id: int, offset: int = Query(0, ge=0)):
         "pbs":          [(label, profile[col]) for col, label, _, _ in PB_FIELDS if profile[col]],
         "received":     [(kind, label, n) for kind, label in RECEIVED_ORDER
                          if (n := received.get(kind))],
-    })
+    }, headers=PROFILE_CACHE)
 
 
 @router.get("/user/{user_id}/card", response_class=HTMLResponse)
@@ -77,4 +80,4 @@ async def profile_card(request: Request, user_id: int):
         "request":  request,
         "profile":  profile,
         "received": [(kind, label, n) for kind, label in RECEIVED_ORDER if (n := received.get(kind))],
-    }, headers={"Cache-Control": "public, max-age=300"})
+    }, headers=PROFILE_CACHE)

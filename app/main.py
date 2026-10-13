@@ -14,6 +14,7 @@ from config import RUNTIME_DATA_DIR, STATIC_BASE_URL, ASSET_VERSION
 from app.display_helpers import flag, program_label, title_words
 from app.share import cards as share_cards
 from ptd_users import db as users_db
+from ptd_users.auth import REMEMBER_COOKIE, SESSION_COOKIE
 
 BASE_DIR = Path(__file__).resolve().parent.parent # Project root
 ALLOWED_HOSTS = {"protridata.com", "www.protridata.com", "127.0.0.1:8000"}
@@ -50,7 +51,8 @@ async def flag_cache_headers(request: Request, call_next):
 # X-Partial requests are skipped: the compare partials share their URL with a
 # 302 for direct navigation, and Cloudflare keys its cache on URL alone, so
 # caching either variant would serve the wrong response to the other caller.
-# NOTE: if user accounts ever land, per-user pages must opt out of this.
+# A browser with a session or remembered login never fills the shared cache
+# though: /login ("continue as"), /settings and friends render per person.
 @app.middleware("http")
 async def edge_cache_headers(request: Request, call_next):
     response = await call_next(request)
@@ -59,6 +61,10 @@ async def edge_cache_headers(request: Request, call_next):
     # from the one person meant to see it.
     if request.url.path.startswith("/admin"):
         response.headers["Cache-Control"] = "no-store"
+        return response
+    if "cache-control" not in response.headers and (
+            SESSION_COOKIE in request.cookies or REMEMBER_COOKIE in request.cookies):
+        response.headers["Cache-Control"] = "private, no-store"
         return response
     if (
         request.method == "GET"
