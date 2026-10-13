@@ -473,29 +473,44 @@
 </div>
 
 {% if vs_prediction %}
-{# Versus prediction: does this athlete beat the model? Each race's places
-   gained on its pre-race prediction (above the line: beat it), in date
-   order, with non-finishes on a row underneath. The scorecard counts it up. #}
-{% set vp = vs_prediction %}
+{# Versus prediction: does this athlete beat the model? Predicted against
+   actual place, overall or per leg, with non-finishes on a row underneath;
+   the scorecard for the same discipline beside it. #}
 {% macro chg(c) %}{% if c and c.formatted_str %}<span class="rating-change {{ c.css_class }}">{{ c.formatted_str | safe }}</span>{% endif %}{% endmacro %}
+{% set vp_first = vs_prediction.keys() | first %}
 <div class="page-section-head"><span>Versus prediction {{ help_icon('athlete-vs-prediction') }}</span></div>
 <div class="collapsible-card vp-card">
-    <div class="vp-chart"><canvas id="vp-canvas" aria-label="Places gained on the prediction in {{ vp.finished }} races"></canvas></div>
+    <div class="vp-main">
+        {% if vs_prediction | length > 1 %}
+        <div class="race-view-toggle vp-disc" id="vp-disc" role="group" aria-label="Discipline">
+            {% for d in vs_prediction %}<button type="button" class="race-view-btn{{ ' active' if loop.first }}" data-disc="{{ d }}" aria-pressed="{{ 'true' if loop.first else 'false' }}">{{ d | capitalize }}</button>{% endfor %}
+        </div>
+        {% endif %}
+        <div class="vp-chart"><canvas id="vp-canvas" aria-label="Predicted against actual place"></canvas></div>
+    </div>
     <div class="vp-side">
-        <dl class="vp-score">
+        {% for d, vp in vs_prediction.items() %}
+        <dl class="vp-score" data-disc="{{ d }}"{% if d != vp_first %} hidden{% endif %}>
             <div><dt>Beat the predicted place</dt><dd>{{ vp.beat }} <small>of {{ vp.finished }}</small></dd></div>
             <div><dt>Matched it</dt><dd>{{ vp.matched }}</dd></div>
             <div><dt>Missed it</dt><dd>{{ vp.missed }}</dd></div>
-            {% if vp.dnf_count %}<div><dt>Did not finish</dt><dd>{{ vp.dnf_count }} <small>of {{ vp.starts }}</small></dd></div>{% endif %}
-            {% if vp.pred_wins %}<div><dt>Predicted wins converted</dt><dd>{{ vp.pred_wins_won }} <small>of {{ vp.pred_wins }}</small></dd></div>{% endif %}
-            <div><dt>Wins</dt><dd>{{ vp.wins }}{% if vp.wins_change %} <small>{{ chg(vp.wins_change) }}</small>{% endif %}</dd></div>
-            {% if vp.best.pos < vp.best.pred %}<div class="vp-swing"><dt>Biggest beat</dt><dd><a href="/race/{{ vp.best.race_id }}">{{ vp.best.race }}</a><small>{{ vp.best.pred|ordinal }} predicted, finished {{ vp.best.pos|ordinal }} {{ chg(vp.best.change) }}</small></dd></div>{% endif %}
-            {% if vp.worst.pos > vp.worst.pred %}<div class="vp-swing"><dt>Biggest miss</dt><dd><a href="/race/{{ vp.worst.race_id }}">{{ vp.worst.race }}</a><small>{{ vp.worst.pred|ordinal }} predicted, finished {{ vp.worst.pos|ordinal }} {{ chg(vp.worst.change) }}</small></dd></div>{% endif %}
+            {% if vp.dnf_count %}<div><dt>{{ 'Did not finish' if d == 'overall' else 'No split' }}</dt><dd>{{ vp.dnf_count }} <small>of {{ vp.starts }}</small></dd></div>{% endif %}
+            {% if vp.pred_wins %}<div><dt>Predicted {{ 'wins' if d == 'overall' else 'fastest' }} converted</dt><dd>{{ vp.pred_wins_won }} <small>of {{ vp.pred_wins }}</small></dd></div>{% endif %}
+            <div><dt>{{ vp.win_word }}</dt><dd>{{ vp.wins }}</dd></div>
+            {% for key, label, cond in [('best', 'Biggest beat', vp.best.pos < vp.best.pred), ('worst', 'Biggest miss', vp.worst.pos > vp.worst.pred)] if cond %}
+            {% set sw = vp[key] %}
+            <div class="vp-swing">
+                <dt>{{ label }}</dt>
+                <dd><a href="/race/{{ sw.race_id }}">{{ sw.race }}</a><small>{{ sw.pred|ordinal }} predicted, {{ 'finished' if d == 'overall' else 'split' }} {{ sw.pos|ordinal }}</small></dd>
+                <span class="vp-swing-chg">{{ chg(sw.change) }}</span>
+            </div>
+            {% endfor %}
         </dl>
-        <p class="vp-note">Rating changes are overall.</p>
+        {% endfor %}
+        <p class="vp-note">Rating changes are for the discipline shown.</p>
     </div>
 </div>
-<script id="vp-chart-data" type="application/json">{{ {'points': vp.points, 'dnf': vp.dnf} | tojson }}</script>
+<script id="vp-chart-data" type="application/json">{{ vs_prediction | tojson }}</script>
 {% endif %}
 
 <div class="page-section-head" id="pct-behind-section-title">% Behind Leader - Overall</div>

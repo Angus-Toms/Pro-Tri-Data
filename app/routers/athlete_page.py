@@ -796,36 +796,45 @@ def get_athlete(request: Request, athlete_id: int,
     active_key = 'ag' if category == 'ag' else f'elite-{course}'
 
 
-    # --- Versus prediction: places gained on the prediction, race by race ---
+    # --- Versus prediction: predicted against actual place, per discipline ---
     # Individual races with a confident stored prediction (relay legs and
-    # low-confidence predictions left out). Shown from 5 such finishes.
+    # low-confidence predictions left out). Overall compares predicted and
+    # finishing position; a leg compares the predicted split's place in the
+    # field with the recorded split's. A discipline shows from 5 finishes.
     vp_rows = [e for e in race_history if e["pred"] and not e["pred"]["low_conf"] and not e["is_relay"]]
-    vp_fin = [e for e in vp_rows if e["status"] == "Finished" and e["position"]]
-    vs_prediction = None
-    if len(vp_fin) >= 5:
-        change = lambda e: e["rating"]["overall"]["change"] if e["rating"] else None
-        by_gain = sorted(vp_fin, key=lambda e: e["pred"]["pos"] - e["position"])
-        pred_wins = [e for e in vp_fin if e["pred"]["pos"] == 1]
-        wins = [e for e in vp_fin if e["position"] == 1]
-        swing = lambda e: {"race": e["race_title"], "race_id": e["race_id"],
-                           "pred": e["pred"]["pos"], "pos": e["position"], "change": change(e)}
-        point = lambda e: {"x": str(e["race_date"]), "race": e["race_title"], "race_id": e["race_id"],
-                           "date": e["race_date"].strftime("%d %b %Y"), "pred": e["pred"]["pos"],
-                           "win_pct": e["pred"]["win_pct"],
-                           "chg": round(change(e)["raw"]) if change(e) and change(e)["raw"] is not None else None}
-        vs_prediction = {
-            "points":     [{**point(e), "y": e["pred"]["pos"] - e["position"], "pos": e["position"]} for e in vp_fin],
-            "dnf":        [{**point(e), "status": e["status"]} for e in vp_rows if e not in vp_fin],
-            "finished":   len(vp_fin),
-            "beat":       sum(e["position"] < e["pred"]["pos"] for e in vp_fin),
-            "matched":    sum(e["position"] == e["pred"]["pos"] for e in vp_fin),
-            "missed":     sum(e["position"] > e["pred"]["pos"] for e in vp_fin),
-            "dnf_count":  len(vp_rows) - len(vp_fin),
-            "starts":     len(vp_rows),
+    places = queries.get_athlete_prediction_places(athlete_id) if vp_rows else {}
+    vs_prediction = {}
+    for disc, win_word in (("overall", "Wins"), ("swim", "Fastest swims"), ("bike", "Fastest bikes"), ("run", "Fastest runs")):
+        rows = [(e, places[e["race_id"]][disc]) for e in vp_rows
+                if e["race_id"] in places and places[e["race_id"]][disc]["pred_rank"]]
+        fin = [(e, p) for e, p in rows if p["act_rank"]]
+        if len(fin) < 5:
+            continue
+        change = lambda e: e["rating"][disc]["change"] if e["rating"] else None
+        point = lambda e, p: {"race": e["race_title"], "race_id": e["race_id"], "date": e["race_date"].strftime("%d %b %Y"),
+                              "pred": p["pred_rank"], "pos": p["act_rank"], "status": None if p["act_rank"] else e["status"] if e["status"] != "Finished" else "No split",
+                              "pred_t": format_time(round(p["pred_s"])) if p["pred_s"] else None,
+                              "act_t": format_time(round(p["act_s"])) if p["act_s"] else None,
+                              "win_pct": e["pred"]["win_pct"] if disc == "overall" else None,
+                              "chg": round(change(e)["raw"]) if change(e) and change(e)["raw"] is not None else None}
+        gain = lambda ep: ep[1]["pred_rank"] - ep[1]["act_rank"]
+        by_gain = sorted(fin, key=gain)
+        swing = lambda ep: {"race": ep[0]["race_title"], "race_id": ep[0]["race_id"],
+                            "pred": ep[1]["pred_rank"], "pos": ep[1]["act_rank"], "change": change(ep[0])}
+        pred_wins = [ep for ep in fin if ep[1]["pred_rank"] == 1]
+        vs_prediction[disc] = {
+            "points":     [point(e, p) for e, p in fin],
+            "dnf":        [point(e, p) for e, p in rows if not p["act_rank"]],
+            "finished":   len(fin),
+            "beat":       sum(gain(ep) > 0 for ep in fin),
+            "matched":    sum(gain(ep) == 0 for ep in fin),
+            "missed":     sum(gain(ep) < 0 for ep in fin),
+            "dnf_count":  len(rows) - len(fin),
+            "starts":     len(rows),
             "pred_wins":  len(pred_wins),
-            "pred_wins_won": sum(e["position"] == 1 for e in pred_wins),
-            "wins":       len(wins),
-            "wins_change": format_rating_change(sum(change(e)["raw"] or 0 for e in wins if change(e))) if wins else None,
+            "pred_wins_won": sum(ep[1]["act_rank"] == 1 for ep in pred_wins),
+            "wins":       sum(ep[1]["act_rank"] == 1 for ep in fin),
+            "win_word":   win_word,
             "best":       swing(by_gain[-1]),
             "worst":      swing(by_gain[0]),
         }

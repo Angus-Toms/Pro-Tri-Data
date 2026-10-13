@@ -677,27 +677,35 @@ function rrRender() {
 })();
 
 // Versus prediction ---------------------------------------------------------
-// Predicted place (across) against finishing place (down, 1st at the top), on
-// linear scales. The dashed diagonal is "as predicted"; the shaded side above
-// it is beating the prediction. Non-finishes sit on a DNF row underneath, as
-// on the race page. Podium finishes take their medal colour; the two biggest
-// beats and misses are ringed and labelled.
+// Predicted place (across) against actual place (down, 1st at the top), on
+// linear scales, overall or per leg. The dashed diagonal is "as predicted";
+// the shaded side above it is beating the prediction. Non-finishes (or legs
+// with no split) sit on a DNF row underneath, as on the race page. Podium
+// places take their medal colour; the two biggest beats and misses are
+// ringed and labelled. Switching discipline moves the dots on the same chart.
 (function initVsPrediction() {
-    const data = getJSON('vp-chart-data');
+    const all = getJSON('vp-chart-data');
     const canvas = document.getElementById('vp-canvas');
-    if (!data || !canvas) return;
-    const pts = data.points.map(p => ({ ...p, gain: p.y, x: p.pred, y: p.pos }));
-    const dnf = data.dnf;
+    if (!all || !canvas) return;
     const MEDAL = { 1: '#f5c842', 2: '#c8d8e0', 3: '#d4a870' };
     const tipEl = _makeRankTooltipEl('vp-tooltip');
     const ord = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : { 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th');
-    const max = Math.max(...pts.map(p => Math.max(p.x, p.y)), ...dnf.map(p => p.pred));
-    const step = [1, 2, 5, 10, 20].find(v => max / v <= 8) || 50;
-    const top = Math.max(step, Math.ceil(max / step) * step);
-    // The DNF row sits a clear gap below the last finishing place.
-    const dnfY = top + Math.max(1.5, top * 0.1);
-    const byGain = [...pts].sort((a, b) => b.gain - a.gain);
-    const ringed = new Set([...byGain.slice(0, 2).filter(p => p.gain > 0), ...byGain.slice(-2).filter(p => p.gain < 0)]);
+    // tojson sorts the keys, so take the discipline order explicitly.
+    let disc = ['overall', 'swim', 'bike', 'run'].find(d => all[d]);
+    const st = {};   // the current discipline's points, scale and highlights
+
+    function load(d) {
+        const v = all[d];
+        st.pts = v.points.map(p => ({ ...p, gain: p.pred - p.pos, x: p.pred, y: p.pos }));
+        const max = Math.max(...st.pts.map(p => Math.max(p.x, p.y)), ...v.dnf.map(p => p.pred));
+        st.step = [1, 2, 5, 10, 20].find(s => max / s <= 8) || 50;
+        st.top = Math.max(st.step, Math.ceil(max / st.step) * st.step);
+        // The DNF row sits a clear gap below the last place.
+        st.dnfY = st.top + Math.max(1.5, st.top * 0.1);
+        st.dnf = v.dnf.map(p => ({ ...p, x: p.pred, y: st.dnfY }));
+        const byGain = [...st.pts].sort((a, b) => b.gain - a.gain);
+        st.ringed = new Set([...byGain.slice(0, 2).filter(p => p.gain > 0), ...byGain.slice(-2).filter(p => p.gain < 0)]);
+    }
 
     const guide = {
         id: 'vpGuide',
@@ -705,16 +713,15 @@ function rrRender() {
             const { ctx, chartArea: a, scales: { x, y } } = chart;
             const p = (u, v) => [x.getPixelForValue(u), y.getPixelForValue(v)];
             ctx.save();
-            // Above the diagonal: finished ahead of the prediction.
+            // Above the diagonal: placed ahead of the prediction.
             ctx.fillStyle = 'rgba(5, 150, 105, 0.06)';
-            ctx.beginPath(); ctx.moveTo(...p(1, 1)); ctx.lineTo(...p(top, 1)); ctx.lineTo(...p(top, top)); ctx.closePath(); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(...p(1, 1)); ctx.lineTo(...p(st.top, 1)); ctx.lineTo(...p(st.top, st.top)); ctx.closePath(); ctx.fill();
             ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.setLineDash([4, 4]);
-            ctx.beginPath(); ctx.moveTo(...p(1, 1)); ctx.lineTo(...p(top, top)); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(...p(1, 1)); ctx.lineTo(...p(st.top, st.top)); ctx.stroke();
             ctx.setLineDash([]);
-            if (dnf.length) {
-                const yd = y.getPixelForValue(dnfY);
+            if (st.dnf.length) {
                 ctx.fillStyle = 'rgba(26, 26, 46, 0.05)';
-                ctx.fillRect(a.left, yd - 10, a.right - a.left, 20);
+                ctx.fillRect(a.left, y.getPixelForValue(st.dnfY) - 10, a.right - a.left, 20);
             }
             // Corner names, top right in the shaded triangle and bottom left
             // below the diagonal (left out on the narrowest charts).
@@ -723,7 +730,7 @@ function rrRender() {
                 ctx.fillStyle = 'rgba(4, 120, 87, 0.8)'; ctx.textAlign = 'right';
                 ctx.fillText('Beat prediction', a.right - 6, a.top + 14);
                 ctx.fillStyle = 'rgba(185, 28, 28, 0.7)'; ctx.textAlign = 'left';
-                ctx.fillText('Missed', a.left + 6, y.getPixelForValue(top) - 8);
+                ctx.fillText('Missed', a.left + 6, y.getPixelForValue(st.top) - 8);
             }
             ctx.restore();
         },
@@ -735,8 +742,8 @@ function rrRender() {
             // The corner name counts as placed, so labels steer around it.
             const cw = ctx.measureText('Beat prediction').width;
             const placed = chart.width >= 380 ? [{ x: a.right - 6 - cw, y: a.top + 14, w: cw }] : [];
-            pts.forEach((pt, i) => {
-                if (!ringed.has(pt)) return;
+            st.pts.forEach((pt, i) => {
+                if (!st.ringed.has(pt) || !meta.data[i]) return;
                 const el = meta.data[i];
                 ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 1.3;
                 ctx.beginPath(); ctx.arc(el.x, el.y, 9, 0, Math.PI * 2); ctx.stroke();
@@ -760,51 +767,69 @@ function rrRender() {
         },
     };
 
+    // Short label / value rows. Times are shown but not compared: a predicted
+    // time is for a typical course, so the places are the fair comparison.
     function tooltip(context) {
         const { chart, tooltip: t } = context;
         if (t.opacity === 0 || !t.dataPoints.length) { tipEl.style.opacity = '0'; return; }
         const d = t.dataPoints[0].raw;
-        const row = (k, v) => `<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="color:rgba(255,255,255,0.5);font-size:11px">${k}</span><span style="color:#fff;font-size:13px;font-weight:600">${v}</span></div>`;
-        const verdict = d.status ? `<span style="color:#f87171">${d.status}</span>`
-                      : d.gain > 0 ? `<span style="color:#5eead4">${d.gain} place${d.gain === 1 ? '' : 's'} better</span>`
-                      : d.gain < 0 ? `<span style="color:#f87171">${-d.gain} place${d.gain === -1 ? '' : 's'} worse</span>`
-                      : '<span style="color:rgba(255,255,255,0.6)">As predicted</span>';
+        const row = (k, v) => `<div style="display:flex;justify-content:space-between;gap:12px;align-items:baseline"><span style="color:rgba(255,255,255,0.5);font-size:11px">${k}</span><span style="color:#fff;font-size:12.5px;font-weight:600;text-align:right">${v}</span></div>`;
+        const place = (r, time) => (r ? ord(r) : '-') + (time ? `<span style="color:rgba(255,255,255,0.5);font-weight:500"> · ${time}</span>` : '');
+        const result = d.status
+            ? `<span style="color:#f87171">${d.status}</span>`
+            : d.gain > 0 ? `<span style="color:#5eead4">${d.gain} place${d.gain === 1 ? '' : 's'} better</span>`
+            : d.gain < 0 ? `<span style="color:#f87171">${-d.gain} place${d.gain === -1 ? '' : 's'} worse</span>`
+            : 'As predicted';
         tipEl.innerHTML = `
             <div style="padding:7px 12px;border-bottom:1px solid rgba(255,255,255,0.08)">
                 <div style="color:#fff;font-weight:700;font-size:13px;line-height:1.2">${escapeHtml(d.race)}</div>
-                <div style="font-size:11px;color:rgba(255,255,255,0.4)">${d.date}</div>
+                <div style="font-size:11px;color:rgba(255,255,255,0.4)">${d.date} · ${DISC_LABELS[disc]}</div>
             </div>
             <div style="padding:8px 12px;display:flex;flex-direction:column;gap:4px">
-                ${row('Predicted', ord(d.pred) + (d.win_pct != null ? ` · win ${(d.win_pct * 100).toFixed(0)}%` : ''))}
-                ${row('Finished', d.status ? d.status : ord(d.pos))}
+                ${row('Predicted', place(d.pred, d.pred_t))}
+                ${row(disc === 'overall' ? 'Finished' : 'Split', d.status ? '-' : place(d.pos, d.act_t))}
+                ${row('Result', result)}
                 ${d.chg != null ? row('Rating', fmtChangeArrow(d.chg) || '0') : ''}
-                <div style="font-size:12px;font-weight:600">${verdict}</div>
+                ${d.win_pct != null ? row('Win chance', `${(d.win_pct * 100).toFixed(0)}%`) : ''}
             </div>`;
         _positionTooltip(tipEl, chart, t);
     }
 
-    const ticks = (withDnf) => s => {
+    const ticks = withDnf => s => {
         const t = [{ value: 1 }];
-        for (let v = step; v <= top; v += step) if (v > 1) t.push({ value: v });
-        if (withDnf && dnf.length) t.push({ value: dnfY });
+        for (let v = st.step; v <= st.top; v += st.step) if (v > 1) t.push({ value: v });
+        if (withDnf && st.dnf.length) t.push({ value: st.dnfY });
         s.ticks = t;
     };
+    const scales = () => ({
+        // Axes start at 1st; the dots on it overhang the edge (clip off).
+        x: { min: 1, max: st.top * 1.03, grid: { color: 'rgba(0,0,0,0.05)' }, afterBuildTicks: ticks(false),
+             ticks: { color: '#999', autoSkip: false },
+             title: { display: true, text: 'Predicted place', color: '#6b7280', font: { size: 11, weight: '600' } } },
+        y: { min: 1, max: st.dnf.length ? st.dnfY + st.top * 0.06 : st.top * 1.03, reverse: true,
+             grid: { color: 'rgba(0,0,0,0.05)' }, afterBuildTicks: ticks(true),
+             ticks: { color: '#999', autoSkip: false, callback: v => (v === st.dnfY ? 'DNF' : v) },
+             title: { display: true, text: disc === 'overall' ? 'Finished' : `${DISC_LABELS[disc]} split place`,
+                      color: '#6b7280', font: { size: 11, weight: '600' } } },
+    });
+
+    load(disc);
     const chart = new Chart(canvas, {
         type: 'scatter',
         data: { datasets: [
-            { data: pts,
+            { data: st.pts, clip: false,
               pointRadius: ctx => (ctx.raw?.pos <= 3 ? 5.5 : 4),
               pointHoverRadius: ctx => (ctx.raw?.pos <= 3 ? 7 : 5.5),
               pointBackgroundColor: ctx => MEDAL[ctx.raw?.pos] || 'rgba(107, 114, 128, 0.6)',
               pointBorderColor: ctx => (ctx.raw?.pos <= 3 ? 'rgba(0,0,0,0.25)' : 'transparent'),
-              pointBorderWidth: 1, clip: false },
-            { data: dnf.map(p => ({ ...p, x: p.pred, y: dnfY })),
+              pointBorderWidth: 1 },
+            { data: st.dnf, clip: false,
               pointRadius: 4, pointHoverRadius: 5.5, pointBackgroundColor: '#fff',
-              pointBorderColor: 'rgba(107, 114, 128, 0.8)', pointBorderWidth: 1.5, clip: false },
+              pointBorderColor: 'rgba(107, 114, 128, 0.8)', pointBorderWidth: 1.5 },
         ] },
         options: {
             responsive: true, maintainAspectRatio: true, aspectRatio: 1,
-            animation: { duration: 500 },
+            animation: { duration: 500, easing: 'easeInOutCubic' },
             layout: { padding: { top: 8, right: 8 } },
             interaction: { mode: 'nearest', intersect: true },
             onClick: (e, els) => {
@@ -812,19 +837,24 @@ function rrRender() {
                 location.href = '/race/' + chart.data.datasets[els[0].datasetIndex].data[els[0].index].race_id;
             },
             plugins: { legend: { display: false }, yearBands: false, tooltip: { enabled: false, external: tooltip } },
-            scales: {
-                // Axes start at 1st; the dots on it overhang the edge (clip off).
-                x: { min: 1, max: top + top * 0.03, grid: { color: 'rgba(0,0,0,0.05)' }, afterBuildTicks: ticks(false),
-                     ticks: { color: '#999', autoSkip: false },
-                     title: { display: true, text: 'Predicted place', color: '#6b7280', font: { size: 11, weight: '600' } } },
-                y: { min: 1, max: dnf.length ? dnfY + top * 0.06 : top + top * 0.03, reverse: true,
-                     grid: { color: 'rgba(0,0,0,0.05)' }, afterBuildTicks: ticks(true),
-                     ticks: { color: '#999', autoSkip: false, callback: v => (v === dnfY ? 'DNF' : v) },
-                     title: { display: true, text: 'Finished', color: '#6b7280', font: { size: 11, weight: '600' } } },
-            },
+            scales: scales(),
         },
         plugins: [guide],
     });
+
+    const btns = [...document.querySelectorAll('#vp-disc [data-disc]')];
+    btns.forEach(btn => btn.addEventListener('click', () => {
+        if (btn.dataset.disc === disc) return;
+        disc = btn.dataset.disc;
+        btns.forEach(b => { b.classList.toggle('active', b === btn); b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
+        document.querySelectorAll('.vp-score').forEach(dl => { dl.hidden = dl.dataset.disc !== disc; });
+        tipEl.style.opacity = '0';
+        load(disc);
+        chart.data.datasets[0].data = st.pts;
+        chart.data.datasets[1].data = st.dnf;
+        chart.options.scales = scales();
+        chart.update();
+    }));
 })();
 
 // % Behind Leader chart -------------------------------------------------------

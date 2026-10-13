@@ -2540,6 +2540,45 @@ def get_athlete_relay_stats(athlete_id):
             "podiums": row[1] + row[2] + row[3], "dnfs": row[4]}
 
 
+def get_athlete_prediction_places(athlete_id):
+    """For every race the athlete has a stored prediction in, the predicted and
+    actual place and time per discipline: {race_id: {disc: {"pred_rank",
+    "pred_s", "act_rank", "act_s"}}}. Overall places are the predicted and
+    finishing positions; a leg's places rank the split among the field's
+    predicted splits and among the recorded splits. act_s is None when the
+    athlete has no time for it (did not finish, or no split recorded)."""
+    discs = ("swim", "bike", "run")
+    rank = lambda col: f"RANK() OVER (PARTITION BY race_id ORDER BY CASE WHEN {col} > 0 THEN {col} END NULLS LAST)"
+    rows = _get_conn().execute(f"""
+        WITH mine AS (SELECT race_id FROM race_predictions WHERE athlete_id = ?),
+        pr AS (
+            SELECT race_id, athlete_id, predicted_position, overall_s, {", ".join(f"{d}_s" for d in discs)},
+                   {", ".join(f"{rank(d + '_s')} AS r_{d}" for d in discs)}
+            FROM race_predictions WHERE race_id IN (SELECT race_id FROM mine)
+        ),
+        ac AS (
+            SELECT race_id, athlete_id, position, status, overall_s, {", ".join(f"{d}_s" for d in discs)},
+                   {", ".join(f"{rank(d + '_s')} AS r_{d}" for d in discs)}
+            FROM results WHERE race_id IN (SELECT race_id FROM mine)
+        )
+        SELECT pr.race_id, pr.predicted_position, pr.overall_s, ac.position, ac.status, ac.overall_s,
+               {", ".join(f"pr.{d}_s, pr.r_{d}, ac.{d}_s, ac.r_{d}" for d in discs)}
+        FROM pr LEFT JOIN ac ON ac.race_id = pr.race_id AND ac.athlete_id = pr.athlete_id
+        WHERE pr.athlete_id = ?
+    """, [athlete_id, athlete_id]).fetchall()
+    out = {}
+    for r in rows:
+        finished = r[4] == "Finished" and r[3]
+        e = {"overall": {"pred_rank": r[1], "pred_s": r[2], "act_rank": r[3] if finished else None,
+                         "act_s": r[5] if finished and r[5] else None}}
+        for i, d in enumerate(discs):
+            ps, prk, as_, ark = r[6 + 4 * i: 10 + 4 * i]
+            e[d] = {"pred_rank": prk if ps else None, "pred_s": ps or None,
+                    "act_rank": ark if as_ else None, "act_s": as_ or None}
+        out[r[0]] = e
+    return out
+
+
 def get_athlete_relay_history(athlete_id):
     """The athlete's mixed relay legs, shaped like get_athlete_race_history rows.
 

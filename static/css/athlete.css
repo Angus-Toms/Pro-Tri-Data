@@ -907,6 +907,8 @@
    (stacked below 768). */
 .vp-card { display: grid; grid-template-columns: minmax(0, 460px) minmax(0, 1fr); gap: 1.25rem 2rem; align-items: start; padding: 1rem 1.25rem; margin-bottom: 2rem; }
 .vp-chart { position: relative; width: 100%; }
+.vp-disc { margin-bottom: 0.6rem; }
+.vp-disc .race-view-btn { flex: 1; padding-left: 0.4rem; padding-right: 0.4rem; }
 .vp-score { margin: 0; }
 .vp-score > div { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; padding: 0.45rem 0; border-top: 1px solid var(--border-color); font-size: 0.86rem; }
 .vp-score > div:first-child { border-top: 0; }
@@ -914,8 +916,12 @@
 .vp-score dt small { display: block; font-size: 0.72rem; color: var(--text-lighter); }
 .vp-score dd { margin: 0; font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
 .vp-score dd small { font-weight: 500; color: var(--text-light); }
-.vp-score .vp-swing { flex-direction: column; gap: 0.1rem; }
-.vp-score .vp-swing dd { text-align: left; font-weight: 600; white-space: normal; }
+/* Biggest beat / miss: label and race on the left, the rating change large on the right. */
+.vp-score .vp-swing { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; column-gap: 1rem; row-gap: 0.1rem; align-items: center; }
+.vp-score .vp-swing dt { grid-column: 1; }
+.vp-score .vp-swing dd { grid-column: 1; text-align: left; font-weight: 600; white-space: normal; }
+.vp-swing-chg { grid-column: 2; grid-row: 1 / 3; }
+.vp-swing-chg .rating-change { font-size: 1.1rem; font-weight: 800; }
 .vp-score .vp-swing a { color: var(--text-color); text-decoration: none; }
 .vp-score .vp-swing a:hover { color: var(--primary-color); }
 .vp-score .vp-swing small { display: block; }
