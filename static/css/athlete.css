@@ -558,9 +558,8 @@
     .pt-head, .pt-total, .pt-row summary { grid-template-columns: minmax(0, 1fr) repeat(3, 2.25rem) 1.25rem; }
     .pt-preview, .pt-head span + span { display: none; }
     .pt-total .pt-name { grid-column: auto; }
-    /* Stacked: the short, current Form first, then the longer Palmares. */
-    .cs-body.two-col .cs-form { order: -1; border-left: 0; padding-left: 0; }
-    .cs-body.two-col .cs-palmares { border-top: 1px solid var(--border-color); padding-top: 1rem; }
+    /* Stacked: Palmares first, then Current form under a divider. */
+    .cs-body.two-col .cs-form { border-left: 0; padding-left: 0; border-top: 1px solid var(--border-color); padding-top: 0.8rem; }
     .upcoming-item { grid-template-columns: minmax(0, 1fr) 2.5rem 4.5rem 4rem 4rem; gap: 0.25rem 0.6rem; }
     .career-ratings .rt-spark { width: 4em; margin-left: 0.35rem; }
 
@@ -933,7 +932,7 @@
 
 /* Phones: the career cards become a slim switch and the career summary a
    dense block, as in the audit's phone layout. Form folds to one line. */
-.career-card-sub, .cf-phone { display: none; }
+.career-card-sub, .cf-drop { display: none; }
 /* Phone form grid: a plain grid, not a data table. */
 .cf-phone { width: 100%; table-layout: auto; font-variant-numeric: tabular-nums; }
 .cf-phone th, .cf-phone td,
@@ -951,9 +950,16 @@
     .career-card-title { font-size: 0.85rem; }
     .career-summary { padding: 0.6rem 0.8rem; margin-top: 0.5rem; }
     .cs-body { gap: 0.6rem; }
-    .cs-body.two-col .cs-palmares { padding-top: 0.6rem; }
+    .cs-body.two-col .cs-form { padding-top: 0.55rem; }
     .cs-form .career-form-table { display: none; }
-    .cf-phone { display: table; }
+    .cf-drop { display: block; }
+    .cf-drop > summary { display: flex; align-items: center; gap: 0.6rem; list-style: none; cursor: pointer; padding: 0.15rem 0; font-variant-numeric: tabular-nums; }
+    .cf-drop > summary::-webkit-details-marker { display: none; }
+    .cf-drop-lead { flex: 1; min-width: 0; font-size: 0.82rem; color: var(--text-light); text-align: right; }
+    .cf-drop-lead b { color: var(--text-color); font-weight: 700; }
+    .cf-drop > summary svg { flex-shrink: 0; color: var(--text-lighter); transition: transform var(--transition-fast); }
+    .cf-drop[open] > summary svg { transform: rotate(180deg); }
+    .cf-drop .cf-phone { margin-top: 0.35rem; }
     .pt-head { padding-bottom: 0.2rem; }
     .pt-total { padding: 0.35rem 0; font-size: 0.85rem; }
     .pt-row summary { padding: 0.32rem 0; font-size: 0.84rem; }

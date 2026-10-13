@@ -250,16 +250,26 @@
                     {% endfor %}
                 </tbody>
             </table>
-            {# Phones: the same times turned round, a distance per row and a
-               discipline per column, so it stays three short lines. #}
-            <table class="cf-phone">
-                <thead><tr><th class="cs-label">Current form</th>{% for row in current_form.rows %}<th>{{ row.label }}</th>{% endfor %}</tr></thead>
-                <tbody>
-                    {% for c in current_form.cols %}{% set ci = loop.index0 %}
-                    <tr><th scope="row">{{ c }}</th>{% for row in current_form.rows %}<td>{{ row.cells[ci].time }}</td>{% endfor %}</tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            {# Phones: a dropdown under Palmares, as in the audit's phone layout.
+               Closed it shows the run (or the one leg there is) at each
+               distance; open, the times turned round, a distance per row and a
+               discipline per column. #}
+            {% set lead = (current_form.rows | selectattr('label', 'equalto', 'Run') | first) or current_form.rows[0] %}
+            <details class="cf-drop">
+                <summary>
+                    <span class="cs-label">Current form</span>
+                    <span class="cf-drop-lead">{{ lead.label }} {% for cell in lead.cells %}<b>{{ cell.time }}</b>{% if not loop.last %} / {% endif %}{% endfor %}</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                </summary>
+                <table class="cf-phone">
+                    <thead><tr><th></th>{% for row in current_form.rows %}<th>{{ row.label }}</th>{% endfor %}</tr></thead>
+                    <tbody>
+                        {% for c in current_form.cols %}{% set ci = loop.index0 %}
+                        <tr><th scope="row">{{ c }}</th>{% for row in current_form.rows %}<td>{{ row.cells[ci].time }}</td>{% endfor %}</tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </details>
         </div>
         {% endif %}
     </div>
