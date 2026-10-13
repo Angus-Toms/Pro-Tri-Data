@@ -318,7 +318,9 @@
 .career-form-table tbody tr:nth-child(even) td,
 .career-form-table tr:hover td { background-color: transparent !important; }
 .career-form-table thead th { font-size: 0.75rem; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--text-lighter); padding-bottom: 0.15rem; }
-.career-form-table thead th:hover { background: none; color: var(--text-light); }
+/* Not sortable, so no hover colour (the site-wide th:hover turns heads blue). */
+.career-form-table thead th:hover, .cf-phone thead th:hover { background: none; color: var(--text-lighter); cursor: default; }
+.career-form-table thead th.cs-label:hover, .cf-phone thead th.cs-label:hover { color: var(--text-color); }
 .career-form-table tbody tr + tr { border-top: 1px solid var(--border-color); }
 .career-form-table tbody th { color: var(--text-color); font-size: 0.85rem; font-weight: 700; text-transform: none; letter-spacing: 0; }
 .cf-time { font-weight: 700; }
