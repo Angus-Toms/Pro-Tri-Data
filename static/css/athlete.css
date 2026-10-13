@@ -360,25 +360,6 @@
     color: var(--success-color);
     margin-left: 0.4rem;
 }
-/* White rows with thin inset dividers at every width, as in Head-to-head:
-   no zebra stripes, no hover highlight. */
-.career-ratings tbody tr, .career-ratings tbody tr:hover { border-bottom: 0; background: none; }
-.career-ratings tbody tr:nth-child(even) td,
-.career-ratings tr:hover td { background-color: transparent !important; }
-@media (min-width: 481px) {
-    /* The divider is a cell border, so the edge cells draw theirs as a 1px
-       background line that starts where their text does. */
-    .career-ratings tbody td { border-top: 0; }
-    .career-ratings tbody tr + tr td { border-top: 1px solid var(--border-color); }
-    .career-ratings tbody tr + tr td:first-child,
-    .career-ratings tbody tr + tr td:last-child {
-        border-top: 0;
-        background: linear-gradient(var(--border-color), var(--border-color)) no-repeat;
-        background-size: calc(100% - 1.25rem) 1px;
-    }
-    .career-ratings tbody tr + tr td:first-child { background-position: right top; }
-    .career-ratings tbody tr + tr td:last-child { background-position: left top; }
-}
 
 /* On phones each row is one grid line: discipline, world rank, rating and
    1-year change. */
@@ -397,6 +378,10 @@
        their side padding so text still lines up under the header. */
     .career-ratings tbody tr { margin: 0 0.6rem; }
     .career-ratings tbody tr + tr { border-top: 1px solid var(--border-color); }
+    /* ...so the shared table's cell dividers (base.css) come off */
+    .ratings-table.career-ratings tbody tr + tr td,
+    .ratings-table.career-ratings tbody tr + tr td:first-child,
+    .ratings-table.career-ratings tbody tr + tr td:last-child { border-top: 0; background: none; }
     .career-ratings tbody td, .career-ratings tbody td:first-child, .career-ratings tbody td:last-child { padding-left: 0; padding-right: 0; }
     .career-ratings th, .career-ratings td,
     .career-ratings th.rt-rank, .career-ratings td.rt-rank,

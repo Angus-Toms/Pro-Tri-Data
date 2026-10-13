@@ -2281,8 +2281,23 @@ sup.ordinal-suffix {
     letter-spacing: 0.08em;
     white-space: nowrap;
 }
-.ratings-table tbody tr { transition: background 0.12s ease; }
-.ratings-table tbody tr:hover { background: #fafbfc; }
+/* White rows with thin inset dividers, as in Head-to-head: no zebra
+   stripes, no hover highlight. The divider is a cell border, so the edge
+   cells draw theirs as a 1px background line that starts where their text
+   does (1.25rem, the site's edge-cell padding). */
+.ratings-table tbody tr, .ratings-table tbody tr:hover { border-bottom: 0; background: none; }
+.ratings-table tbody tr:nth-child(even) td,
+.ratings-table tr:hover td { background-color: transparent !important; }
+.ratings-table tbody td { border-top: 0; }
+.ratings-table tbody tr + tr td { border-top: 1px solid var(--border-color); }
+.ratings-table tbody tr + tr td:first-child,
+.ratings-table tbody tr + tr td:last-child {
+    border-top: 0;
+    background: linear-gradient(var(--border-color), var(--border-color)) no-repeat;
+    background-size: calc(100% - 1.25rem) 1px;
+}
+.ratings-table tbody tr + tr td:first-child { background-position: right top; }
+.ratings-table tbody tr + tr td:last-child { background-position: left top; }
 
 /* Column widths. Fixed widths on every column so the slack distributes
    evenly rather than ballooning Best Performance. Disciplines + ranks
