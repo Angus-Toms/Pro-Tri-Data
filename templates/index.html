@@ -32,7 +32,7 @@
 {% block hero %}
 <div class="page-hero home-strip">
     <div class="home-strip-inner">
-        <div class="home-strip-label"><b>Race calendar</b><span>{{ schedule[0].date.strftime('%-d %b') }} – {{ schedule[-1].date.strftime('%-d %b') }}</span></div>
+        <div class="home-strip-label"><b>Latest and upcoming</b><span>{{ schedule[0].date.strftime('%-d %b') }} – {{ schedule[-1].date.strftime('%-d %b') }}</span></div>
         <div class="home-schedule">
             {% for s in schedule %}
             <a href="{{ s.href }}"{% if s.status != 'Results' and loop.previtem is defined and loop.previtem.status == 'Results' %} class="next"{% endif %}>
