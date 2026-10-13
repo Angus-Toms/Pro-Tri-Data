@@ -3,6 +3,16 @@
 // /home/mine is a no-store partial injected above "This weekend" once /me
 // says who you are.
 
+// Phones open the calendar strip on the latest result, with the next race
+// beside it, rather than on the oldest result off-screen to the left.
+// After load, so a reload's restored scroll position doesn't override it.
+window.addEventListener('load', () => {
+    const strip = document.querySelector('.home-schedule');
+    const latest = strip?.querySelector('a.next')?.previousElementSibling;
+    if (latest && matchMedia('(max-width: 480px)').matches)
+        strip.scrollLeft += latest.getBoundingClientRect().left - strip.getBoundingClientRect().left;
+});
+
 // data-tab="group:key" buttons switch the data-pane="group:key" panes of the same group.
 document.querySelectorAll('[data-tab]').forEach(tab => {
     tab.addEventListener('click', () => {

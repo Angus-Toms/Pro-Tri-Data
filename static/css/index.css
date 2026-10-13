@@ -267,6 +267,7 @@
 .home-why[hidden] { display: none; }
 
 .home-blog { padding: 1rem 1.25rem; }
+.home-blog + .home-blog { margin-top: 0.75rem; }
 .home-blog h3 { margin: 0 0 0.3rem; font-size: 0.95rem; }
 .home-blog h3 a { color: inherit; text-decoration: none; }
 .home-blog h3 a:hover { color: var(--primary-color); }
@@ -330,6 +331,8 @@
 
 /* ── Responsive: the site's three breakpoints, 1024 / 768 / 480 ── */
 @media (max-width: 1024px) {
+    /* The fourth latest event and the second blog post fill wide screens only */
+    .home-wide-only { display: none; }
     .home-layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
     .home-side { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 2rem; }
     .home-side > .home-why, .home-side > .home-section:last-child { grid-column: 1 / -1; }
@@ -391,6 +394,20 @@
     .home-mine .race .small::before { content: "\00b7"; margin: 0 0.3em; color: var(--text-lighter); }
 }
 @media (max-width: 480px) {
+    /* The label takes its own line above the strip so the events get the full width */
+    .home-strip-inner { flex-direction: column; }
+    .home-strip-label {
+        flex-direction: row;
+        justify-content: flex-start;
+        align-items: baseline;
+        gap: 0.5rem;
+        padding: 0.7rem 0 0;
+        margin-right: 0;
+        border-right: 0;
+    }
+    .home-strip-label span { display: inline; }
+    .home-strip-label span::before { content: "· "; }
+    .home-schedule a { padding-top: 0.4rem; }
     /* Your athletes: same rows, tighter */
     .home-mine tr { padding: 0.6rem 0.75rem; column-gap: 0.5rem; }
     .home-mine .home-who { gap: 0.5rem; }

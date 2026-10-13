@@ -6,8 +6,8 @@
 <img class="home-ath-img" src="{{ STATIC_BASE_URL }}{{ 'athlete_imgs/128/' ~ p.athlete_id ~ '.webp' if p.profile_img else 'imgs/default_user_64.webp' }}" alt="" loading="lazy" width="28" height="28">
 {%- endmacro %}
 
-{% macro event_block(e, predicted=False) %}
-<article class="home-event">
+{% macro event_block(e, predicted=False, cls='') %}
+<article class="home-event{{ ' ' ~ cls if cls }}">
     <div class="home-event-head">
         <h3><a href="/event/{{ e.event_id }}">{{ e.name }}</a></h3>
         <div class="home-event-meta">

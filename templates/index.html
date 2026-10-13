@@ -68,7 +68,8 @@
             <span>Latest results</span>
             <a href="/recent" class="section-link">All results</a>
         </div>
-        {% for e in recent %}{{ event_block(e) }}{% endfor %}
+        {# A fourth event, and a second blog post, only where there's room #}
+        {% for e in recent %}{{ event_block(e, cls='home-wide-only' if loop.index > 3) }}{% endfor %}
     </section>
 
 </div>
@@ -141,17 +142,19 @@
         <b>Make this page yours.</b> Follow athletes and races and they appear first, with predicted finishes and results as they land. One email on race weekends, nothing else. <a href="/login?next=/">Log in with your email</a>
     </section>
 
-    {% if latest_blog %}
+    {% if blogs %}
     <section class="home-section">
         <div class="page-section-head page-section-head--sm">
             <span>From the blog</span>
             <a href="/about" class="section-link">About PTD</a>
         </div>
-        <div class="home-card home-blog">
-            <h3><a href="/about/blog/{{ latest_blog.slug }}">{{ latest_blog.title }}</a></h3>
-            <p>{{ latest_blog.teaser }}</p>
-            <a href="/about/blog/{{ latest_blog.slug }}" class="section-link">Read more</a>
+        {% for b in blogs %}
+        <div class="home-card home-blog{{ ' home-wide-only' if not loop.first }}">
+            <h3><a href="/about/blog/{{ b.slug }}">{{ b.title }}</a></h3>
+            <p>{{ b.teaser }}</p>
+            <a href="/about/blog/{{ b.slug }}" class="section-link">Read more</a>
         </div>
+        {% endfor %}
     </section>
     {% endif %}
 

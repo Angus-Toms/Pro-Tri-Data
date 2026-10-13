@@ -51,9 +51,9 @@ async def _race_counts(race_ids):
 @router.get("/")
 def index(request: Request):
 
-    # --- latest results: the latest weekend's three biggest elite events, two
-    # programmes each (men first) ---
-    recent = queries.get_headline_events(3)
+    # --- latest results: the latest weekend's biggest elite events, two
+    # programmes each (men first); the template shows the fourth on wide screens ---
+    recent = queries.get_headline_events(4)
     for e in recent:
         e["races"] = _pair(e["races"])
 
@@ -122,7 +122,7 @@ def index(request: Request):
         "recent":         recent,
         "risers":         risers,
         "rankings":       rankings,
-        "latest_blog":    blogs[0] if blogs else None,
+        "blogs":          blogs[:2],
         "total_athletes": counts["athletes"],
         "total_races":    counts["races"],
         "total_results":  counts["results"],
