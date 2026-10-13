@@ -491,11 +491,19 @@ function openHelpTour(key) {
         const r = targetRect(step);
         const left = Math.max(0, r.left), right = Math.min(innerWidth, r.right);
         const top = Math.max(0, r.top);
-        // A target taller than the screen (a whole results table) is clipped so
-        // the window keeps a normal height with the card below it, rather than
-        // stretching over the entire viewport.
+        // Card below the spotlight if it fits, otherwise above. Only when it
+        // fits neither way (a whole results table) is the window clipped to
+        // leave the card room below.
         const ch = card.offsetHeight;
-        const bottom = Math.min(r.bottom, Math.max(top + 80, innerHeight - ch - 28));
+        let bottom = Math.min(r.bottom, innerHeight);
+        let cardTop = bottom + 12;
+        if (cardTop + ch > innerHeight - 12) {
+            if (top - ch - 12 >= 12) cardTop = top - ch - 12;
+            else {
+                bottom = Math.min(bottom, Math.max(top + 80, innerHeight - ch - 28));
+                cardTop = bottom + 12;
+            }
+        }
         const w = right - left, h = bottom - top;
         // Match the window's corner rounding to the component it frames.
         const rad = Math.min(step.column ? 8 : (parseFloat(getComputedStyle(step.el).borderRadius) + 8 || 10), w / 2, h / 2);
@@ -514,10 +522,7 @@ function openHelpTour(key) {
                 `clip-path:${cornerClip};transform:rotate(${i * 90}deg)`;
         });
         spot.style.cssText = `top:${top}px;left:${left}px;width:${w}px;height:${h}px;border-radius:${rad}px`;
-        // Card below the spotlight if it fits, otherwise above; clamped to viewport.
         const cw = Math.min(card.offsetWidth, innerWidth - 24);
-        let cardTop = bottom + 12;
-        if (cardTop + ch > innerHeight - 12) cardTop = Math.max(12, top - ch - 12);
         const cardLeft = Math.min(Math.max(12, left + (right - left) / 2 - cw / 2), innerWidth - cw - 12);
         card.style.top = `${cardTop}px`;
         card.style.left = `${cardLeft}px`;
@@ -531,12 +536,16 @@ function openHelpTour(key) {
         card.querySelector('.help-card-count').textContent = steps.length > 1 ? `${idx + 1} of ${steps.length}` : '';
         card.querySelector('[data-nav="-1"]').style.visibility = idx > 0 ? 'visible' : 'hidden';
         card.querySelector('[data-nav="1"]').textContent = idx < steps.length - 1 ? 'Next' : 'Done';
-        // Tall targets (whole tables) scroll to their top - centering them would
-        // land mid-table with the section title out of view. The extra nudge
-        // clears the sticky header.
-        const tall = step.el.getBoundingClientRect().height > innerHeight * 0.7;
-        step.el.scrollIntoView({ block: tall ? 'start' : 'center', behavior: 'instant' });
-        if (tall) scrollBy(0, -70);
+        // Centre the spotlight and the card below it together under the sticky
+        // header; a target too tall for both scrolls to its top instead. Only
+        // the window scrolls: scrollIntoView would also scroll overflow:hidden
+        // cards, sliding a table inside its card near the page bottom.
+        const head = 70;
+        const r = targetRect(step);
+        const block = r.bottom - r.top + 12 + card.offsetHeight;
+        const room = innerHeight - head - 12;
+        const y = block <= room ? r.top - head - (room - block) / 2 : r.top - head;
+        scrollTo({ top: scrollY + y, behavior: 'instant' });
         position();
     }
 
