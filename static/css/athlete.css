@@ -926,7 +926,6 @@
 .vp-score .vp-swing a:hover { color: var(--primary-color); }
 .vp-score .vp-swing small { display: block; }
 .vp-score .rating-change { font-size: 0.78rem; font-weight: 700; }
-.vp-note { margin: 0.6rem 0 0; font-size: 0.75rem; color: var(--text-lighter); }
 @media (max-width: 768px) {
     .vp-card { grid-template-columns: minmax(0, 1fr); }
     .vp-chart { max-width: 440px; margin: 0 auto; }
