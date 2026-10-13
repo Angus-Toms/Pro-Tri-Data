@@ -795,15 +795,15 @@ function rrRender() {
               pointHoverRadius: ctx => (ctx.raw?.pos <= 3 ? 7 : 5.5),
               pointBackgroundColor: ctx => MEDAL[ctx.raw?.pos] || 'rgba(107, 114, 128, 0.6)',
               pointBorderColor: ctx => (ctx.raw?.pos <= 3 ? 'rgba(0,0,0,0.25)' : 'transparent'),
-              pointBorderWidth: 1 },
+              pointBorderWidth: 1, clip: false },
             { data: dnf.map(p => ({ ...p, x: p.pred, y: dnfY })),
               pointRadius: 4, pointHoverRadius: 5.5, pointBackgroundColor: '#fff',
-              pointBorderColor: 'rgba(107, 114, 128, 0.8)', pointBorderWidth: 1.5 },
+              pointBorderColor: 'rgba(107, 114, 128, 0.8)', pointBorderWidth: 1.5, clip: false },
         ] },
         options: {
             responsive: true, maintainAspectRatio: true, aspectRatio: 1,
             animation: { duration: 500 },
-            layout: { padding: { top: 4, right: 8 } },
+            layout: { padding: { top: 8, right: 8 } },
             interaction: { mode: 'nearest', intersect: true },
             onClick: (e, els) => {
                 if (!els.length) return;
@@ -811,10 +811,11 @@ function rrRender() {
             },
             plugins: { legend: { display: false }, yearBands: false, tooltip: { enabled: false, external: tooltip } },
             scales: {
-                x: { min: 0, max: top + top * 0.03, grid: { color: 'rgba(0,0,0,0.05)' }, afterBuildTicks: ticks(false),
+                // Axes start at 1st; the dots on it overhang the edge (clip off).
+                x: { min: 1, max: top + top * 0.03, grid: { color: 'rgba(0,0,0,0.05)' }, afterBuildTicks: ticks(false),
                      ticks: { color: '#999', autoSkip: false },
                      title: { display: true, text: 'Predicted place', color: '#6b7280', font: { size: 11, weight: '600' } } },
-                y: { min: 0, max: dnf.length ? dnfY + top * 0.06 : top + top * 0.03, reverse: true,
+                y: { min: 1, max: dnf.length ? dnfY + top * 0.06 : top + top * 0.03, reverse: true,
                      grid: { color: 'rgba(0,0,0,0.05)' }, afterBuildTicks: ticks(true),
                      ticks: { color: '#999', autoSkip: false, callback: v => (v === dnfY ? 'DNF' : v) },
                      title: { display: true, text: 'Finished', color: '#6b7280', font: { size: 11, weight: '600' } } },

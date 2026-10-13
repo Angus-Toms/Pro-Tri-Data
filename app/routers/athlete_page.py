@@ -825,8 +825,6 @@ def get_athlete(request: Request, athlete_id: int,
             "pred_wins":  len(pred_wins),
             "pred_wins_won": sum(e["position"] == 1 for e in pred_wins),
             "wins":       len(wins),
-            # The model's expected wins: the pre-race win chances added up.
-            "expected_wins": sum(e["pred"]["win_pct"] or 0 for e in vp_fin),
             "wins_change": format_rating_change(sum(change(e)["raw"] or 0 for e in wins if change(e))) if wins else None,
             "best":       swing(by_gain[-1]),
             "worst":      swing(by_gain[0]),

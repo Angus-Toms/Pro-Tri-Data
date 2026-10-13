@@ -488,11 +488,11 @@
             <div><dt>Missed it</dt><dd>{{ vp.missed }}</dd></div>
             {% if vp.dnf_count %}<div><dt>Did not finish</dt><dd>{{ vp.dnf_count }} <small>of {{ vp.starts }}</small></dd></div>{% endif %}
             {% if vp.pred_wins %}<div><dt>Predicted wins converted</dt><dd>{{ vp.pred_wins_won }} <small>of {{ vp.pred_wins }}</small></dd></div>{% endif %}
-            <div><dt>Wins <small>model expected {{ "%.1f"|format(vp.expected_wins) }}</small></dt><dd>{{ vp.wins }}{% if vp.wins_change %} <small>{{ chg(vp.wins_change) }}</small>{% endif %}</dd></div>
+            <div><dt>Wins</dt><dd>{{ vp.wins }}{% if vp.wins_change %} <small>{{ chg(vp.wins_change) }}</small>{% endif %}</dd></div>
             {% if vp.best.pos < vp.best.pred %}<div class="vp-swing"><dt>Biggest beat</dt><dd><a href="/race/{{ vp.best.race_id }}">{{ vp.best.race }}</a><small>{{ vp.best.pred|ordinal }} predicted, finished {{ vp.best.pos|ordinal }} {{ chg(vp.best.change) }}</small></dd></div>{% endif %}
             {% if vp.worst.pos > vp.worst.pred %}<div class="vp-swing"><dt>Biggest miss</dt><dd><a href="/race/{{ vp.worst.race_id }}">{{ vp.worst.race }}</a><small>{{ vp.worst.pred|ordinal }} predicted, finished {{ vp.worst.pos|ordinal }} {{ chg(vp.worst.change) }}</small></dd></div>{% endif %}
         </dl>
-        <p class="vp-note">Expected wins add up the model's pre-race win chances over these {{ vp.finished }} races: {{ "%.1f"|format(vp.expected_wins) }} is that many wins' worth of chances. Rating changes are overall.</p>
+        <p class="vp-note">Rating changes are overall.</p>
     </div>
 </div>
 <script id="vp-chart-data" type="application/json">{{ {'points': vp.points, 'dnf': vp.dnf} | tojson }}</script>
