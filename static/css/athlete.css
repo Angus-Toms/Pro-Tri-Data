@@ -137,7 +137,8 @@
     color: rgba(255, 255, 255, 0.75);
     transition: color 0.15s;
 }
-.athlete-hero-instagram svg { width: 1em; height: 1em; }
+/* Beside the name, at about cap height. */
+.athlete-hero-instagram svg { width: 0.7em; height: 0.7em; }
 .athlete-hero-instagram:hover { color: var(--primary-color); }
 
 /* Stat numbers - white, bolder */
