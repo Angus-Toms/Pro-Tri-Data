@@ -2545,8 +2545,9 @@ def get_athlete_prediction_places(athlete_id):
     actual place and time per discipline: {race_id: {disc: {"pred_rank",
     "pred_s", "act_rank", "act_s"}}}. Overall places are the predicted and
     finishing positions; a leg's places rank the split among the field's
-    predicted splits and among the recorded splits. act_s is None when the
-    athlete has no time for it (did not finish, or no split recorded)."""
+    predicted splits and among the field's completed, corrected splits (manual
+    then auto corrections). act_s is None when the athlete has no time for it:
+    did not finish, did not complete the leg, or no split recorded."""
     discs = ("swim", "bike", "run")
     rank = lambda col: f"RANK() OVER (PARTITION BY race_id ORDER BY CASE WHEN {col} > 0 THEN {col} END NULLS LAST)"
     rows = _get_conn().execute(f"""
@@ -2556,10 +2557,41 @@ def get_athlete_prediction_places(athlete_id):
                    {", ".join(f"{rank(d + '_s')} AS r_{d}" for d in discs)}
             FROM race_predictions WHERE race_id IN (SELECT race_id FROM mine)
         ),
+        corr AS (
+            SELECT race_id, athlete_id,
+                   MAX(value) FILTER (WHERE discipline = 'overall') AS overall,
+                   MAX(value) FILTER (WHERE discipline = 'swim') AS swim,
+                   MAX(value) FILTER (WHERE discipline = 'bike') AS bike,
+                   MAX(value) FILTER (WHERE discipline = 'run')  AS run
+            FROM (SELECT race_id, athlete_id, discipline,
+                         COALESCE(MAX(value) FILTER (WHERE source = 'manual'),
+                                  MAX(value) FILTER (WHERE source = 'auto')) AS value
+                  FROM corrections WHERE race_id IN (SELECT race_id FROM mine)
+                  GROUP BY race_id, athlete_id, discipline)
+            GROUP BY race_id, athlete_id
+        ),
+        -- Corrected splits, each kept only when the leg was completed: the
+        -- athlete finished or reached the next leg (judged on the raw times:
+        -- a correction that voids a partial split doesn't mean the leg before
+        -- it went unfinished). A DNF's partial bike split would otherwise rank
+        -- among the fastest.
+        cs AS (
+            SELECT res.race_id, res.athlete_id, res.position, res.status,
+                   NULLIF(COALESCE(c.overall, res.overall_s), 0) AS overall_s,
+                   CASE WHEN res.status = 'Finished' OR res.t1_s > 0 OR res.bike_s > 0
+                        THEN NULLIF(COALESCE(c.swim, res.swim_s), 0) END AS swim_s,
+                   CASE WHEN res.status = 'Finished' OR res.t2_s > 0 OR res.run_s > 0
+                        THEN NULLIF(COALESCE(c.bike, res.bike_s), 0) END AS bike_s,
+                   CASE WHEN res.status = 'Finished'
+                        THEN NULLIF(COALESCE(c.run, res.run_s), 0) END AS run_s
+            FROM results res
+            LEFT JOIN corr c ON c.race_id = res.race_id AND c.athlete_id = res.athlete_id
+            WHERE res.race_id IN (SELECT race_id FROM mine)
+        ),
         ac AS (
             SELECT race_id, athlete_id, position, status, overall_s, {", ".join(f"{d}_s" for d in discs)},
                    {", ".join(f"{rank(d + '_s')} AS r_{d}" for d in discs)}
-            FROM results WHERE race_id IN (SELECT race_id FROM mine)
+            FROM cs
         )
         SELECT pr.race_id, pr.predicted_position, pr.overall_s, ac.position, ac.status, ac.overall_s,
                {", ".join(f"pr.{d}_s, pr.r_{d}, ac.{d}_s, ac.r_{d}" for d in discs)}

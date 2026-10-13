@@ -816,7 +816,8 @@ def get_athlete(request: Request, athlete_id: int,
                               "pred_t": format_time(round(p["pred_s"])) if p["pred_s"] else None,
                               "act_t": format_time(round(p["act_s"])) if p["act_s"] else None,
                               "win_pct": e["pred"]["win_pct"] if disc == "overall" else None,
-                              "chg": round(change(e)["raw"]) if change(e) and change(e)["raw"] is not None else None}
+                              # No rating change shown for a non-finish (it reads as 0).
+                              "chg": round(change(e)["raw"]) if p["act_rank"] and change(e) and change(e)["raw"] is not None else None}
         gain = lambda ep: ep[1]["pred_rank"] - ep[1]["act_rank"]
         by_gain = sorted(fin, key=gain)
         swing = lambda ep: {"race": ep[0]["race_title"], "race_id": ep[0]["race_id"],

@@ -789,7 +789,7 @@ function rrRender() {
                 ${row('Predicted', place(d.pred, d.pred_t))}
                 ${row(disc === 'overall' ? 'Finished' : 'Split', d.status ? '-' : place(d.pos, d.act_t))}
                 ${row('Result', result)}
-                ${d.chg != null ? row('Rating', fmtChangeArrow(d.chg) || '0') : ''}
+                ${d.chg != null && !d.status ? row('Rating', fmtChangeArrow(d.chg) || '0') : ''}
                 ${d.win_pct != null ? row('Win chance', `${(d.win_pct * 100).toFixed(0)}%`) : ''}
             </div>`;
         _positionTooltip(tipEl, chart, t);
