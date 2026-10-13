@@ -38,8 +38,6 @@ data/
 *.log
 *.numbers
 
-# WIP
-social/
 growth/
 
 # Model research / backtest scripts (not part of the live app)
