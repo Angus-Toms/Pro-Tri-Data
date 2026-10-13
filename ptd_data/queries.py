@@ -331,21 +331,56 @@ def _fmt_time(seconds):
     m, sec = divmod(rem, 60)
     return f"{h}:{m:02d}:{sec:02d}" if h else f"{m}:{sec:02d}"
 
-def get_recent_events(offset, limit, country=None):
+def get_headline_events(limit, window_days=7):
+    """The biggest elite events of the latest race weekend, for the home page:
+    events with an elite / pro race from the `window_days` up to the latest
+    one, strongest field first, topped up with the next most recent elite
+    events when the weekend has fewer than `limit`. Strength is the event's
+    best all-time race rank as a share of its gender and course's races, so
+    a long-course and a short-course field compare (raw standards don't).
+    Returned like get_recent_events, newest first."""
+    conn = _get_conn()
+    rows = conn.execute("""
+        WITH totals AS (SELECT gender, course, count(*) AS n FROM race_rankings GROUP BY ALL),
+        elite AS (
+            SELECT r.event_id, max(r.race_date) AS last_date,
+                   min(rr.overall_rank::DOUBLE / t.n) AS strength
+            FROM races r
+            LEFT JOIN race_rankings rr USING (race_id)
+            LEFT JOIN totals t ON t.gender = rr.gender AND t.course = rr.course
+            WHERE r.category = 'elite' AND r.sub_category = 'elite'
+              AND r.race_date >= current_date - 60
+            GROUP BY r.event_id
+        )
+        SELECT event_id, last_date, strength FROM elite ORDER BY last_date DESC, event_id
+    """).fetchall()
+    if not rows:
+        return []
+    latest = rows[0][1]
+    weekend = sorted((r for r in rows if (latest - r[1]).days < window_days),
+                     key=lambda r: (r[2] is None, r[2]))
+    ids = [r[0] for r in weekend[:limit]]
+    ids += [r[0] for r in rows if r[0] not in ids][:limit - len(ids)]
+    return get_recent_events(0, limit, event_ids=ids)
+
+
+def get_recent_events(offset, limit, country=None, event_ids=None):
     """Events sorted by start_date desc, paginated, with constituent races.
 
-    Optional `country` filter restricts to events hosted in that country (name).
+    Optional `country` filter restricts to events hosted in that country (name);
+    `event_ids` to those events.
     """
     conn = _get_conn()
     country_sql, country_params = ("AND e.country = ?", [country]) if country else ("", [])
+    ids_sql, ids_params = ("AND e.event_id = ANY(?)", [list(event_ids)]) if event_ids is not None else ("", [])
     event_rows = conn.execute(f"""
         SELECT event_id, name, venue, country, start_date, end_date
         FROM events e
         WHERE EXISTS (SELECT 1 FROM races r WHERE r.event_id = e.event_id)
-          {country_sql}
+          {country_sql} {ids_sql}
         ORDER BY start_date DESC
         LIMIT ? OFFSET ?
-    """, country_params + [limit, offset]).fetchall()
+    """, country_params + ids_params + [limit, offset]).fetchall()
     if not event_rows:
         return []
 

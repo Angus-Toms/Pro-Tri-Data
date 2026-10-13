@@ -51,8 +51,9 @@ async def _race_counts(race_ids):
 @router.get("/")
 def index(request: Request):
 
-    # --- latest results: three most recent events, two programmes each (men first) ---
-    recent = queries.get_recent_events(0, 3)
+    # --- latest results: the latest weekend's three biggest elite events, two
+    # programmes each (men first) ---
+    recent = queries.get_headline_events(3)
     for e in recent:
         e["races"] = _pair(e["races"])
 
@@ -80,14 +81,18 @@ def index(request: Request):
             r["likes"]    = likes.get(r["race_id"], 0)
             r["comments"] = comments.get(r["race_id"], 0)
 
-    # --- schedule strip: last four events raced, next six to come ---
+    # --- schedule strip: the latest weekend's four biggest elite events, then
+    # the next six. An upcoming event says what it has: a predicted podium, a
+    # start list for its elite races, or neither yet. ---
     def strip_item(e, status):
         return {"href": f"/event/{e['event_id']}", "date": e["start_date"],
                 "name": re.sub(r"^\d{4}\s+", "", e["name"]), "status": status}
-    predicted_ids = {e["event_id"] for e in upcoming if any(r["podium"] for r in e["races"])}
-    schedule = ([strip_item(e, "Results") for e in reversed(queries.get_recent_events(0, 4))]
-                + [strip_item(e, "Predictions" if e["event_id"] in predicted_ids else "Start list")
-                   for e in all_upcoming[:6]])
+    def upcoming_status(e):
+        if any(r["podium"] for r in e["races"]):
+            return "Predictions"
+        return "Start list" if any(r["entry_count"] for r in e["races"]) else "Upcoming"
+    schedule = ([strip_item(e, "Results") for e in reversed(queries.get_headline_events(4))]
+                + [strip_item(e, upcoming_status(e)) for e in all_upcoming[:6]])
 
     # --- on the rise: biggest gains per course over 30 days, men then women ---
     risers = []
