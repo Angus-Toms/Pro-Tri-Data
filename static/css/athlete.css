@@ -368,9 +368,13 @@
     .career-ratings.has-change tr { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .career-ratings thead tr { background: var(--navy); }
     .career-ratings thead th { background: none; white-space: normal; }
-    /* Zebra rows as elsewhere; the grid rows carry the shading. */
-    .career-ratings tbody tr:nth-child(even) { background: #f2f4f6; }
-    .career-ratings tbody tr td { background: none; }
+    /* White rows with thin inset dividers, as in Head-to-head: the rows sit
+       in from the card's edges and carry the divider, cells drop their side
+       padding so text still lines up under the header. */
+    .career-ratings tbody tr { margin: 0 0.6rem; background: none; }
+    .career-ratings tbody tr + tr { border-top: 1px solid var(--border-color); }
+    .career-ratings tbody tr td, .career-ratings tbody tr:nth-child(even) td { background: none; }
+    .career-ratings tbody td, .career-ratings tbody td:first-child, .career-ratings tbody td:last-child { padding-left: 0; padding-right: 0; }
     .career-ratings th, .career-ratings td,
     .career-ratings th.rt-rank, .career-ratings td.rt-rank,
     .career-ratings th.rt-change, .career-ratings td.rt-change,
