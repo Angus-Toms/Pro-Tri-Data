@@ -10,6 +10,10 @@ from config import ENV
 from ptd_users import queries as uq
 
 SESSION_COOKIE = "ptd_session"
+# Readable by page JS, unlike the session: tells every tab whether this browser
+# is logged in, so users.js only trusts its per-tab cached /me while it exists
+# and a logout in one tab shows in all of them.
+LOGGED_IN_COOKIE = "ptd_in"
 SESSION_MAX_AGE = 90 * 24 * 3600
 COOKIE_SECURE = ENV in {"prod", "production"}
 
@@ -27,10 +31,15 @@ def set_session_cookie(response, token):
         SESSION_COOKIE, token, max_age=SESSION_MAX_AGE, httponly=True,
         secure=COOKIE_SECURE, samesite="lax", path="/",
     )
+    response.set_cookie(
+        LOGGED_IN_COOKIE, "1", max_age=SESSION_MAX_AGE,
+        secure=COOKIE_SECURE, samesite="lax", path="/",
+    )
 
 
 def clear_session_cookie(response):
     response.delete_cookie(SESSION_COOKIE, path="/")
+    response.delete_cookie(LOGGED_IN_COOKIE, path="/")
 
 
 # --- remembered accounts --------------------------------------------------------

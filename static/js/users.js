@@ -1,5 +1,7 @@
 // User-state hydration. Pages render anonymously and correct themselves from
-// /me, cached in sessionStorage for a few minutes.
+// /me, cached in sessionStorage for a few minutes. sessionStorage is per tab,
+// so the cache only counts while the ptd_in cookie (set at login, cleared at
+// logout, shared by every tab) says this browser is still logged in.
 
 window.ptdUser = (function () {
     const KEY = 'ptd_me';
@@ -9,7 +11,7 @@ window.ptdUser = (function () {
     function load() {
         if (promise) return promise;
         const cached = sessionStorage.getItem(KEY);
-        if (cached) {
+        if (cached && document.cookie.split('; ').includes('ptd_in=1')) {
             const { t, me } = JSON.parse(cached);
             // Only logged-in payloads are cached: a cached null would keep the
             // page anonymous for minutes after logging in, and the anonymous
