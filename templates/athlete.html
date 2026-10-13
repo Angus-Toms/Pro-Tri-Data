@@ -183,6 +183,8 @@
             <span class="career-card-span">{{ cr.span if cr.current else 'Last raced ' ~ cr.last.strftime('%b %Y') }}</span>
         </span>
         {% if cr.headline %}<span class="career-card-best"><i class="pt-dot m{{ cr.medal }}" aria-hidden="true"></i>{{ cr.headline }}</span>{% endif %}
+        {# Phones: one small line under the course name instead of the figures. #}
+        <span class="career-card-sub">{% if cr.rank %}{{ cr.rank_label }} #{{ "{:,}".format(cr.rank) }}{% if cr.headline %} · {% endif %}{% endif %}{{ cr.headline or '' }}</span>
         <span class="career-card-figs">
             {% if cr.rank %}<span><b>#{{ "{:,}".format(cr.rank) }}</b>{{ cr.rank_label }}</span>{% endif %}
             <span><b>{{ cr.starts }}</b>start{{ '' if cr.starts == 1 else 's' }}</span>
@@ -236,6 +238,12 @@
         {% if current_form %}
         {# Equivalent race-day splits from the form model. #}
         <div class="cs-form">
+            {# Phones: the first distance's splits on one line, tapping opens the table. #}
+            <button type="button" class="cs-form-sum" aria-expanded="false">
+                <span class="cs-label">Form {{ current_form.cols[0] }}</span>
+                <span>{% for row in current_form.rows %}{{ row.label }} <b>{{ row.cells[0].time }}</b>{% if not loop.last %} · {% endif %}{% endfor %}</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
             <table class="career-form-table">
                 <thead><tr><th class="cs-label">Current form</th>{% for c in current_form.cols %}<th>{{ c }}</th>{% endfor %}</tr></thead>
                 <tbody>
