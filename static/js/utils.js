@@ -382,7 +382,7 @@ const HELP_TOURS = {
     ],
     'athlete-vs-prediction': [
         { sel: '#vp-canvas', title: 'Versus prediction',
-          text: 'Each dot is a race, in date order: how many places better (above the line) or worse than the model predicted before the race the athlete finished. Non-finishes sit on the DNF row. The biggest beats and misses are ringed. Only confident predictions count (enough races for a settled rating), and relay legs are left out. Expected wins add up the pre-race win chances.' },
+          text: 'Each dot is a race: the place the model predicted before it, against where the athlete finished. Dots on the dashed line went as predicted; dots in the shaded area above it beat the prediction. Non-finishes sit on the DNF row, and the biggest beats and misses are ringed. Only confident predictions count (enough races for a settled rating), and relay legs are left out. Expected wins add up the pre-race win chances.' },
     ],
     'athlete-races': [
         { sel: '#races-table', title: 'Races',
