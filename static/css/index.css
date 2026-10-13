@@ -336,6 +336,9 @@
     .home-layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
     .home-side { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 2rem; }
     .home-side > .home-why, .home-side > .home-section:last-child { grid-column: 1 / -1; }
+    /* Top of the rail on wide screens; here it keeps its row above the blog */
+    .home-side > .home-why { order: 1; }
+    .home-side > .home-section:last-child { order: 2; }
     .home-rank-pane { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
     /* Your athletes: single column now, so the table is wider than on desktop;
        short column names, and room for the whole athlete name */
