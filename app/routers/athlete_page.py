@@ -866,6 +866,11 @@ def get_athlete(request: Request, athlete_id: int,
         "current_form":        current_form,
         "current_ratings":     current_ratings,
         "ratings_rows":        ratings_rows,
+        # Today's live ranks (the Ratings table's), so the rank chart's line
+        # ends where the table does even when the pool has changed since the
+        # last race. None for a career not ranked now.
+        "ranks_now":           {kind: {d: active_ranks[f"{kind}_{d}"] for d in DISCS} for kind in ("world", "national")}
+                               if active_ranks else None,
         "ranked_now":          active_ranks is not None,
         "doping_ban":          queries.get_athlete_doping_ban(athlete_id),
         "nationality_history": queries.get_athlete_nationality_history(athlete_id),

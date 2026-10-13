@@ -478,13 +478,17 @@ const rrSeries = {
     national: getJSON('national-rankings-chart-data'),
 };
 let rrMode = 'rating', rrChart = null;
+const rrNow = getJSON('ranks-now-data');
 
 function _rrData(mode, disc) {
     const pts = (rrSeries[mode]?.[disc] || []).filter(p => p.y != null);
     if (!pts.length) return [];
-    // Hold the last value to today, as the step line does between races.
+    // Hold the last value to today, as the step line does between races. A
+    // rank ends on today's live rank (the Ratings table's): athletes leaving
+    // the 18-month pool can move it without a race.
     const today = new Date().toISOString().slice(0, 10);
-    return [...pts, { ...pts[pts.length - 1], x: today, now: true }];
+    const live = mode !== 'rating' && rrNow?.[mode]?.[disc];
+    return [...pts, { ...pts[pts.length - 1], x: today, now: true, ...(live ? { y: live } : {}) }];
 }
 
 function _rrScale(mode, data) {
@@ -552,7 +556,9 @@ const rrDecor = {
         };
         label(peakText, Math.max(area.left + 4, Math.min(pp.x, area.right - 4)), yFor(pp.y, rrMode === 'rating'),
               pp.x > area.left + area.width * 0.6 ? 'right' : 'left', '#1a1a2e');
-        if (pi !== li - 1 || data[li].y !== peak.y) {
+        // No "now" label when the peak label already covers today: the rating
+        // is still its peak, or the best rank is held "since" a date.
+        if (data[li].y !== peak.y || (rrMode !== 'rating' && !peakText.includes(' since '))) {
             label(`${fmt(data[li].y)} now`, lp.x - 2, yFor(lp.y, rrMode !== 'rating'), 'right', '#6b7280');
         }
         ctx.restore();
@@ -582,7 +588,10 @@ function _rrBestText(data, best) {
                : days < 730 ? `${Math.round(days / 30.44)} months`
                : `${(days / 365.25).toFixed(1)} years`;
     const rank = '#' + best.toLocaleString('en-GB');
-    const current = data[data.length - 1].y === best;
+    // "Since" only when the last race is in the current spell; a rank regained
+    // between races (the pool changing) has no start date to give.
+    const lastRace = data.filter(p => !p.now).pop();
+    const current = data[data.length - 1].y === best && lastRace.y === best;
     const first = month(spells[0].start);
     if (current) {
         const since = month(spells[spells.length - 1].start);
