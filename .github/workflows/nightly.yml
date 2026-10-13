@@ -152,6 +152,16 @@ jobs:
           exit 1
           EOF
 
+      # The edge holds pages for an hour, athlete pages a day and old races a
+      # week, so tonight's data only shows once the cache is emptied
+      - name: Purge the Cloudflare cache
+        env:
+          CF_PURGE_TOKEN: ${{ secrets.CF_PURGE_TOKEN }}
+        run: |
+          curl -fsS -X POST "https://api.cloudflare.com/client/v4/zones/b030e91d2e152d7ca9a326078dcba074/purge_cache" \
+            -H "Authorization: Bearer $CF_PURGE_TOKEN" -H "Content-Type: application/json" \
+            --data '{"purge_everything":true}' | grep -q '"success":true'
+
       # Liked-race start-list changes and results into the bell, now the new
       # DB is live. The emails go weekly (weekly-emails.yml). The service's
       # settings live in its systemd unit, so they are passed here.

@@ -46,7 +46,8 @@ async def flag_cache_headers(request: Request, call_next):
     return response
 
 # Edge-cache everything the DB serves: content only changes on rebuild, which
-# redeploys the app (purge the Cloudflare cache on deploy). max-age=0 keeps
+# redeploys the app (the nightly workflow purges the Cloudflare cache after
+# each deploy). max-age=0 keeps
 # browsers revalidating against the edge so a purge takes effect immediately.
 # X-Partial requests are skipped: the compare partials share their URL with a
 # 302 for direct navigation, and Cloudflare keys its cache on URL alone, so
