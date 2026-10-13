@@ -19,7 +19,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from playwright.sync_api import sync_playwright
 
 from app.routers.router_utils import format_time, format_time_behind
-from config import RUNTIME_ATHLETE_IMAGES_DIR, STATIC_BASE_URL
+from config import RUNTIME_ATHLETE_IMAGES_DIR
 from ptd_data import queries
 
 ROOT       = Path(__file__).resolve().parents[2]
@@ -59,12 +59,13 @@ def ordinal(n: int) -> str:
 
 
 def face_uri(athlete_id: int) -> str | None:
-    """Local 512px face as a data URI; in prod the images live on the CDN."""
+    """The 512px face as a data URI, or None (the card then shows initials).
+    Every place cards render (dev, the box, the nightly runner) has the faces
+    on disk, and the box can't fetch them from the CDN anyway, so a missing
+    file means the athlete has no photo."""
     p = RUNTIME_ATHLETE_IMAGES_DIR / "512" / f"{athlete_id}.webp"
     if p.exists():
         return "data:image/webp;base64," + base64.b64encode(p.read_bytes()).decode()
-    if STATIC_BASE_URL.startswith("http"):
-        return f"{STATIC_BASE_URL}athlete_imgs/512/{athlete_id}.webp"
     return None
 
 
