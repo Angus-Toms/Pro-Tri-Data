@@ -152,6 +152,12 @@ jobs:
           exit 1
           EOF
 
+      # Liked-race start-list changes and results into the bell, now the new
+      # DB is live. The emails go weekly (weekly-emails.yml). The service's
+      # settings live in its systemd unit, so they are passed here.
+      - name: Race bell notifications
+        run: ssh "$PROD" "cd $APP && PTD_ENV=prod DATA_ROOT=$DATA .venv/bin/python -m scripts.send_update_emails --bells-only"
+
       - name: Commit admin entries
         run: |
           # Collect start lists saved during the run too, and empty the box's

@@ -318,8 +318,9 @@ Emails (`ptd_users/emails.py`, templates in `templates/emails/`)
 - Table-based HTML with inline styles in the site palette, plus a plain-text part.
   Sent through Resend from `EMAIL_FROM` (default login@protridata.com).
 - Login: subject "Your login link", one button to the confirm page.
-- Follow updates: `scripts/send_update_emails.py`, run by hand after a nightly build
-  against the production database. One email per opted-in user listing new
+- Follow updates: `scripts/send_update_emails.py`, run on the box against the production
+  database by the Weekly emails workflow on Monday mornings (the nightly run posts only its
+  bell notifications). One email per opted-in user listing new
   results for followed athletes (last 14 days, with rating change), new start-list
   entries with a predicted finish (rank by rating, as the site's predicted podium),
   and the liked-race notifications from the bell: start-list changes with the

@@ -8,11 +8,14 @@ Liked-race updates go to the bell first, for everyone who liked the race
 whether or not they take emails, and the email then picks up the ones it
 hasn't sent, so the bell and the inbox always agree.
 
-Run by hand after a nightly build, against the production DATABASE_URL:
-    .venv/bin/python -m scripts.send_update_emails
+Runs on the box against the production DATABASE_URL: the nightly workflow
+posts the bell notifications only (--bells-only), and the Weekly emails
+workflow runs the whole thing on Monday mornings, after the weekend's races:
+    .venv/bin/python -m scripts.send_update_emails [--bells-only]
 """
 
 import asyncio
+import sys
 import time
 from datetime import date, datetime, timedelta, timezone
 
@@ -169,6 +172,9 @@ async def collect_updates(users):
 async def main():
     await db.init()
     await notify_race_likes()
+    if "--bells-only" in sys.argv:
+        await db.close()
+        return
     users = await uq.users_for_update_emails()
     sent_count = 0
     for u, results, starts, races, note_ids in await collect_updates(users):

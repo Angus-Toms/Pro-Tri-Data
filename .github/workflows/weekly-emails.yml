@@ -1,0 +1,41 @@
+name: Weekly emails
+
+# Monday mornings, after the nightly build has the weekend's results: each
+# opted-in user gets one email with new results and start lists for the
+# athletes they follow and every update on the races they like. Runs on the
+# box, where the users DB is. Items already emailed are skipped, so a rerun
+# from the Actions tab is safe.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"  # Monday 06:00 UTC
+  workflow_dispatch:
+
+# Waits for a nightly build still running against the box
+concurrency:
+  group: prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  PROD: ptd@77.42.41.185
+  DATA: /var/lib/ptd
+  APP: /opt/ptd
+
+jobs:
+  emails:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: SSH to the box
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          echo "77.42.41.185 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBFEgEd+idK8v/TSqTO8brxclnfxx/FlKmJ3uutAU3i4" > ~/.ssh/known_hosts
+
+      # The service's settings live in its systemd unit, so they are passed here
+      - name: Send the update emails
+        run: ssh "$PROD" "cd $APP && PTD_ENV=prod DATA_ROOT=$DATA .venv/bin/python -m scripts.send_update_emails"
