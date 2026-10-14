@@ -8,7 +8,8 @@ name: Weekly emails
 
 on:
   schedule:
-    - cron: "0 6 * * 1"  # Monday 06:00 UTC
+    # Off the hour: GitHub delays or drops scheduled runs at :00, its busiest minute
+    - cron: "23 6 * * 1"  # Monday 06:23 UTC
   workflow_dispatch:
 
 # Waits for a nightly build still running against the box

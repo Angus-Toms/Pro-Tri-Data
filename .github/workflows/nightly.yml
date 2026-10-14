@@ -8,7 +8,8 @@ name: Nightly
 
 on:
   schedule:
-    - cron: "0 3 * * *"  # 03:00 UTC
+    # Off the hour: GitHub delays or drops scheduled runs at :00, its busiest minute
+    - cron: "17 3 * * *"  # 03:17 UTC
   workflow_dispatch:
     inputs:
       full:
