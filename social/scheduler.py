@@ -10,6 +10,7 @@ filter applied at the SQL level so we don't post Junior/U23/Youth/AG.
 """
 from __future__ import annotations
 
+import os
 from datetime import date, timedelta
 
 from ptd_data import db
@@ -97,4 +98,9 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    # The nightly workflow's DB is the one that reaches the box. Posting from
+    # anywhere else (a laptop with the Meta tokens in .env) leaves no record
+    # there, and the next nightly posts the same races again.
+    if os.getenv("GITHUB_ACTIONS") != "true":
+        raise SystemExit("social.scheduler only posts from the nightly workflow")
     main()
