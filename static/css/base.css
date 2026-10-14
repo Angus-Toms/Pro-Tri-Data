@@ -1035,6 +1035,22 @@ html, body {
     height: 44px;
     justify-self: center;
 }
+/* Site users: their avatar, or their initial on their colour. */
+.gs-avatar:not(.profile-img) {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    justify-self: center;
+}
+.gs-avatar-letter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 800;
+    font-size: 1.05rem;
+}
 .gs-tile {
     width: 48px;
     height: 48px;
@@ -1249,7 +1265,7 @@ body.gs-locked { overflow: hidden; }
         padding: 0.6rem 0.9rem;
     }
     .gs-section-head { padding: 0.7rem 0.9rem 0.25rem; }
-    .gs-avatar.profile-img { width: 42px; height: 42px; }
+    .gs-avatar.profile-img, .gs-avatar:not(.profile-img) { width: 42px; height: 42px; }
     .gs-tile { width: 44px; height: 44px; }
     .gs-expand { right: 0.7rem; }
     .gs-editions { margin: 0 0.9rem 0.5rem calc(0.9rem + 22px); }

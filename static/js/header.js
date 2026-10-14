@@ -175,6 +175,27 @@
             </div>
         </a>`;
 
+    // A site user: avatar (or their initial on their colour), name, and their
+    // club or activity.
+    const userRow = (u) => {
+        const pic = u.avatar_version
+            ? `<img class="gs-avatar" src="/avatar/${u.user_id}.webp?v=${u.avatar_version}" alt="" loading="lazy">`
+            : `<span class="gs-avatar gs-avatar-letter" style="background:${u.tone}" aria-hidden="true">${esc(u.name.slice(0, 1).toUpperCase())}</span>`;
+        // Separator dots only between the parts that are there.
+        const bits = [u.club && esc(u.club),
+                      u.followers && `${u.followers} follower${u.followers === 1 ? '' : 's'}`,
+                      u.comments && `${u.comments} comment${u.comments === 1 ? '' : 's'}`]
+            .filter(Boolean).map((t, i) => `<span class="${i ? 'gs-dot' : 'gs-ellip'}">${t}</span>`).join('');
+        return `
+        <a class="gs-row" href="/user/${u.user_id}">
+            ${pic}
+            <div class="gs-main">
+                <div class="gs-title">${hl(u.name)}${u.country_alpha3 ? flagImg(u.country_alpha3, '') : ''}</div>
+                <div class="gs-sub">${bits || '<span>Member</span>'}</div>
+            </div>
+        </a>`;
+    };
+
     const setOpen = (group, open) => {
         group.classList.toggle('is-open', open);
         group.querySelector('.gs-editions').hidden = !open;
@@ -191,6 +212,8 @@
                     items: d => d.groups.map(groupRow).concat(d.events.map(eventRow)) },
         series:   { label: 'Series',   noun: 'series',   top: 2, total: d => d.series.length,
                     items: d => d.series.map(seriesRow) },
+        users:    { label: 'People',   noun: 'people',   top: 3, total: d => d.users_total,
+                    items: d => d.users.map(userRow) },
     };
 
     const render = () => {
@@ -209,10 +232,10 @@
 
         // All: series, then races, except that a well-known athlete leads.
         // An athlete who never made the world top 100 goes last, so "kona"
-        // opens on Kona, not on someone named Konami. A lone group shows in
-        // full, not as a teaser.
+        // opens on Kona, not on someone named Konami. People always come
+        // last. A lone group shows in full, not as a teaser.
         const r0 = data.athletes.length && data.athletes[0].rank;
-        const order = r0 && !r0.ag && r0.rank <= 100 ? ['athletes', 'series', 'races'] : ['series', 'races', 'athletes'];
+        const order = (r0 && !r0.ag && r0.rank <= 100 ? ['athletes', 'series', 'races'] : ['series', 'races', 'athletes']).concat('users');
         const lone = order.filter(k => rows[k].length).length === 1;
         modal.querySelector('[data-gs-pane="all"]').innerHTML = order.map(k => {
             const g = GROUPS[k], total = g.total(data);

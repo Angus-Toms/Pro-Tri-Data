@@ -608,3 +608,25 @@ async def record_sent(user_id, items):
     await db.pool.executemany("""
         insert into email_sent (user_id, item) values ($1, $2) on conflict do nothing
     """, [(user_id, i) for i in items])
+
+
+async def search_users(query, limit=8):
+    """Public users whose display name contains every word of `query`, for the
+    header search. Names starting with the query come first, then by
+    followers and comments. Banned accounts are left out, and only public
+    profile fields are returned (never the email). Returns (rows, total)."""
+    words = query.split()
+    conds = " and ".join(f"u.display_name ilike '%' || ${i + 1} || '%'" for i in range(len(words)))
+    rows = await db.pool.fetch(f"""
+        select u.user_id, u.display_name, u.country, u.club,
+               case when u.avatar is null then 0 else u.avatar_version end as avatar_version,
+               (select count(*) from follows f where f.kind = 'user' and f.ref_id = u.user_id) as followers,
+               (select count(*) from comments c
+                where c.user_id = u.user_id and c.hidden_at is null and c.deleted_at is null) as comments,
+               count(*) over () as total
+        from users u
+        where not u.is_banned and {conds}
+        order by u.display_name ilike ${len(words) + 1} || '%' desc, followers desc, comments desc, u.display_name
+        limit {int(limit)}
+    """, *words, query)
+    return [dict(r) for r in rows], (rows[0]["total"] if rows else 0)

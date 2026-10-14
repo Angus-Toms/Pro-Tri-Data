@@ -2,22 +2,31 @@ from datetime import date
 
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 
+from app.routers.router_utils import avatar_tone
 from ptd_data import queries
+from ptd_users import queries as uq
 
 router = APIRouter()
 
 _EMPTY = {"athletes": [], "athletes_total": 0, "groups": [], "groups_total": 0,
-          "events": [], "events_total": 0, "series": []}
+          "events": [], "events_total": 0, "series": [], "users": [], "users_total": 0}
 
 
 @router.get("/search")
-def global_search(q: str = Query("")):
+async def global_search(q: str = Query("")):
     """JSON behind the header search modal (static/js/header.js)."""
     q = q.strip()
     if len(q) < 2:
         return JSONResponse(_EMPTY)
-    res = queries.global_search(q)
+    # The race data is DuckDB (blocking), so it runs in a thread; site users
+    # come from Postgres.
+    res = await run_in_threadpool(queries.global_search, q)
+    users, res["users_total"] = await uq.search_users(q)
+    res["users"] = [{"user_id": u["user_id"], "name": u["display_name"], "country_alpha3": u["country"],
+                     "club": u["club"], "followers": u["followers"], "comments": u["comments"],
+                     "avatar_version": u["avatar_version"], "tone": avatar_tone(u["user_id"])} for u in users]
     today = date.today()
 
     for a in res["athletes"]:
@@ -30,5 +39,6 @@ def global_search(q: str = Query("")):
         x["next_date"] = x["next_date"].strftime("%-d %b %Y") if x["next_date"] else None
     # Edge-cached like every page, but without the default
     # stale-while-revalidate: browsers honour it, and a day-old response
-    # shape would break the freshly deployed header.js.
-    return JSONResponse(res, headers={"Cache-Control": "public, max-age=0, s-maxage=3600"})
+    # shape would break the freshly deployed header.js. Ten minutes, not an
+    # hour, now that it lists people, who rename themselves and sign up.
+    return JSONResponse(res, headers={"Cache-Control": "public, max-age=0, s-maxage=600"})
