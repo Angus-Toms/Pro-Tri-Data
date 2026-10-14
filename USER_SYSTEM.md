@@ -28,6 +28,8 @@ Access layer: asyncpg connection pool (size ~10), raw SQL, no ORM. New package
 `ptd_users/` mirroring `ptd_data/`: `db.py` (pool + migration runner), `queries.py`.
 Migrations are numbered .sql files in `ptd_users/migrations/`, applied at startup;
 a `schema_migrations` table records what ran. Crash on failure.
+The live database exists, so schema changes go in a new numbered file; an
+applied file is never edited (002 repairs the one time that happened).
 
 ## 2. Auth: passwordless magic links
 
