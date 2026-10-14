@@ -180,10 +180,21 @@
     {% endblock %}
 
     <!-- Cloudflare Web Analytics. Hostname-gated so local dev and any preview
-         host don't count as real visits; the token is public by design. -->
+         host don't count as real visits; the token is public by design.
+         Rendering crawlers (Baiduspider-render, Googlebot, headless Chrome)
+         run JS and would count as visits. The check has to happen in the
+         browser: pages are edge-cached by URL alone, so a server-side UA
+         check would cache one variant for everyone. -->
     {% if request.url.hostname.endswith('protridata.com') %}
-    <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js"
-            data-cf-beacon='{"token": "7bba9a7651194ca7b77b5d615fd1f36f"}'></script>
+    <script>
+        if (!navigator.webdriver && !/bot|spider|crawl|slurp|headless|lighthouse/i.test(navigator.userAgent)) {
+            const s = document.createElement('script');
+            s.type = 'module';
+            s.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+            s.dataset.cfBeacon = '{"token": "7bba9a7651194ca7b77b5d615fd1f36f"}';
+            document.body.appendChild(s);
+        }
+    </script>
     {% endif %}
 </body>
 </html>

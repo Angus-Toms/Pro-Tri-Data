@@ -41,7 +41,13 @@ def _athlete_count() -> int:
 @router.get("/robots.txt", response_class=PlainTextResponse)
 def robots_txt(request: Request) -> str:
     base_url = str(request.base_url).rstrip("/")
-    return f"""User-agent: *
+    return f"""# Baidu crawls heavily (4k+ requests/day, some timing out the origin)
+# for an audience this site doesn't serve. The Cloudflare WAF blocks it too;
+# this tells it to stop asking. Matches Baiduspider-render as well.
+User-agent: Baiduspider
+Disallow: /
+
+User-agent: *
 
 # Comparison result pages generate too many URL combinations. The deep
 # routes 302 to ?a1=/?r1= query URLs on the landing pages, so block those
