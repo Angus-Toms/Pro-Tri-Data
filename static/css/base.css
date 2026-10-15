@@ -1533,6 +1533,7 @@ table td a.link:hover   { color: var(--primary-color); }
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 1rem;
     border-left: 3px solid var(--primary-color);
     padding-left: 0.65rem;
     margin-bottom: 0.6rem;
@@ -1553,6 +1554,38 @@ table td a.link:hover   { color: var(--primary-color); }
     letter-spacing: 0;
     margin: 0.1rem 0 0;
 }
+
+.page-section-head--sm { font-size: 1.1rem; }
+
+/* Link from a section to its full page, usually at the right of the heading.
+   The chevron says it goes somewhere; the padding gives a taller tap target
+   without moving the heading. */
+.section-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.5rem 0;
+    margin: -0.5rem 0;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    letter-spacing: 0;
+    white-space: nowrap;
+    text-decoration: underline 1.5px transparent;
+    text-underline-offset: 3px;
+    transition: text-decoration-color var(--transition-fast);
+}
+.section-link::after {
+    content: "";
+    flex: none;
+    width: 0.42em;
+    height: 0.7em;
+    background: currentColor;
+    clip-path: polygon(0 0, 45% 0, 100% 50%, 45% 100%, 0 100%, 55% 50%);
+    transition: transform var(--transition-fast);
+}
+.section-link:hover { color: var(--primary-hover); text-decoration-color: currentColor; }
+.section-link:hover::after { transform: translateX(2px); }
 
 /* ============================================
    HERO STATS - reusable right-side stat cluster for page heroes

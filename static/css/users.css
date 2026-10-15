@@ -15,19 +15,6 @@ a.hero-stat--link:hover .hero-stat-lbl {
     color: var(--primary-color);
 }
 
-.section-link {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--primary-color);
-    text-decoration: none;
-    letter-spacing: 0;
-    white-space: nowrap;
-}
-
-.section-link:hover {
-    color: var(--primary-hover);
-}
-
 .feed-dot {
     color: var(--text-lighter);
 }

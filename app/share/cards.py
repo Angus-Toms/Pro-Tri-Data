@@ -18,7 +18,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from playwright.sync_api import sync_playwright
 
-from app.routers.router_utils import format_time, format_time_behind
+from app.routers.router_utils import format_time, format_time_behind, ordinal
 from config import RUNTIME_ATHLETE_IMAGES_DIR
 from ptd_data import queries
 
@@ -48,14 +48,6 @@ _env = Environment(loader=FileSystemLoader(str(TPL_DIR)), autoescape=select_auto
 _env.globals["STATIC_URI"] = STATIC_URI
 # flag()/face() as globals so child-template blocks can call them.
 _env.globals.update({k: v for k, v in vars(_env.get_template("_macros.html").module).items() if not k.startswith("_")})
-
-
-def ordinal(n: int) -> str:
-    if 10 <= n % 100 <= 20:
-        suf = "th"
-    else:
-        suf = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
-    return f"{n}{suf}"
 
 
 def face_uri(athlete_id: int) -> str | None:

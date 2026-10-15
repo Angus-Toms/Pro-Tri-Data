@@ -80,15 +80,6 @@
 }
 .home-section { margin-bottom: 3rem; }
 .home-section[hidden] { display: none; }
-.page-section-head--sm { font-size: 1.1rem; }
-.section-link {
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: var(--primary-color);
-    text-decoration: none;
-    white-space: nowrap;
-}
-.section-link:hover { color: var(--primary-hover); }
 .home-empty { color: var(--text-light); font-size: 0.9rem; }
 
 /* Rating change: the site's chevron arrows, green up and red down only. */

@@ -3,116 +3,232 @@
 {% block title %}Races - Pro Tri Data{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/event_cards.css?v={{ ASSET_VERSION }}">
-<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/athlete_search.css?v={{ ASSET_VERSION }}">
 <link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/race_search.css?v={{ ASSET_VERSION }}">
 {% endblock %}
 
+{% macro who(p) -%}
+<a href="/athlete/{{ p.athlete_id }}" class="rs-who"><img class="rs-av" src="{{ STATIC_BASE_URL }}{{ 'athlete_imgs/128/' ~ p.athlete_id ~ '.webp' if p.profile_img else 'imgs/default_user_64.webp' }}" alt="" loading="lazy" width="24" height="24"><span>{{ p.name }}{{ flag(p.country_alpha3) }}</span></a>
+{%- endmacro %}
+
+{% macro event_meta(e) -%}
+<small><span>{{ e.country }}</span>{% if e.kind %}<span>{{ e.kind }}</span>{% endif %}{% if e.entries %}<span>{{ e.entries }} entries</span>{% endif %}</small>
+{%- endmacro %}
+
+{% macro also(b, href) -%}
+{% if b.also %}<div class="rs-also">Also: {% for e in b.also[:3] %}<a href="/event/{{ e.event_id }}">{{ e.short_name }}</a>{{ ', ' if not loop.last }}{% endfor %}{% if b.also|length > 3 %} and <a href="{{ href }}">{{ b.also|length - 3 }} more</a>{% endif %}</div>{% endif %}
+{%- endmacro %}
+
 {% block hero %}
-<div class="page-hero">
-    <div class="page-hero-inner">
-        <div>
-            <h1>Race Database</h1>
-            <p class="page-hero-subtitle">Results &amp; analysis for every World Triathlon event</p>
+<div class="hub-hero">
+    <div class="hub-hero-inner">
+        <div class="hub-title">
+            <h1>Races</h1>
+            <p>Results, start lists and predictions for {{ "{:,}".format(summary.events) }} events since {{ summary.first_year }}</p>
         </div>
-        <div class="hero-stats">
-            <div class="hero-stat">
-                <span class="hero-stat-num">{{ "{:,}".format(total_events) }}</span>
-                <span class="hero-stat-lbl">Events</span>
-            </div>
-        </div>
+        <form class="hub-search" role="search" onsubmit="return false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" id="rs-input" placeholder="Search races, venues, countries" autocomplete="off" aria-label="Search races">
+            <button type="button" id="filterToggle" aria-expanded="false" aria-controls="filterPanel">Filters</button>
+        </form>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
 
-<!-- ── Race Search ── -->
-<div class="page-section-head">Race Search</div>
-
-<div class="as-search-box">
-    <svg class="as-search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-    </svg>
-    <input type="text" id="rs-input" class="as-input" placeholder="Search event name, venue, country…" autocomplete="off">
-</div>
-
-<div class="filters-card">
-    <form id="rs-filter-form" onsubmit="return false">
-        <div class="filter-summary-bar">
-            <div class="filter-summary" id="rs-filter-summary">Newest first</div>
-            <button type="button" class="btn-filter-toggle" id="filterToggle" aria-expanded="false" aria-controls="filterPanel">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                </svg>
-                Filters
-            </button>
+<!-- Search: filters stay closed until asked for; results open under the hero -->
+<div class="filters-card rs-filters" id="filterPanel">
+    <form class="filter-panel" onsubmit="return false">
+        <div class="filter-panel-grid">
+            <div class="filter-chip-group">
+                <span class="filter-chip-label">Sort</span>
+                <div class="radio-chips">
+                    <input type="radio" id="sort-desc" name="rs-sort" value="desc" checked>
+                    <label for="sort-desc">Newest first</label>
+                    <input type="radio" id="sort-asc" name="rs-sort" value="asc">
+                    <label for="sort-asc">Oldest first</label>
+                </div>
+            </div>
+            <div class="filter-group">
+                <label for="rs-country">Country</label>
+                <select id="rs-country">
+                    <option value="">All countries</option>
+                    {% for c in country_list %}
+                    <option value="{{ c }}">{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Year</label>
+                <div class="year-range">
+                    <input type="number" id="rs-year-start" placeholder="From" min="1979" max="2030">
+                    <span class="range-sep">–</span>
+                    <input type="number" id="rs-year-end" placeholder="To" min="1979" max="2030">
+                </div>
+            </div>
         </div>
-
-        <div class="filter-panel" id="filterPanel">
-            <div class="filter-panel-grid">
-
-                <div class="filter-chip-group">
-                    <span class="filter-chip-label">Sort</span>
-                    <div class="radio-chips">
-                        <input type="radio" id="sort-desc" name="rs-sort" value="desc" checked>
-                        <label for="sort-desc">Newest first</label>
-                        <input type="radio" id="sort-asc" name="rs-sort" value="asc">
-                        <label for="sort-asc">Oldest first</label>
-                    </div>
-                </div>
-
-                <div class="filter-group">
-                    <label for="rs-country">Country</label>
-                    <select id="rs-country">
-                        <option value="">All countries</option>
-                        {% for c in country_list %}
-                        <option value="{{ c }}">{{ c }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="filter-group">
-                    <label>Year</label>
-                    <div class="year-range">
-                        <input type="number" id="rs-year-start" placeholder="From" min="1990" max="2030">
-                        <span class="range-sep">–</span>
-                        <input type="number" id="rs-year-end" placeholder="To" min="1990" max="2030">
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="filter-panel-actions">
-                <button type="button" class="btn-reset" id="rs-reset">Reset</button>
-            </div>
+        <div class="filter-panel-actions">
+            <button type="button" class="btn-reset" id="rs-reset">Reset</button>
         </div>
     </form>
 </div>
+<div id="rs-results" class="as-results rs-results"></div>
 
-<div id="rs-results" class="as-results"></div>
+<div class="rs-layout">
+<div class="rs-main">
+    <section class="rs-section">
+        <div class="page-section-head">
+            <div>Calendar<p class="page-section-sub">Each week's strongest fields</p></div>
+            <a class="section-link" id="cal-link" href="{{ '/upcoming' if tab == 'up' else '/recent' }}">{{ 'Full calendar' if tab == 'up' else 'All results' }}</a>
+        </div>
+        <div class="rs-tabs" role="tablist">
+            <button type="button" class="rs-tab{{ ' active' if tab == 'up' }}" role="tab" aria-selected="{{ 'true' if tab == 'up' else 'false' }}" data-tab="up" data-link="/upcoming" data-label="Full calendar">Upcoming</button>
+            <button type="button" class="rs-tab{{ ' active' if tab == 'res' }}" role="tab" aria-selected="{{ 'true' if tab == 'res' else 'false' }}" data-tab="res" data-link="/recent" data-label="All results">Results</button>
+        </div>
 
-<!-- ── Race Compare CTA ── -->
-<div class="page-section-head">Compare Races</div>
-<div class="as-compare-widget">
-    <div class="as-compare-copy">
-        <p class="as-compare-lead">Stack two races side by side</p>
-        <p class="as-compare-desc">Compare field standards, course conditions, time and rating distributions, and head-to-head results from athletes who raced both.</p>
+        <div class="rs-cal" data-pane="up"{% if tab != 'up' %} hidden{% endif %}>
+            {% if up_blocks %}
+            <div class="rs-cal-head"><span>Date</span><span>Event</span><span>Men favourite</span><span>Women favourite</span></div>
+            {% for b in up_blocks %}
+            <div class="rs-week{{ ' rs-week--later' if loop.index > 2 }}">
+                <div class="rs-week-head"><span{% if loop.first %} class="now"{% endif %}>{{ b.label }}</span><span>{{ b.span }}</span></div>
+                {% for e in b.events %}
+                <div class="rs-row">
+                    <span class="rs-date">{{ e.date.strftime('%a') }}<b>{{ e.date.day }}</b></span>
+                    <span class="rs-event"><a href="/event/{{ e.event_id }}">{{ e.short_name }}</a>{{ event_meta(e) }}</span>
+                    {% for g, label in [('male', 'Men'), ('female', 'Women')] %}
+                    {% set r = e[g] %}
+                    <span class="rs-cell rs-cell--{{ g }}"><span class="rs-lbl">{{ label }}</span>
+                        {%- if r and r.favourite %}{{ who(r.favourite) }}<span class="rs-pred"><span class="rs-bar"><i style="width: {{ '%.1f'|format(r.favourite.win_pct * 100) }}%"></i></span>{{ '%.0f'|format(r.favourite.win_pct * 100) }}%</span>
+                        {%- elif r and r.entry_count %}<span class="rs-none">Start list out</span>
+                        {%- elif r %}<span class="rs-none">No start list yet</span>
+                        {%- else %}<span class="rs-none">No race</span>{% endif %}</span>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+                {{ also(b, '/upcoming') }}
+            </div>
+            {% endfor %}
+            {% else %}
+            <p class="rs-empty">No start lists published yet.</p>
+            {% endif %}
+        </div>
+
+        <div class="rs-cal" data-pane="res"{% if tab != 'res' %} hidden{% endif %}>
+            {% if res_blocks %}
+            <div class="rs-cal-head"><span>Date</span><span>Event</span><span>Men winner</span><span>Women winner</span></div>
+            {% for b in res_blocks %}
+            <div class="rs-week{{ ' rs-week--later' if loop.index > 2 }}">
+                <div class="rs-week-head"><span{% if loop.first %} class="now"{% endif %}>{{ b.label }}</span><span>{{ b.span }}</span></div>
+                {% for e in b.events %}
+                <div class="rs-row">
+                    <span class="rs-date">{{ e.date.strftime('%a') }}<b>{{ e.date.day }}</b></span>
+                    <span class="rs-event"><a href="/event/{{ e.event_id }}">{{ e.short_name }}</a>{{ event_meta(e) }}</span>
+                    {% for g, label in [('male', 'Men'), ('female', 'Women')] %}
+                    {% set r = e[g] %}
+                    <span class="rs-cell rs-cell--{{ g }}"><span class="rs-lbl">{{ label }}</span>
+                        {%- if r and r.athlete_id %}{{ who(r) }}<small>
+                            {%- if r.margin == 0 %}<span class="rs-story">photo finish</span>
+                            {%- elif r.margin_fmt %}by {{ r.margin_fmt }}{% endif %}
+                            {%- if r.predicted_position and r.predicted_position >= 5 %} <span class="rs-story">predicted {{ r.predicted_position|ordinal }}</span>{% endif %}</small>
+                        {%- elif r %}<span class="rs-none">Results pending</span>
+                        {%- else %}<span class="rs-none">No race</span>{% endif %}</span>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+                {{ also(b, '/recent') }}
+            </div>
+            {% endfor %}
+            {% else %}
+            <p class="rs-empty">No results in the last ten weeks.</p>
+            {% endif %}
+        </div>
+    </section>
+</div>
+
+<aside class="rs-side">
+    <section class="rs-section">
+        <div class="page-section-head page-section-head--sm"><span>Series</span><a class="section-link" href="/series">All series</a></div>
+        <ul class="rs-rail">
+            {% for s in series %}
+            <li>
+                <a class="rs-rail-name" href="/series/{{ s.slug }}">{{ s.name }}</a>
+                <small>
+                    {%- if s.rounds %}<span>{{ s.rounds }} round{{ 's' if s.rounds != 1 }} this year</span>{% endif %}
+                    {%- if s.next_date %}<span class="rs-next">Next round: {{ s.next_round }}, {{ s.next_date.strftime('%a %-d %b') }}</span>
+                    {%- elif s.last_date %}<span>Last round: {{ s.last_round }}, {{ s.last_date.strftime('%-d %b %Y') }}</span>{% endif %}
+                </small>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    <section class="rs-section">
+        <div class="page-section-head page-section-head--sm"><span>Races with history</span><a class="section-link" href="/recurring">Race directory</a></div>
+        <ul class="rs-rail">
+            {% for h in history %}
+            <li class="rs-hist">
+                <div class="rs-hist-top">
+                    <span><a class="rs-rail-name" href="/recurring/{{ h.slug }}">{{ h.name }}</a><small><span>Since {{ h.first_date.year }}</span></small></span>
+                    <span class="rs-hist-n">{{ h.editions }}<small>editions</small></span>
+                </div>
+                <p class="rs-hist-eds"><span>Last edition {{ h.last_date.strftime('%-d %b %Y') }}</span>{% if h.next_date %}<span class="rs-next">Next {{ h.next_date.strftime('%a %-d %b') }}</span>{% endif %}</p>
+                {% if h.winners %}<div class="rs-hist-winners">{% for w in h.winners %}{{ who(w) }}{% endfor %}</div>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    <section class="rs-section rs-wide">
+        {% if ag_event %}<p class="rs-note"><b>Age-group results.</b> {{ ag_event.short_name }}, every age band with splits and ratings. <a class="section-link" href="/event/{{ ag_event.event_id }}">Find your race</a></p>{% endif %}
+        <p class="rs-note"><b>Compare two races.</b> Field strength, times and head-to-heads from the athletes who raced both. <a class="section-link" href="/race-compare">Compare races</a></p>
+    </section>
+</aside>
+</div>
+
+<section class="rs-section">
+    <div class="page-section-head">
+        <span>The {{ season_year }} season{{ ' so far' if season_open }}</span>
+        <a class="section-link" href="/race-leaderboard">Race leaderboard</a>
     </div>
-    <a href="/race-compare" class="as-compare-btn">Open race comparison</a>
-</div>
-
-<!-- ── Recent Races ── -->
-<div class="page-section-head">
-    <div>
-        Recent Races
-        <p class="page-section-sub">Check out the most recent events below</p>
+    <div class="rs-season">
+        <div class="rs-ss">
+            <h3>Strongest fields</h3>
+            <ol>
+                {% for r in strongest %}
+                <li>
+                    <span class="rs-big">{{ r.rank|ordinal }}</span>
+                    <span class="rs-what"><a class="rs-what-title" href="/race/{{ r.race_id }}">{{ r.short_name }}</a> <span class="rs-field">{{ "Men's" if r.gender == 'male' else "Women's" }} {{ r.course }} course</span><span class="rs-winner">{{ who(r) }}</span></span>
+                </li>
+                {% endfor %}
+            </ol>
+        </div>
+        <div class="rs-ss">
+            <h3>Biggest upsets</h3>
+            <ol>
+                {% for r in upsets %}
+                <li>
+                    <span class="rs-big">{{ '%.1f'|format(r.win_pct * 100) }}%<small>win chance</small></span>
+                    <span class="rs-what">{{ who(r) }}<small><a href="/race/{{ r.race_id }}">{{ r.short_name }}</a></small></span>
+                </li>
+                {% endfor %}
+            </ol>
+        </div>
+        <div class="rs-ss">
+            <h3>Closest finishes</h3>
+            <ol>
+                {% for r in closest %}
+                <li>
+                    <span class="rs-big">{{ 'Photo' if r.margin == 0 else r.margin_fmt }}</span>
+                    <span class="rs-what">{{ who(r) }}<small><a href="/race/{{ r.race_id }}">{{ r.short_name }}</a><span>{{ r.race_date.strftime('%-d %b') }}</span></small></span>
+                </li>
+                {% endfor %}
+            </ol>
+        </div>
     </div>
-</div>
+</section>
 
-<div class="home-events-grid rs-events-grid">
-    {% with events=recent_events %}{% include "partials/recent_events.html" %}{% endwith %}
-</div>
+<p class="rs-counts"><span><b>{{ "{:,}".format(summary.events) }}</b> events</span><span><b>{{ "{:,}".format(summary.races) }}</b> races</span><span><b>{{ summary.countries }}</b> host countries</span><span>since {{ summary.first_year }}</span></p>
 
 {% endblock %}
 

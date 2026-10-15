@@ -1,8 +1,332 @@
 /* ============================================
-   RACE SEARCH PAGE
-   Shared filter/radio-chip/toggle styles live in base.css.
-   Event card styles (.event-card, .event-card-header, etc.) live in event_cards.css.
+   RACES HUB (/races)
+   Hero with search, then a calendar of each week's strongest fields beside a
+   series and history rail, then the season's records. Every page this hub
+   previews is linked from the section that previews it.
+   Shared filter, radio-chip and .as-results styles live in base.css.
    ============================================ */
+
+/* ── Hero: title and search ── */
+.hub-hero {
+    background: var(--navy);
+    border-bottom: 3px solid var(--primary-color);
+}
+.hub-hero-inner {
+    width: 90%;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1.5rem 0 1.6rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+    gap: 1rem 2.5rem;
+    align-items: center;
+}
+.hub-title h1 { margin: 0; color: #fff; font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; }
+.hub-title p { margin: 0.15rem 0 0; color: rgba(255,255,255,0.55); font-size: 0.85rem; }
+.hub-search {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    height: 46px;
+    padding: 0 0.4rem 0 0.9rem;
+    background: var(--white);
+    border-radius: var(--border-radius);
+}
+.hub-search:focus-within { box-shadow: 0 0 0 3px rgba(232, 93, 4, 0.35); }
+.hub-search svg { width: 18px; height: 18px; color: var(--text-lighter); flex: none; }
+.hub-search input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: none;
+    font: inherit;
+    font-size: 0.95rem;
+    color: var(--text-color);
+}
+.hub-search button {
+    flex: none;
+    padding: 0.35rem 0.65rem;
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-light);
+    cursor: pointer;
+}
+.hub-search button[aria-expanded="true"],
+.hub-search button.active { color: var(--primary-color); border-color: var(--primary-color); }
+
+/* ── Search filters and results: closed until used ── */
+.rs-filters { display: none; }
+.rs-filters.open { display: block; }
+.rs-filters .filter-panel { display: block; border-top: 0; }
+.rs-results { margin-bottom: 2rem; }
+
+/* ── Layout ── */
+.rs-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 3rem;
+    align-items: start;
+    padding-top: 0.5rem;
+}
+.rs-section { margin-bottom: 2.5rem; }
+.rs-empty { margin: 0; padding: 1rem 1.25rem; font-size: 0.9rem; color: var(--text-light); }
+
+.rs-tabs { display: flex; gap: 1.25rem; border-bottom: 1px solid var(--border-color); margin-bottom: 0.75rem; }
+.rs-tab {
+    background: none;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    padding: 0.3rem 0 0.45rem;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-light);
+    cursor: pointer;
+}
+.rs-tab.active { color: var(--text-color); border-color: var(--primary-color); }
+
+/* An athlete everywhere on the page: photo, name, flag */
+.rs-who {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+    max-width: 100%;
+    font-weight: 600;
+    color: var(--text-color);
+    text-decoration: none;
+}
+.rs-who:hover { color: var(--primary-color); }
+.rs-who > span { min-width: 0; }
+.rs-av {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--border-color);
+}
+
+/* ── Calendar: a row per event, men left and women right ── */
+.rs-cal {
+    background: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    overflow: hidden;
+}
+.rs-cal[hidden] { display: none; }
+.rs-cal-head,
+.rs-row {
+    display: grid;
+    grid-template-columns: 3.25rem minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0 1rem;
+    align-items: center;
+    padding: 0.7rem 1.25rem;
+}
+.rs-cal-head {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    background: var(--navy);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.6);
+}
+.rs-week-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.45rem 1.25rem;
+    background: var(--bg-color);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-light);
+}
+.rs-week-head .now { color: var(--primary-color); font-weight: 700; }
+.rs-row { border-bottom: 1px solid var(--border-color); }
+.rs-week:last-child > :last-child { border-bottom: 0; }
+.rs-date {
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    line-height: 1.2;
+}
+.rs-date b { display: block; font-size: 1.05rem; letter-spacing: 0; color: var(--text-color); }
+.rs-event { min-width: 0; }
+.rs-event > a { display: block; font-weight: 700; font-size: 0.92rem; line-height: 1.3; color: var(--text-color); text-decoration: none; }
+.rs-event > a:hover { color: var(--primary-color); }
+.rs-event small { display: block; margin-top: 0.1rem; font-size: 0.75rem; color: var(--text-light); }
+.rs-cell { min-width: 0; font-size: 0.85rem; line-height: 1.3; }
+.rs-cell small {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 0.74rem;
+    color: var(--text-light);
+    font-variant-numeric: tabular-nums;
+}
+.rs-lbl { display: none; }
+.rs-none { font-size: 0.8rem; color: var(--text-lighter); }
+.rs-story { color: var(--primary-color); font-weight: 600; }
+
+/* Favourite's win chance as a filled bar */
+.rs-pred {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.3rem;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--text-light);
+    font-variant-numeric: tabular-nums;
+}
+/* Same colours as the win bars in the prediction tables (.pct-bar) */
+.rs-bar { flex: 0 1 5rem; height: 6px; background: var(--border-color); border-radius: 3px; overflow: hidden; }
+.rs-bar i { display: block; height: 100%; background: var(--primary-color); border-radius: 3px; }
+
+.rs-also {
+    padding: 0.6rem 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.78rem;
+    color: var(--text-light);
+}
+.rs-also a { font-weight: 600; color: var(--text-color); text-decoration: none; }
+.rs-also a:hover { color: var(--primary-color); }
+
+/* Dot between the parts of a meta line, kept at the end of the part before
+   it so a wrapped line never starts with one */
+.rs-event small > :not(:last-child)::after,
+.rs-rail small > :not(:last-child)::after,
+.rs-what small > :not(:last-child)::after { content: "\00b7"; margin: 0 0.35rem; color: var(--text-lighter); }
+
+/* ── Side rail ── */
+.rs-rail {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    background: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+}
+.rs-rail > li { padding: 0.7rem 1.25rem; border-bottom: 1px solid var(--border-color); }
+.rs-rail > li:last-child { border-bottom: 0; }
+.rs-rail-name { display: block; font-weight: 600; font-size: 0.88rem; line-height: 1.3; color: var(--text-color); text-decoration: none; }
+.rs-rail-name:hover { color: var(--primary-color); }
+.rs-rail small { display: block; margin-top: 0.15rem; font-size: 0.75rem; color: var(--text-light); }
+.rs-next { color: var(--primary-color); font-weight: 600; }
+
+/* Races with history: editions on the right, the edition dates on one line,
+   then the last winners side by side, men left */
+.rs-hist-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.75rem; align-items: start; }
+.rs-hist-n { text-align: right; font-weight: 800; font-size: 1.05rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.rs-hist-n small {
+    margin: 0;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-lighter);
+}
+.rs-hist-eds { margin: 0.35rem 0 0; font-size: 0.75rem; color: var(--text-light); }
+.rs-hist-eds > :not(:last-child)::after { content: "\00b7"; margin: 0 0.35rem; color: var(--text-lighter); }
+.rs-hist-winners {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--border-color);
+}
+.rs-hist-winners .rs-who { font-size: 0.8rem; }
+.rs-hist-winners .rs-av { width: 20px; height: 20px; }
+
+.rs-note {
+    margin: 0;
+    padding: 0.9rem 0;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.88rem;
+    color: var(--text-light);
+}
+.rs-note b { color: var(--text-color); }
+.rs-note + .rs-note { border-top: 0; }
+.rs-note .section-link { white-space: normal; }
+
+/* ── The season: three ranked lists, the big number on the left ── */
+.rs-season { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; }
+.rs-ss {
+    background: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    overflow: hidden;
+}
+.rs-ss h3 {
+    margin: 0;
+    padding: 0.55rem 1.25rem;
+    background: var(--navy);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.6);
+}
+.rs-ss ol { list-style: none; margin: 0; padding: 0; }
+.rs-ss li {
+    display: grid;
+    grid-template-columns: 3.5rem minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.6rem 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.rs-ss li:last-child { border-bottom: 0; }
+.rs-big { font-weight: 800; font-size: 1.1rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.rs-big small {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-lighter);
+}
+.rs-what { min-width: 0; font-size: 0.85rem; line-height: 1.3; }
+.rs-what-title { font-weight: 600; color: var(--text-color); text-decoration: none; }
+.rs-field {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-lighter);
+    white-space: nowrap;
+}
+.rs-winner { display: block; margin-top: 0.3rem; font-size: 0.8rem; }
+.rs-winner .rs-av { width: 20px; height: 20px; }
+.rs-what-title:hover { color: var(--primary-color); }
+.rs-what small {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 0.75rem;
+    color: var(--text-light);
+}
+.rs-what small a { color: inherit; text-decoration: none; }
+.rs-what small a:hover { color: var(--primary-color); }
+.rs-what small .rs-who { font-weight: 500; gap: 0.35rem; vertical-align: middle; }
+.rs-what small .rs-av { width: 18px; height: 18px; }
+
+.rs-counts { margin: 0.5rem 0 1rem; text-align: center; font-size: 0.75rem; color: var(--text-lighter); }
+.rs-counts b { font-weight: 600; color: var(--text-light); }
+.rs-counts span + span::before { content: "\00b7"; margin: 0 0.5rem; }
 
 /* ── Search results ── */
 .rs-result-item {
@@ -12,15 +336,8 @@
     padding: 0.75rem 1.25rem;
     border-bottom: 1px solid var(--border-color);
 }
-
-.rs-result-item:last-child {
-    border-bottom: none;
-}
-
-.rs-result-item:hover {
-    background: var(--bg-color);
-}
-
+.rs-result-item:last-child { border-bottom: none; }
+.rs-result-item:hover { background: var(--bg-color); }
 .rs-result-name {
     font-size: 0.95rem;
     font-weight: 600;
@@ -28,24 +345,11 @@
     text-decoration: none;
     transition: color var(--transition-fast);
 }
+.rs-result-item:hover .rs-result-name { color: var(--primary-color); }
+.rs-result-meta { font-size: 0.8rem; color: var(--text-light); }
+.rs-result-races { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 0.1rem; }
+.rs-result-name-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 
-.rs-result-item:hover .rs-result-name {
-    color: var(--primary-color);
-}
-
-.rs-result-meta {
-    font-size: 0.8rem;
-    color: var(--text-light);
-}
-
-.rs-result-races {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    margin-top: 0.1rem;
-}
-
-/* Race pills */
 .race-pill {
     display: inline-block;
     padding: 2px 10px;
@@ -59,24 +363,10 @@
     text-decoration: none;
     transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
-
-/* Event name + course chip on one row */
-.rs-result-name-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
 a.race-pill:hover {
     background: rgba(231, 100, 30, 0.06);
     border-color: var(--primary-color);
     color: var(--primary-color);
-}
-
-.race-pill-more {
-    color: var(--text-lighter);
-    border-style: dashed;
 }
 
 .rs-no-results,
@@ -87,14 +377,59 @@ a.race-pill:hover {
     text-align: center;
 }
 
-/* ── Recent events grid ── */
-.rs-events-grid {
-    margin-bottom: 2rem;
+/* ── Responsive: the site's three breakpoints, 1024 / 768 / 480 ── */
+@media (max-width: 1024px) {
+    /* One column; the rail becomes a two-up grid under the calendar */
+    .rs-layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .rs-side { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 2rem; }
+    .rs-wide { grid-column: 1 / -1; }
+    .rs-ss li:nth-child(n+6) { display: none; }
 }
-
-/* ── Responsive ── */
 @media (max-width: 768px) {
-    .hero-stats {
-        display: none;
+    .hub-hero-inner { grid-template-columns: minmax(0, 1fr); padding: 1.1rem 0 1.25rem; gap: 0.75rem; }
+    .rs-side { grid-template-columns: minmax(0, 1fr); }
+    .rs-season { grid-template-columns: minmax(0, 1fr); }
+    .rs-ss li:nth-child(n+5) { display: none; }
+    /* Two weeks each way; the section link has the rest */
+    .rs-week--later { display: none; }
+    .rs-week:has(+ .rs-week--later) > :last-child { border-bottom: 0; }
+    /* Calendar: no header row; the event takes the first line, men and women share the second */
+    .rs-cal-head { display: none; }
+    .rs-row {
+        grid-template-columns: 3rem minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-areas: "date event event" "date m w";
+        row-gap: 0.55rem;
+        padding: 0.75rem 1rem;
+        align-items: start;
     }
+    .rs-date { grid-area: date; }
+    .rs-event { grid-area: event; }
+    .rs-cell--male { grid-area: m; }
+    .rs-cell--female { grid-area: w; }
+    .rs-lbl {
+        display: block;
+        margin-bottom: 0.25rem;
+        font-size: 0.62rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-lighter);
+    }
+    .rs-week-head, .rs-also { padding-left: 1rem; padding-right: 1rem; }
+}
+@media (max-width: 480px) {
+    .hub-title h1 { font-size: 1.5rem; }
+    /* Calendar: men and women stack under the event, the label in its own column */
+    .rs-row {
+        grid-template-columns: 2.6rem minmax(0, 1fr);
+        grid-template-areas: "date event" "date m" "date w";
+        row-gap: 0.5rem;
+        column-gap: 0.75rem;
+    }
+    .rs-cell { display: grid; grid-template-columns: 3.1rem minmax(0, 1fr); align-items: center; }
+    .rs-cell > :not(.rs-lbl) { grid-column: 2; }
+    .rs-lbl { margin: 0; }
+    .rs-ss li { padding: 0.6rem 1rem; }
+    .rs-ss li:nth-child(n+4) { display: none; }
+    .rs-rail > li { padding: 0.65rem 1rem; }
 }

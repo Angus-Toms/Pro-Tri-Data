@@ -5,6 +5,7 @@ All functions return plain dicts/lists - no custom objects, no DataFrames.
 Formatting stays in the routers.
 """
 
+import bisect
 import math
 import re
 import statistics
@@ -466,12 +467,6 @@ def get_recent_events(offset, limit, country=None, event_ids=None):
     return [event_map[r[0]] for r in event_rows]
 
 
-def get_total_events():
-    return _get_conn().execute(
-        "SELECT COUNT(*) FROM events e WHERE EXISTS (SELECT 1 FROM races r WHERE r.event_id = e.event_id)"
-    ).fetchone()[0]
-
-
 def get_event_countries():
     """Sorted list of all distinct countries that have hosted events."""
     rows = _get_conn().execute(
@@ -539,6 +534,283 @@ def search_events_full(query, country=None, year_start=None, year_end=None,
         })
 
     return [event_map[r[0]] for r in event_rows]
+
+
+# ---------------------------------------------------------------------------
+# Races hub (/races)
+# ---------------------------------------------------------------------------
+
+def get_races_summary():
+    """Event, race and host-country counts, the first year on record and the
+    latest race date."""
+    row = _get_conn().execute("""
+        SELECT COUNT(DISTINCT e.event_id), COUNT(*), COUNT(DISTINCT e.country),
+               MIN(YEAR(r.race_date)), MAX(r.race_date)
+        FROM races r JOIN events e USING (event_id)
+    """).fetchone()
+    return dict(zip(["events", "races", "countries", "first_year", "last_date"], row))
+
+
+def get_events_meta(event_ids):
+    """{event_id: {series}} for calendar rows. An event in several series
+    reports the highest-tier one (lowest sort_order)."""
+    if not event_ids:
+        return {}
+    ph = ",".join("?" * len(event_ids))
+    rows = _get_conn().execute(f"""
+        SELECT e.event_id,
+               (SELECT s.name FROM event_series es JOIN series s USING (series_id)
+                WHERE es.event_id = e.event_id ORDER BY s.sort_order LIMIT 1)
+        FROM events e
+        WHERE e.event_id IN ({ph})
+    """, list(event_ids)).fetchall()
+    return {r[0]: {"series": r[1]} for r in rows}
+
+
+def get_calendar_results(since):
+    """Completed events with a race on or after `since`, newest first, for the
+    /races calendar. Each carries one headline programme per gender (elite
+    before U23 / junior / youth, then prog_name so D1 beats D2) with its winner,
+    winning margin and the winner's predicted place. `strength` is the best
+    elite race rank as a share of its gender and course's races, as in
+    get_headline_events; events without an elite-elite race have none.
+    Age-group-only events come back with neither programme."""
+    rows = _get_conn().execute("""
+        WITH totals AS (SELECT gender, course, COUNT(*) AS n FROM race_rankings GROUP BY ALL),
+        ev AS (
+            SELECT e.event_id, e.name, e.country, MIN(r.race_date) AS first_date
+            FROM events e JOIN races r USING (event_id)
+            WHERE r.race_date >= ?
+            GROUP BY ALL
+        ),
+        prog AS (
+            SELECT r.event_id, r.race_id, r.gender, r.sub_category, r.distance, r.race_date,
+                   ROW_NUMBER() OVER (PARTITION BY r.event_id, r.gender
+                                      ORDER BY r.sub_category <> 'elite', r.prog_name) AS k
+            FROM races r JOIN ev USING (event_id)
+            WHERE r.category = 'elite' AND r.gender IN ('male', 'female') AND r.distance <> 'relay'
+        ),
+        second AS (
+            SELECT race_id, MIN(overall_s) AS s FROM results
+            WHERE position = 2 AND status = 'Finished' AND race_id IN (SELECT race_id FROM prog WHERE k = 1)
+            GROUP BY race_id
+        )
+        SELECT ev.event_id, ev.name, ev.country, ev.first_date,
+               p.race_id, p.gender, p.distance, p.race_date,
+               CASE WHEN p.sub_category = 'elite' THEN rr.overall_rank::DOUBLE / t.n END,
+               a.athlete_id, a.name, n.alpha3, a.profile_img,
+               second.s - w.overall_s, rp.predicted_position
+        FROM ev
+        LEFT JOIN prog p ON p.event_id = ev.event_id AND p.k = 1
+        LEFT JOIN race_rankings rr ON rr.race_id = p.race_id
+        LEFT JOIN totals t ON t.gender = rr.gender AND t.course = rr.course
+        LEFT JOIN results w ON w.race_id = p.race_id AND w.position = 1 AND w.status = 'Finished'
+        LEFT JOIN athletes a ON a.athlete_id = w.athlete_id
+        LEFT JOIN nationalities n ON n.country_full = a.country_full
+        LEFT JOIN second ON second.race_id = p.race_id
+        LEFT JOIN race_predictions rp ON rp.race_id = p.race_id AND rp.athlete_id = w.athlete_id
+        ORDER BY ev.first_date DESC, ev.event_id, CASE WHEN p.gender = 'male' THEN 0 ELSE 1 END
+    """, [since]).fetchall()
+
+    events = {}
+    for (event_id, name, country, first_date, race_id, gender, distance, race_date, strength,
+         athlete_id, ath_name, alpha3, profile_img, margin, predicted) in rows:
+        e = events.setdefault(event_id, {
+            "event_id": event_id, "name": name, "country": country, "date": first_date,
+            "distance": None, "strength": None, "male": None, "female": None,
+        })
+        if race_id is None:
+            continue
+        e["distance"] = e["distance"] or distance
+        if strength is not None and (e["strength"] is None or strength < e["strength"]):
+            e["strength"] = strength
+        e[gender] = {
+            "race_id": race_id, "race_date": race_date, "athlete_id": athlete_id,
+            "name": ath_name, "country_alpha3": alpha3, "profile_img": profile_img,
+            "margin": margin, "predicted_position": predicted,
+        }
+    # The headline race date, not the event's: Pontevedra's age-group week
+    # starts days before the elite races.
+    for e in events.values():
+        dates = [e[g]["race_date"] for g in ("male", "female") if e[g]]
+        if dates:
+            e["date"] = min(dates)
+    return list(events.values())
+
+
+def get_race_favourites(race_ids):
+    """{race_id: predicted winner} for races with stored predictions."""
+    if not race_ids:
+        return {}
+    ph = ",".join("?" * len(race_ids))
+    rows = _get_conn().execute(f"""
+        SELECT rp.race_id, a.athlete_id, a.name, n.alpha3, a.profile_img, rp.win_pct
+        FROM race_predictions rp
+        JOIN athletes a USING (athlete_id)
+        JOIN nationalities n ON n.country_full = a.country_full
+        WHERE rp.race_id IN ({ph}) AND rp.predicted_position = 1
+    """, list(race_ids)).fetchall()
+    cols = ["athlete_id", "name", "country_alpha3", "profile_img", "win_pct"]
+    return {r[0]: dict(zip(cols, r[1:])) for r in rows}
+
+
+def standard_rank_shares(items):
+    """Rank share (rank / races on record, lower is stronger) for pre-race
+    standards, against race_rankings for the same gender and course. `items`
+    is {key: (gender, course, overall_std)}; returns {key: share}. Puts an
+    upcoming field on the same scale as get_calendar_results' strength."""
+    buckets = {(g, c) for g, c, _ in items.values()}
+    dist = {b: [] for b in buckets}
+    for g, c, std in _get_conn().execute(
+            "SELECT gender, course, overall_std FROM race_rankings "
+            "WHERE overall_std IS NOT NULL ORDER BY overall_std").fetchall():
+        if (g, c) in dist:
+            dist[(g, c)].append(std)
+    out = {}
+    for key, (g, c, std) in items.items():
+        stds = dist[(g, c)]
+        out[key] = (len(stds) - bisect.bisect_right(stds, std) + 1) / len(stds)
+    return out
+
+
+_SEASON_WINNER_COLS = "a.athlete_id, a.name, n.alpha3, a.profile_img"
+_SEASON_WINNER_JOIN = """
+    JOIN results w ON w.race_id = r.race_id AND w.position = 1 AND w.status = 'Finished'
+    JOIN athletes a ON a.athlete_id = w.athlete_id
+    JOIN nationalities n ON n.country_full = a.country_full
+"""
+_SEASON_COLS = ["race_id", "event_name", "gender", "race_date",
+                "athlete_id", "name", "country_alpha3", "profile_img"]
+
+
+def get_season_strongest_fields(year, limit):
+    """The year's elite races with the strongest fields of all time, by
+    overall rank within their gender and course."""
+    rows = _get_conn().execute(f"""
+        SELECT r.race_id, e.name, r.gender, r.race_date, {_SEASON_WINNER_COLS},
+               rr.course, rr.overall_rank
+        FROM race_rankings rr
+        JOIN races r USING (race_id)
+        JOIN events e ON e.event_id = r.event_id
+        {_SEASON_WINNER_JOIN}
+        WHERE YEAR(r.race_date) = ? AND r.category = 'elite' AND rr.course IN ('short', 'long')
+          AND r.distance <> 'relay'
+        ORDER BY rr.overall_rank, r.race_date
+        LIMIT ?
+    """, [year, limit]).fetchall()
+    return [dict(zip(_SEASON_COLS + ["course", "rank"], r)) for r in rows]
+
+
+# Beginner and Novice fields sit below the 60th percentile standard (the
+# get_race_standard_thresholds cut). The season lists leave them out: thin-record
+# fields the model predicts badly, and where a dead heat is often a timing artefact.
+_P60_CTE = """
+    p60 AS (
+        SELECT gender, course, QUANTILE_CONT(overall_std, 0.60) AS std
+        FROM race_rankings GROUP BY ALL
+    )
+"""
+
+
+def get_season_upsets(year, limit):
+    """The year's elite winners the model gave the lowest win chance, in
+    Intermediate fields and up."""
+    rows = _get_conn().execute(f"""
+        WITH {_P60_CTE}
+        SELECT r.race_id, e.name, r.gender, r.race_date, {_SEASON_WINNER_COLS},
+               rp.win_pct, rp.predicted_position
+        FROM races r
+        JOIN events e ON e.event_id = r.event_id
+        JOIN race_rankings rr ON rr.race_id = r.race_id
+        JOIN p60 ON p60.gender = rr.gender AND p60.course = rr.course
+        {_SEASON_WINNER_JOIN}
+        JOIN race_predictions rp ON rp.race_id = r.race_id AND rp.athlete_id = w.athlete_id
+        WHERE YEAR(r.race_date) = ? AND r.category = 'elite' AND rr.course IN ('short', 'long')
+          AND rr.overall_std >= p60.std
+        ORDER BY rp.win_pct, r.race_date
+        LIMIT ?
+    """, [year, limit]).fetchall()
+    return [dict(zip(_SEASON_COLS + ["win_pct", "predicted_position"], r)) for r in rows]
+
+
+def get_season_closest_finishes(year, limit):
+    """The year's elite races with the smallest winning margin, in
+    Intermediate fields and up; ties go to the stronger field."""
+    rows = _get_conn().execute(f"""
+        WITH totals AS (SELECT gender, course, COUNT(*) AS n FROM race_rankings GROUP BY ALL),
+        {_P60_CTE},
+        m AS (
+            SELECT x.race_id,
+                   MIN(x.overall_s) FILTER (WHERE x.position = 2)
+                     - MIN(x.overall_s) FILTER (WHERE x.position = 1) AS margin
+            FROM results x JOIN races r USING (race_id)
+            WHERE YEAR(r.race_date) = ? AND r.category = 'elite' AND r.distance <> 'relay'
+              AND x.position IN (1, 2) AND x.status = 'Finished'
+            GROUP BY x.race_id
+        )
+        SELECT r.race_id, e.name, r.gender, r.race_date, {_SEASON_WINNER_COLS}, m.margin
+        FROM m
+        JOIN races r USING (race_id)
+        JOIN events e ON e.event_id = r.event_id
+        {_SEASON_WINNER_JOIN}
+        JOIN race_rankings rr ON rr.race_id = r.race_id
+        JOIN totals t ON t.gender = rr.gender AND t.course = rr.course
+        JOIN p60 ON p60.gender = rr.gender AND p60.course = rr.course
+        WHERE m.margin >= 0 AND rr.overall_std >= p60.std
+        ORDER BY m.margin, rr.overall_rank::DOUBLE / t.n, r.race_date DESC
+        LIMIT ?
+    """, [year, limit]).fetchall()
+    return [dict(zip(_SEASON_COLS + ["margin"], r)) for r in rows]
+
+
+def get_series_hub(year, limit):
+    """Series for the /races rail: those with an upcoming round first, then by
+    tier. Each carries its rounds in `year`, its last completed round and its
+    next round."""
+    rows = _get_conn().execute("""
+        WITH done AS (
+            SELECT es.series_id,
+                   COUNT(*) FILTER (WHERE YEAR(e.start_date) = ?) AS rounds,
+                   ARG_MAX(e.name, e.start_date) AS last_name,
+                   MAX(e.start_date) AS last_date
+            FROM event_series es JOIN events e USING (event_id)
+            WHERE EXISTS (SELECT 1 FROM races r WHERE r.event_id = e.event_id)
+            GROUP BY es.series_id
+        ),
+        nxt AS (
+            SELECT es.series_id,
+                   ARG_MIN(e.name, ur.race_date) AS next_name,
+                   MIN(ur.race_date) AS next_date
+            FROM event_series es
+            JOIN events e USING (event_id)
+            JOIN upcoming_races ur USING (event_id)
+            WHERE ur.race_date >= CURRENT_DATE
+            GROUP BY es.series_id
+        )
+        SELECT s.slug, s.name, COALESCE(done.rounds, 0), done.last_name, done.last_date,
+               nxt.next_name, nxt.next_date
+        FROM series s
+        LEFT JOIN done USING (series_id)
+        LEFT JOIN nxt USING (series_id)
+        ORDER BY nxt.next_date IS NULL, s.sort_order
+        LIMIT ?
+    """, [year, limit]).fetchall()
+    cols = ["slug", "name", "rounds", "last_name", "last_date", "next_name", "next_date"]
+    return [dict(zip(cols, r)) for r in rows]
+
+
+def get_latest_series_event(slug):
+    """The most recent completed event in a series, or None."""
+    row = _get_conn().execute("""
+        SELECT e.event_id, e.name, e.start_date
+        FROM series s
+        JOIN event_series es USING (series_id)
+        JOIN events e USING (event_id)
+        WHERE s.slug = ? AND EXISTS (SELECT 1 FROM races r WHERE r.event_id = e.event_id)
+        ORDER BY e.start_date DESC
+        LIMIT 1
+    """, [slug]).fetchone()
+    return {"event_id": row[0], "name": row[1], "start_date": row[2]} if row else None
 
 
 # ---------------------------------------------------------------------------
@@ -5808,8 +6080,9 @@ def _collapse_program_rows(rows):
 
 def get_recurring_index():
     """One row per recurring event group for the /recurring index page:
-    edition count, date range, venue, and the latest elite/pro winner per
-    gender (newest individual race with a position-1 finisher)."""
+    edition count, date range, venue, the latest elite/pro winner per gender
+    (newest edition with a position-1 finisher, its elite programme before
+    U23 / junior / youth) and the next edition's date if one is scheduled."""
     rows = _get_conn().execute("""
         WITH grp AS (
             SELECT re.recurring_event_id, re.slug, re.name,
@@ -5830,10 +6103,12 @@ def get_recurring_index():
         winners AS (
             SELECT * FROM (
                 SELECT er.recurring_event_id, r.gender,
-                       a.athlete_id, a.name AS winner, n.alpha3,
+                       a.athlete_id, a.name AS winner, n.alpha3, a.profile_img,
                        ROW_NUMBER() OVER (PARTITION BY er.recurring_event_id, r.gender
-                                          ORDER BY r.race_date DESC) AS rn
+                                          ORDER BY e.start_date DESC, r.sub_category <> 'elite',
+                                                   r.prog_name) AS rn
                 FROM event_recurring er
+                JOIN events e    ON e.event_id = er.event_id
                 JOIN races r     ON r.event_id = er.event_id
                 JOIN results res ON res.race_id = r.race_id AND res.position = 1 AND res.status = 'Finished'
                 JOIN athletes a  ON a.athlete_id = res.athlete_id
@@ -5842,20 +6117,29 @@ def get_recurring_index():
                   AND (r.category = 'elite' OR r.prog_name IN ('Pro Men', 'Pro Women'))
                   AND NOT EXISTS (SELECT 1 FROM ignored_races ig WHERE ig.race_id = r.race_id)
             ) WHERE rn = 1
+        ),
+        nxt AS (
+            SELECT er.recurring_event_id, MIN(ur.race_date) AS next_date
+            FROM event_recurring er
+            JOIN upcoming_races ur ON ur.event_id = er.event_id
+            WHERE ur.race_date >= CURRENT_DATE
+            GROUP BY er.recurring_event_id
         )
         SELECT g.slug, g.name, g.venue, g.country, gn.alpha3, g.editions,
-               g.first_date, g.last_date,
-               wm.athlete_id, wm.winner, wm.alpha3,
-               wf.athlete_id, wf.winner, wf.alpha3
+               g.first_date, g.last_date, nxt.next_date,
+               wm.athlete_id, wm.winner, wm.alpha3, wm.profile_img,
+               wf.athlete_id, wf.winner, wf.alpha3, wf.profile_img
         FROM grp g
         LEFT JOIN nationalities gn ON gn.country_full = g.country
         LEFT JOIN winners wm ON wm.recurring_event_id = g.recurring_event_id AND wm.gender = 'male'
         LEFT JOIN winners wf ON wf.recurring_event_id = g.recurring_event_id AND wf.gender = 'female'
+        LEFT JOIN nxt ON nxt.recurring_event_id = g.recurring_event_id
         ORDER BY g.editions DESC, g.last_date DESC
     """).fetchall()
     cols = ["slug", "name", "venue", "country", "country_alpha3", "editions", "first_date", "last_date",
-            "male_winner_id", "male_winner", "male_winner_alpha3",
-            "female_winner_id", "female_winner", "female_winner_alpha3"]
+            "next_date",
+            "male_winner_id", "male_winner", "male_winner_alpha3", "male_winner_img",
+            "female_winner_id", "female_winner", "female_winner_alpha3", "female_winner_img"]
     return [dict(zip(cols, r)) for r in rows]
 
 
