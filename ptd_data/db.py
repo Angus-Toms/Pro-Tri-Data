@@ -1224,9 +1224,11 @@ def load_doping_bans(conn):
     print(f"Loaded {len(rows)} doping ban(s) ({skipped} skipped - athlete not in DB)")
 
 
-# Current active world rank (either course), then elite starts in the last two
-# years, among athletes with a recent elite start. Ranks put the names people
-# look for first; raw start counts favour prolific continental-cup racers.
+# Best predicted place (overall or any split) in an upcoming race first: those
+# are the athletes about to be tagged in race posts. Then current active world
+# rank (either course), then elite starts in the last two years. Ranks put the
+# names people look for first; raw start counts favour prolific continental-cup
+# racers.
 INSTAGRAM_PRIORITY_SQL = """
     WITH recent AS (
         SELECT r.athlete_id, COUNT(*) AS recent_elite
@@ -1235,6 +1237,22 @@ INSTAGRAM_PRIORITY_SQL = """
         WHERE ra.category = 'elite' AND ra.race_date >= CURRENT_DATE - INTERVAL 730 DAY
         GROUP BY r.athlete_id
     ),
+    upcoming_places AS (
+        SELECT pr.athlete_id, pr.predicted_position,
+               CASE WHEN pr.swim_s > 0 THEN RANK() OVER (PARTITION BY pr.race_id ORDER BY pr.swim_s = 0, pr.swim_s) END AS swim_place,
+               CASE WHEN pr.bike_s > 0 THEN RANK() OVER (PARTITION BY pr.race_id ORDER BY pr.bike_s = 0, pr.bike_s) END AS bike_place,
+               CASE WHEN pr.run_s > 0 THEN RANK() OVER (PARTITION BY pr.race_id ORDER BY pr.run_s = 0, pr.run_s) END AS run_place
+        FROM race_predictions pr
+        JOIN upcoming_races ur ON ur.race_id = pr.race_id
+        WHERE ur.race_date >= CURRENT_DATE AND ur.category = 'elite'
+    ),
+    upcoming AS (
+        SELECT athlete_id,
+               MIN(LEAST(predicted_position, COALESCE(swim_place, 999999),
+                         COALESCE(bike_place, 999999), COALESCE(run_place, 999999))) AS best_upcoming_place
+        FROM upcoming_places
+        GROUP BY athlete_id
+    ),
     latest_rank AS (
         SELECT DISTINCT ON (rk.athlete_id) rk.athlete_id, rk.active_world_overall
         FROM rankings rk
@@ -1242,11 +1260,13 @@ INSTAGRAM_PRIORITY_SQL = """
         WHERE rk.category = 'elite'
         ORDER BY rk.athlete_id, ra.race_date DESC, rk.race_id DESC
     )
-    SELECT a.athlete_id, rc.recent_elite, lr.active_world_overall
+    SELECT a.athlete_id, COALESCE(rc.recent_elite, 0) AS recent_elite, lr.active_world_overall,
+           up.best_upcoming_place
     FROM athletes a
-    JOIN recent rc ON rc.athlete_id = a.athlete_id
+    LEFT JOIN recent rc ON rc.athlete_id = a.athlete_id
+    LEFT JOIN upcoming up ON up.athlete_id = a.athlete_id
     LEFT JOIN latest_rank lr ON lr.athlete_id = a.athlete_id
-    ORDER BY COALESCE(lr.active_world_overall, 999999), rc.recent_elite DESC, a.athlete_id
+    WHERE rc.athlete_id IS NOT NULL OR up.athlete_id IS NOT NULL
 """
 
 INSTAGRAM_CSV_COLUMNS = ["athlete_id", "name", "handle", "updated_at"]

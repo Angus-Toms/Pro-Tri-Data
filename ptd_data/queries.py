@@ -1778,17 +1778,18 @@ def get_instagram_queue(exclude_ids, limit=5):
     conn = _get_conn()
     ids = list(exclude_ids) or [-1]
     cols = ["athlete_id", "name", "gender", "year_of_birth", "profile_img", "country_full",
-            "country_alpha3", "recent_elite", "active_world_overall"]
+            "country_alpha3", "recent_elite", "active_world_overall", "best_upcoming_place"]
     rows = conn.execute(f"""
         SELECT a.athlete_id, a.name, a.gender, a.year_of_birth, a.profile_img, a.country_full,
-               n.alpha3, p.recent_elite, p.active_world_overall
+               n.alpha3, p.recent_elite, p.active_world_overall, p.best_upcoming_place
         FROM ({db.INSTAGRAM_PRIORITY_SQL}) p
         JOIN athletes a ON a.athlete_id = p.athlete_id
         JOIN nationalities n ON n.country_full = a.country_full
         WHERE a.instagram = ''
           AND a.athlete_id NOT IN (SELECT athlete_id FROM instagram_skips)
           AND a.athlete_id NOT IN ({",".join("?" * len(ids))})
-        ORDER BY COALESCE(p.active_world_overall, 999999), p.recent_elite DESC, a.athlete_id
+        ORDER BY COALESCE(p.best_upcoming_place, 999999), COALESCE(p.active_world_overall, 999999),
+                 p.recent_elite DESC, a.athlete_id
         LIMIT ?
     """, ids + [limit])
     return _dicts(cols, rows)

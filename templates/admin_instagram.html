@@ -30,6 +30,7 @@
                     {% if a.year_of_birth %} · b. {{ a.year_of_birth }}{% endif %}
                     · {{ 'Men' if a.gender == 'male' else 'Women' }}
                     {% if a.recent_elite %} · {{ a.recent_elite }} elite starts in 2 yrs{% endif %}
+                    {% if a.best_upcoming_place %} · Pred. P{{ a.best_upcoming_place }} upcoming{% endif %}
                     {% if a.active_world_overall %} · WR #{{ a.active_world_overall }}{% endif %}
                 </div>
             </div>
@@ -61,7 +62,7 @@
     <h3>Up next</h3>
     <ul>
         {% for a in up_next %}
-        <li><a href="/admin/instagram?q={{ a.athlete_id }}">{{ a.name }}</a> <span class="adm-muted">{{ a.recent_elite }} starts</span></li>
+        <li><a href="/admin/instagram?q={{ a.athlete_id }}">{{ a.name }}</a> <span class="adm-muted">{% if a.best_upcoming_place %}Pred. P{{ a.best_upcoming_place }}{% else %}{{ a.recent_elite }} starts{% endif %}</span></li>
         {% endfor %}
     </ul>
 
