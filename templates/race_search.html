@@ -37,42 +37,31 @@
 {% block content %}
 
 <!-- Search: filters stay closed until asked for; results open under the hero -->
-<div class="filters-card rs-filters" id="filterPanel">
-    <form class="filter-panel" onsubmit="return false">
-        <div class="filter-panel-grid">
-            <div class="filter-chip-group">
-                <span class="filter-chip-label">Sort</span>
-                <div class="radio-chips">
-                    <input type="radio" id="sort-desc" name="rs-sort" value="desc" checked>
-                    <label for="sort-desc">Newest first</label>
-                    <input type="radio" id="sort-asc" name="rs-sort" value="asc">
-                    <label for="sort-asc">Oldest first</label>
-                </div>
-            </div>
-            <div class="filter-group">
-                <label for="rs-country">Country</label>
-                <select id="rs-country">
-                    <option value="">All countries</option>
-                    {% for c in country_list %}
-                    <option value="{{ c }}">{{ c }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>Year</label>
-                <div class="year-range">
-                    <input type="number" id="rs-year-start" placeholder="From" min="1979" max="2030">
-                    <span class="range-sep">–</span>
-                    <input type="number" id="rs-year-end" placeholder="To" min="1979" max="2030">
-                </div>
-            </div>
-        </div>
-        <div class="filter-panel-actions">
-            <button type="button" class="btn-reset" id="rs-reset">Reset</button>
-        </div>
-    </form>
-</div>
-<div id="rs-results" class="as-results rs-results"></div>
+<form class="rs-filters" id="filterPanel" onsubmit="return false">
+    <label class="rs-f"><span>Sort</span>
+        <select id="rs-sort">
+            <option value="desc">Newest first</option>
+            <option value="asc">Oldest first</option>
+        </select>
+    </label>
+    <label class="rs-f"><span>Country</span>
+        <select id="rs-country">
+            <option value="">All countries</option>
+            {% for c in country_list %}
+            <option value="{{ c }}">{{ c }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <div class="rs-f"><span>Year</span>
+        <span class="rs-years">
+            <input type="number" id="rs-year-start" placeholder="From" min="1979" max="2030" aria-label="From year">
+            <span>to</span>
+            <input type="number" id="rs-year-end" placeholder="To" min="1979" max="2030" aria-label="To year">
+        </span>
+    </div>
+    <button type="button" class="rs-reset" id="rs-reset">Reset</button>
+</form>
+<div id="rs-results" class="rs-results"></div>
 
 <div class="rs-layout">
 <div class="rs-main">

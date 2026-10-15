@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 from config import ASSET_VERSION, STATIC_BASE_URL
 from app.display_helpers import flag
 from app.routers.router_utils import ordinal
+from app.routers.search import format_race_results
 
 from ptd_data import queries
 
@@ -210,18 +211,16 @@ def search_races(
     year_end:   str = Query(""),
     sort:       str = Query("desc"),
 ):
-    if not q or len(q.strip()) < 2:
-        return JSONResponse([])
-    results = queries.search_events_full(
-        query=q.strip(),
+    """Recurring races, events and series for the hero search, in the header
+    search's shape so the page renders them with header.js's rows."""
+    q = q.strip()
+    if len(q) < 2:
+        return JSONResponse({"groups": [], "groups_total": 0, "events": [], "events_total": 0, "series": []})
+    res = queries.search_races(
+        q,
         country=country or None,
-        year_start=year_start or None,
-        year_end=year_end or None,
-        sort=sort if sort in ("asc", "desc") else "desc",
-        limit=20,
+        year_start=int(year_start) if year_start.isdigit() else None,
+        year_end=int(year_end) if year_end.isdigit() else None,
+        sort="asc" if sort == "asc" else "desc",
     )
-    for r in results:
-        d = r["start_date"]
-        r["event_date"] = d.strftime("%-d %b %Y") if hasattr(d, "strftime") else str(d)
-        del r["start_date"]
-    return JSONResponse(results)
+    return JSONResponse(format_race_results(res))

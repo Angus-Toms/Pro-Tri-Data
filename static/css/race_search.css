@@ -59,11 +59,68 @@
 .hub-search button[aria-expanded="true"],
 .hub-search button.active { color: var(--primary-color); border-color: var(--primary-color); }
 
-/* ── Search filters and results: closed until used ── */
-.rs-filters { display: none; }
-.rs-filters.open { display: block; }
-.rs-filters .filter-panel { display: block; border-top: 0; }
-.rs-results { margin-bottom: 2rem; }
+/* ── Search filters: one bar, closed until the hero button opens it ── */
+.rs-filters {
+    display: none;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.5rem;
+    margin: 0 0 0.75rem;
+    padding: 0.7rem 1.25rem;
+    background: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+}
+.rs-filters.open { display: flex; }
+.rs-f { display: flex; align-items: center; gap: 0.5rem; margin: 0; }
+.rs-f > span:first-child {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-lighter);
+}
+.rs-f select,
+.rs-f input {
+    height: 34px;
+    padding: 0 0.6rem;
+    box-sizing: border-box;
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    font: inherit;
+    font-size: 0.85rem;
+    color: var(--text-color);
+}
+.rs-f select:focus,
+.rs-f input:focus { outline: none; border-color: var(--primary-color); }
+.rs-f input { width: 5rem; }
+.rs-years { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--text-lighter); }
+.rs-reset {
+    margin-left: auto;
+    padding: 0.4rem 0;
+    background: none;
+    border: 0;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-light);
+    cursor: pointer;
+}
+.rs-reset:hover { color: var(--primary-color); }
+
+/* ── Search results: the header search's rows and tabs (gs-* in base.css) ── */
+.rs-results {
+    margin-bottom: 2rem;
+    background: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    overflow: hidden;
+    transition: opacity var(--transition-fast);
+}
+.rs-results:empty { display: none; }
+.rs-results.is-loading { opacity: 0.6; }
+.rs-results-body { padding-bottom: 0.4rem; }
 
 /* ── Layout ── */
 .rs-layout {
@@ -302,14 +359,10 @@
 }
 .rs-what { min-width: 0; font-size: 0.85rem; line-height: 1.3; }
 .rs-what-title { font-weight: 600; color: var(--text-color); text-decoration: none; }
-.rs-field {
-    font-size: 0.65rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--text-lighter);
-    white-space: nowrap;
-}
+/* Field after the race name on the same baseline: same size, lighter. The
+   dot ends the name, so a field that wraps doesn't start its line with one. */
+.rs-field { font-weight: 400; color: var(--text-light); white-space: nowrap; }
+.rs-what-title:has(+ .rs-field)::after { content: "\00b7"; margin: 0 0.1rem 0 0.35rem; font-weight: 400; color: var(--text-lighter); }
 .rs-winner { display: block; margin-top: 0.3rem; font-size: 0.8rem; }
 .rs-winner .rs-av { width: 20px; height: 20px; }
 .rs-what-title:hover { color: var(--primary-color); }
@@ -327,55 +380,6 @@
 .rs-counts { margin: 0.5rem 0 1rem; text-align: center; font-size: 0.75rem; color: var(--text-lighter); }
 .rs-counts b { font-weight: 600; color: var(--text-light); }
 .rs-counts span + span::before { content: "\00b7"; margin: 0 0.5rem; }
-
-/* ── Search results ── */
-.rs-result-item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    padding: 0.75rem 1.25rem;
-    border-bottom: 1px solid var(--border-color);
-}
-.rs-result-item:last-child { border-bottom: none; }
-.rs-result-item:hover { background: var(--bg-color); }
-.rs-result-name {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--text-color);
-    text-decoration: none;
-    transition: color var(--transition-fast);
-}
-.rs-result-item:hover .rs-result-name { color: var(--primary-color); }
-.rs-result-meta { font-size: 0.8rem; color: var(--text-light); }
-.rs-result-races { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 0.1rem; }
-.rs-result-name-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-
-.race-pill {
-    display: inline-block;
-    padding: 2px 10px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    border-radius: 999px;
-    background: var(--bg-color);
-    border: 1px solid var(--border-color);
-    color: var(--text-light);
-    white-space: nowrap;
-    text-decoration: none;
-    transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
-}
-a.race-pill:hover {
-    background: rgba(231, 100, 30, 0.06);
-    border-color: var(--primary-color);
-    color: var(--primary-color);
-}
-
-.rs-no-results,
-.rs-loading {
-    padding: 1rem 1.25rem;
-    font-size: 0.875rem;
-    color: var(--text-lighter);
-    text-align: center;
-}
 
 /* ── Responsive: the site's three breakpoints, 1024 / 768 / 480 ── */
 @media (max-width: 1024px) {
@@ -430,6 +434,11 @@ a.race-pill:hover {
     .rs-cell > :not(.rs-lbl) { grid-column: 2; }
     .rs-lbl { margin: 0; }
     .rs-ss li { padding: 0.6rem 1rem; }
+    /* Filters: a label column and full-width controls */
+    .rs-filters.open { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.6rem; padding: 0.75rem 1rem; }
+    .rs-f { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); }
+    .rs-f select, .rs-years input { width: 100%; }
+    .rs-reset { margin: 0; justify-self: end; }
     .rs-ss li:nth-child(n+4) { display: none; }
     .rs-rail > li { padding: 0.65rem 1rem; }
 }

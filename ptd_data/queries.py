@@ -475,67 +475,6 @@ def get_event_countries():
     return [r[0] for r in rows]
 
 
-def search_events_full(query, country=None, year_start=None, year_end=None,
-                       sort="desc", limit=20):
-    """
-    Search events by name/venue/country with optional filters.
-    Returns events with their constituent races (no podiums - compact search results).
-    """
-    conn = _get_conn()
-    q = f"%{query}%"
-    filters = [
-        "(e.name ILIKE ? OR e.venue ILIKE ? OR e.country ILIKE ?)",
-        "EXISTS (SELECT 1 FROM races r WHERE r.event_id = e.event_id)",
-    ]
-    params = [q, q, q]
-    if country:
-        filters.append("e.country = ?")
-        params.append(country)
-    if year_start:
-        filters.append("EXTRACT(YEAR FROM e.start_date) >= ?")
-        params.append(int(year_start))
-    if year_end:
-        filters.append("EXTRACT(YEAR FROM e.start_date) <= ?")
-        params.append(int(year_end))
-
-    direction = "ASC" if sort == "asc" else "DESC"
-    where = " AND ".join(filters)
-
-    event_rows = conn.execute(f"""
-        SELECT event_id, name, venue, country, start_date
-        FROM events e
-        WHERE {where}
-        ORDER BY e.start_date {direction}
-        LIMIT ?
-    """, params + [limit]).fetchall()
-    if not event_rows:
-        return []
-
-    event_ids = [r[0] for r in event_rows]
-    event_map = {r[0]: {
-        "event_id": r[0], "name": r[1], "venue": r[2],
-        "country": r[3], "start_date": r[4], "races": []
-    } for r in event_rows}
-
-    placeholders = ",".join("?" * len(event_ids))
-    race_rows = conn.execute(f"""
-        SELECT event_id, race_id, prog_name, distance
-        FROM races
-        WHERE event_id IN ({placeholders})
-        ORDER BY race_date ASC,
-                 CASE WHEN gender = 'male' THEN 0 ELSE 1 END,
-                 race_id ASC
-    """, event_ids).fetchall()
-    for event_id, race_id, prog_name, distance in race_rows:
-        event_map[event_id]["races"].append({
-            "race_id":   race_id,
-            "prog_name": prog_name,
-            "course":    course_for_distance(distance),
-        })
-
-    return [event_map[r[0]] for r in event_rows]
-
-
 # ---------------------------------------------------------------------------
 # Races hub (/races)
 # ---------------------------------------------------------------------------
@@ -847,6 +786,12 @@ def _current_world_ranks():
     return ranks
 
 
+def _match_words(expr, n):
+    """SQL requiring each of n query words somewhere in expr, accents and
+    order ignored; bind the words in order."""
+    return " AND ".join([f"strip_accents(lower({expr})) LIKE '%' || strip_accents(?) || '%'"] * n)
+
+
 def global_search(query, limit=20):
     """Athletes, races (recurring groups and single events) and series
     matching `query`, for the header search modal. Every whitespace-separated
@@ -857,8 +802,7 @@ def global_search(query, limit=20):
     tokens = query.lower().split()
 
     def match(expr):
-        return " AND ".join(
-            [f"strip_accents(lower({expr})) LIKE '%' || strip_accents(?) || '%'"] * len(tokens))
+        return _match_words(expr, len(tokens))
 
     # --- Athletes ---
     # A word of the name starting with the first token beats a mid-word hit,
@@ -915,6 +859,35 @@ def global_search(query, limit=20):
                          "country_full": country, "country_alpha3": alpha3,
                          "has_img": bool(img), "rank": rank})
 
+    return {"athletes": athletes,
+            "athletes_total": athlete_rows[0][-1] if athlete_rows else 0,
+            **search_races(query, limit)}
+
+
+def search_races(query, limit=20, country=None, year_start=None, year_end=None, sort="desc"):
+    """Recurring races, single events and series matching `query`, for the
+    header search and the /races search. The filters narrow races to those
+    with an edition in `country` and the year range; series are matched on
+    name alone. `sort` orders single events by date."""
+    conn = _get_conn()
+    tokens = query.lower().split()
+
+    def match(expr):
+        return _match_words(expr, len(tokens))
+
+    conds, f_params = [], []
+    if country:
+        conds.append("e.country = ?")
+        f_params.append(country)
+    if year_start:
+        conds.append("YEAR(e.start_date) >= ?")
+        f_params.append(int(year_start))
+    if year_end:
+        conds.append("YEAR(e.start_date) <= ?")
+        f_params.append(int(year_end))
+    in_filter = " AND ".join(conds) or "TRUE"
+    direction = "ASC" if sort == "asc" else "DESC"
+
     # --- Races ---
     # Recurring races are one result each, carrying their editions so the
     # modal can drop down to a single year. Matched on any edition's venue
@@ -933,6 +906,7 @@ def global_search(query, limit=20):
             GROUP BY re.recurring_event_id
             HAVING COUNT(DISTINCT e.event_id) >= 2
                AND BOOL_OR({match("re.name || ' ' || COALESCE(e.venue, '') || ' ' || COALESCE(e.country, '')")})
+               AND BOOL_OR({in_filter})
         )"""
     group_rows = conn.execute(f"""
         WITH {group_cte}
@@ -954,7 +928,7 @@ def global_search(query, limit=20):
         GROUP BY re.recurring_event_id, re.slug, re.name
         ORDER BY editions DESC, MAX(e.start_date) DESC
         LIMIT ?
-    """, tokens + [limit]).fetchall()
+    """, tokens + f_params + [limit]).fetchall()
     groups = [{"recurring_event_id": r[0], "slug": r[1], "name": r[2], "editions": r[3],
                "first_year": r[4], "last_year": r[5], "next_date": r[6], "venue": r[7],
                "country": r[8], "country_alpha3": r[9]} for r in group_rows]
@@ -968,9 +942,10 @@ def global_search(query, limit=20):
         WHERE {match("e.name || ' ' || COALESCE(e.venue, '') || ' ' || COALESCE(e.country, '') || ' ' || YEAR(e.start_date)")}
           AND EXISTS (SELECT 1 FROM races r WHERE r.event_id = e.event_id)
           AND e.event_id NOT IN (SELECT er.event_id FROM event_recurring er JOIN grp USING (recurring_event_id))
-        ORDER BY e.start_date DESC, e.event_id
+          AND {in_filter}
+        ORDER BY e.start_date {direction}, e.event_id
         LIMIT ?
-    """, tokens + tokens + [limit]).fetchall()
+    """, tokens + f_params + tokens + f_params + [limit]).fetchall()
     singles = [{"event_id": r[0], "name": r[1], "venue": r[2], "country": r[3],
                 "country_alpha3": r[4], "date": r[5]} for r in single_rows]
 
@@ -1048,13 +1023,11 @@ def global_search(query, limit=20):
     """, tokens))
 
     return {
-        "athletes":        athletes,
-        "athletes_total":  athlete_rows[0][-1] if athlete_rows else 0,
-        "groups":          groups,
-        "groups_total":    group_rows[0][-1] if group_rows else 0,
-        "events":          singles,
-        "events_total":    single_rows[0][-1] if single_rows else 0,
-        "series":          series,
+        "groups":       groups,
+        "groups_total": group_rows[0][-1] if group_rows else 0,
+        "events":       singles,
+        "events_total": single_rows[0][-1] if single_rows else 0,
+        "series":       series,
     }
 
 

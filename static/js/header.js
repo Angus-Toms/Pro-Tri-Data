@@ -202,6 +202,13 @@
         group.querySelector('[data-gs-expand]').setAttribute('aria-expanded', String(open));
     };
 
+    // The /races hero search lists the same race and series rows. Highlighting
+    // reads the last query set here or by the modal, so set it before rendering.
+    window.gsRows = {
+        groupRow, eventRow, seriesRow, setOpen,
+        highlight: (q) => { tokens = fold(q).split(/\s+/).filter(Boolean); },
+    };
+
     // ---------- Render ----------
     // Races: recurring races first, then one-off events (or a single year,
     // when the query names one).
