@@ -1,177 +1,123 @@
 /* ============================================
-   ATHLETES PAGE
-   Shared components live in base.css:
-   - radio-chips, athlete-ratings, athlete-meta, btn-age-preset
-   - .as-search-box, .as-input, .as-results
-   - .filters-card, .filter-summary-bar, .filter-panel
+   ATHLETES HUB (/athletes)
+   Hero with search, world rankings across the page, then breakthroughs and
+   specialists beside a rail of this week's favourites, the next generation
+   and nations. The hero, search, layout, tabs and list parts live in hub.css.
    ============================================ */
 
-.as-result-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.65rem 1.25rem;
-    border-bottom: 1px solid var(--border-color);
-    text-decoration: none;
-    color: inherit;
-    transition: background var(--transition-fast);
-}
+/* Men left, women right */
+.ah-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.25rem; }
 
-.as-result-item:last-child {
-    border-bottom: none;
-}
-
-.as-result-item:hover {
-    background: var(--bg-color);
-}
-
-.as-result-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    object-fit: cover;
-    flex-shrink: 0;
-}
-
-.as-result-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.as-result-name {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--text-color);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    transition: color var(--transition-fast);
-}
-
-/* Orange name on row hover */
-.as-result-item:hover .as-result-name {
-    color: var(--primary-color);
-}
-
-.as-no-results,
-.as-loading {
-    padding: 1rem 1.25rem;
-    font-size: 0.875rem;
-    color: var(--text-lighter);
-    text-align: center;
-}
-
-/* ── Currently Trending ── */
-/* Card styling is shared via .champ-* in base.css. The grid spans four cards
-   (men/women x short/long) and matches the home page champion-card layout.
-   Bottom margin matches the other top-level blocks on this page (2rem). */
-.champs-grid {
-    margin-bottom: 2rem;
-}
-
-/* ── Head-to-Head widget ── */
-.as-compare-widget {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 2rem;
-    background: var(--white);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-lg);
-    padding: 1.5rem 2rem;
-    margin-bottom: 2rem;
-}
-
-.as-compare-copy {
-    min-width: 0;
-}
-
-.as-compare-lead {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--text-color);
-    margin: 0 0 0.35rem;
-}
-
-.as-compare-desc {
-    font-size: 0.875rem;
-    color: var(--text-light);
-    margin: 0;
-    max-width: 520px;
-    line-height: 1.6;
-}
-
-.as-compare-btn {
-    display: inline-block;
-    padding: 0.6rem 1.4rem;
-    background: var(--primary-color);
-    color: #fff;
-    font-size: 0.875rem;
-    font-weight: 700;
-    text-decoration: none;
-    border-radius: var(--border-radius);
-    transition: background var(--transition-fast);
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-
-.as-compare-btn:hover {
-    background: var(--primary-hover);
-}
-
-/* ── All-time Leaderboards ── */
-/* Card styling is shared via .lb-widget* in base.css. */
-.as-lb-grid {
+/* Every list row: ruled, the athlete first */
+.ah-rank li, .ah-bt li, .ah-rail li {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.25rem;
-    margin-bottom: 2rem;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 1.25rem;
+    border-bottom: 1px solid var(--border-color);
 }
+.ah-rank li:last-child, .ah-bt li:last-child, .ah-rail li:last-child { border-bottom: 0; }
+.ah-pos { font-size: 0.8rem; font-weight: 700; color: var(--text-light); text-align: center; font-variant-numeric: tabular-nums; }
+.ah-rank li:nth-child(-n+3) .ah-pos { color: var(--text-color); }
+.ah-num { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ah-big { text-align: right; font-weight: 800; font-size: 1rem; font-variant-numeric: tabular-nums; }
+.ah-who { min-width: 0; }
+.ah-who > b { display: block; font-size: 0.88rem; }
+.ah-who small { display: block; margin-top: 0.1rem; font-size: 0.74rem; color: var(--text-light); }
+.hub-who { font-size: 0.88rem; }
 
-/* ── Responsive ── */
+/* Rating change: the site's chevron arrows, green up and red down only */
+.ah-chg {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.15em;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-lighter);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.ah-chg.rating-increase { color: var(--success-color); font-weight: 600; }
+.ah-chg.rating-decrease { color: var(--error-color); font-weight: 600; }
+.ah-chg .chg-arrow { width: 0.6em; height: 0.5em; }
+
+/* ── World rankings ── */
+.ah-rank li { grid-template-columns: 1.5rem minmax(0, 1fr) 3.75rem 3.75rem; padding-top: 0.45rem; padding-bottom: 0.45rem; }
+
+/* ── Breakthroughs ── */
+.ah-bt li { grid-template-columns: minmax(0, 1fr) 3.5rem; }
+
+/* ── Specialists: a card per discipline, men above women ── */
+.ah-spec { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; }
+.ah-spec h4 {
+    margin: 0;
+    padding: 0.55rem 1.25rem 0.2rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-lighter);
+}
+.ah-spec ol + h4 { border-top: 1px solid var(--border-color); }
+.ah-spec ol { padding-bottom: 0.35rem; }
+.ah-spec li { display: grid; grid-template-columns: 1rem minmax(0, 1fr) 3.25rem 3rem; gap: 0.5rem; align-items: center; padding: 0.4rem 1.25rem; }
+.ah-spec li:first-child .ah-pos { color: var(--primary-color); }
+.ah-spec .hub-who { font-size: 0.85rem; }
+
+/* ── Rail ── */
+.ah-rail li { grid-template-columns: minmax(0, 1fr) auto; }
+/* This week's favourites: win and podium chance under the name, each a bar in
+   the prediction tables' colours (podium the lighter orange of .pct-col--podium) */
+.ah-rail li.ah-fav { grid-template-columns: minmax(0, 1fr); gap: 0; }
+.ah-odds { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
+.ah-odds .hub-bar { flex: 1 1 auto; }
+.ah-odds-lbl { flex: none; width: 2.9rem; font-weight: 500; color: var(--text-lighter); }
+.ah-podium i { background: rgba(232, 93, 4, 0.45); }
+.ah-meta { margin: 0; padding: 0.6rem 1.25rem; border-bottom: 1px solid var(--border-color); font-size: 0.78rem; color: var(--text-light); }
+.ah-meta a { font-weight: 700; color: var(--text-color); text-decoration: none; }
+.ah-meta a:hover { color: var(--primary-color); }
+/* Dot between the parts of a meta line, at the end of the part before it */
+.ah-meta > :not(:last-child)::after,
+.ah-nat small > :not(:last-child)::after { content: "\00b7"; margin: 0 0.35rem; color: var(--text-lighter); }
+.ah-nat li { grid-template-columns: minmax(0, 1fr) 4rem 1.75rem; }
+.ah-nat-bar { height: 6px; background: var(--border-color); border-radius: 3px; overflow: hidden; }
+.ah-nat-bar i { display: block; height: 100%; border-radius: 3px; background: var(--navy); }
+.ah-nat small .hub-who { font-size: 0.74rem; font-weight: 500; gap: 0.35rem; vertical-align: middle; }
+.ah-nat small .hub-av { width: 18px; height: 18px; }
+.ah-nat small > span { white-space: nowrap; }
+.section-links { display: inline-flex; gap: 1rem; }
+
+/* ── Responsive: the site's three breakpoints, 1024 / 768 / 480 ── */
+@media (max-width: 1024px) {
+    /* One column now, so the lists no longer fill down beside the rail */
+    .ah-bt li:nth-child(n+6), .ah-gen li:nth-child(n+4) { display: none; }
+    /* Specialists: three narrower cards, the change column goes */
+    .ah-spec li { grid-template-columns: 1rem minmax(0, 1fr) 3.25rem; }
+    .ah-spec .ah-chg { display: none; }
+}
 @media (max-width: 768px) {
-    .as-lb-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .as-compare-widget {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-    }
-
-    .hero-stats {
-        display: none;
-    }
-
-    /* Stack ratings under the name+meta row instead of hiding them outright.
-       flex-wrap on the parent lets the 100%-width ratings child drop to its
-       own line; avatar + info stay on the first row. min-width:0 + flex-shrink:1
-       overrides the base.css `flex-shrink:0` so the block can shrink with the
-       row instead of overflowing the card on narrow screens. */
-    .as-result-item {
-        flex-wrap: wrap;
-    }
-    .as-result-item .athlete-ratings {
-        width: 100%;
-        box-sizing: border-box;
-        min-width: 0;
-        flex-shrink: 1;
-        flex-wrap: nowrap;
-        justify-content: flex-start;
-    }
-    .as-result-item .athlete-ratings .rating-item {
-        width: auto;
-        min-width: 0;
-        flex: 1 1 4rem;
-    }
+    /* Pairs and the specialist cards stack, men first; rankings show their top five */
+    .ah-pair, .ah-spec { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+    .ah-rank li:nth-child(n+6) { display: none; }
+    .ah-spec li { grid-template-columns: 1rem minmax(0, 1fr) 3.75rem 3.5rem; }
+    .ah-spec .ah-chg { display: inline-flex; }
+    .ah-rank li, .ah-bt li, .ah-rail li, .ah-meta { padding-left: 1rem; padding-right: 1rem; }
+    .ah-spec h4, .ah-spec li { padding-left: 1rem; padding-right: 1rem; }
 }
-
 @media (max-width: 480px) {
-    /* Match leaderboard: drop the transition column on phones to reclaim
-       horizontal space for the other four ratings. */
-    .as-result-item .athlete-ratings .rating-item:nth-child(5) {
-        display: none;
-    }
+    .ah-rank li { grid-template-columns: 1.25rem minmax(0, 1fr) 3.25rem 3.25rem; gap: 0.5rem; }
+    /* Breakthroughs: top three */
+    .ah-bt li:nth-child(n+4) { display: none; }
+    /* Specialists fold into one card: a row per discipline, its men's and
+       women's leader side by side (men left) */
+    .ah-spec { gap: 0; background: var(--white); border-radius: var(--border-radius); box-shadow: var(--box-shadow); overflow: hidden; }
+    .ah-spec .hub-card { display: grid; grid-template-columns: 3.5rem minmax(0, 1fr) minmax(0, 1fr); align-items: center; box-shadow: none; border-radius: 0; border-bottom: 1px solid var(--border-color); }
+    .ah-spec .hub-card:last-child { border-bottom: 0; }
+    .ah-spec h3 { background: none; color: var(--text-lighter); padding: 0.6rem 0 0.6rem 1rem; }
+    .ah-spec h3 span, .ah-spec h4 { display: none; }
+    .ah-spec ol { padding: 0; }
+    .ah-spec li { grid-template-columns: minmax(0, 1fr); padding: 0.6rem 0.5rem; }
+    .ah-spec li .ah-pos, .ah-spec li .ah-num, .ah-spec li .ah-chg { display: none; }
+    .ah-spec li:nth-child(n+2) { display: none; }
 }
-

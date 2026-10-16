@@ -2,12 +2,12 @@
 const input       = document.getElementById('rs-input');
 const filterBtn   = document.getElementById('filterToggle');
 const filterPanel = document.getElementById('filterPanel');
-const results     = document.getElementById('rs-results');
+const results     = document.getElementById('hub-results');
 const sortEl      = document.getElementById('rs-sort');
 const countryEl   = document.getElementById('rs-country');
 const yearStartEl = document.getElementById('rs-year-start');
 const yearEndEl   = document.getElementById('rs-year-end');
-const resetBtn    = document.getElementById('rs-reset');
+const resetBtn    = document.getElementById('hub-reset');
 
 // The panel is closed by default, so the button carries the count of active filters
 function updateFilterCount() {
@@ -117,7 +117,7 @@ function renderResults() {
         const foot = total > n ? `<div class="gs-message gs-foot">Top ${n} of ${total.toLocaleString()} ${t.noun}. Keep typing or filter to narrow it down.</div>` : '';
         body = n ? rows[type].join('') + foot : `<div class="gs-message">No ${t.noun} match "${q}".</div>`;
     }
-    results.innerHTML = `<div class="gs-tabs">${tabs}</div><div class="rs-results-body">${body}</div>`;
+    results.innerHTML = `<div class="gs-tabs">${tabs}</div><div class="hub-results-body">${body}</div>`;
     // A single recurring race opens straight onto its editions, as in the header
     if (data.groups.length === 1) results.querySelectorAll('.gs-group').forEach(g => gsRows.setOpen(g, true));
 }
@@ -135,15 +135,3 @@ results.addEventListener('click', e => {
         gsRows.setOpen(group, !group.classList.contains('is-open'));
     }
 });
-
-// ── Calendar tabs: the section link follows the tab ──
-const calLink = document.getElementById('cal-link');
-document.querySelectorAll('.rs-tab').forEach(tab => tab.addEventListener('click', () => {
-    document.querySelectorAll('.rs-tab').forEach(t => {
-        t.classList.toggle('active', t === tab);
-        t.setAttribute('aria-selected', t === tab);
-        document.querySelector(`.rs-cal[data-pane="${t.dataset.tab}"]`).hidden = t !== tab;
-    });
-    calLink.href = tab.dataset.link;
-    calLink.textContent = tab.dataset.label;
-}));

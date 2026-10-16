@@ -3,12 +3,11 @@
 {% block title %}Races - Pro Tri Data{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/hub.css?v={{ ASSET_VERSION }}">
 <link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/race_search.css?v={{ ASSET_VERSION }}">
 {% endblock %}
 
-{% macro who(p) -%}
-<a href="/athlete/{{ p.athlete_id }}" class="rs-who"><img class="rs-av" src="{{ STATIC_BASE_URL }}{{ 'athlete_imgs/128/' ~ p.athlete_id ~ '.webp' if p.profile_img else 'imgs/default_user_64.webp' }}" alt="" loading="lazy" width="24" height="24"><span>{{ p.name }}{{ flag(p.country_alpha3) }}</span></a>
-{%- endmacro %}
+{% from "partials/hub_macros.html" import who with context %}
 
 {% macro event_meta(e) -%}
 <small><span>{{ e.country }}</span>{% if e.kind %}<span>{{ e.kind }}</span>{% endif %}{% if e.entries %}<span>{{ e.entries }} entries</span>{% endif %}</small>
@@ -37,14 +36,14 @@
 {% block content %}
 
 <!-- Search: filters stay closed until asked for; results open under the hero -->
-<form class="rs-filters" id="filterPanel" onsubmit="return false">
-    <label class="rs-f"><span>Sort</span>
+<form class="hub-filters" id="filterPanel" onsubmit="return false">
+    <label class="hub-f"><span>Sort</span>
         <select id="rs-sort">
             <option value="desc">Newest first</option>
             <option value="asc">Oldest first</option>
         </select>
     </label>
-    <label class="rs-f"><span>Country</span>
+    <label class="hub-f"><span>Country</span>
         <select id="rs-country">
             <option value="">All countries</option>
             {% for c in country_list %}
@@ -52,27 +51,27 @@
             {% endfor %}
         </select>
     </label>
-    <div class="rs-f"><span>Year</span>
-        <span class="rs-years">
+    <div class="hub-f"><span>Year</span>
+        <span class="hub-years">
             <input type="number" id="rs-year-start" placeholder="From" min="1979" max="2030" aria-label="From year">
             <span>to</span>
             <input type="number" id="rs-year-end" placeholder="To" min="1979" max="2030" aria-label="To year">
         </span>
     </div>
-    <button type="button" class="rs-reset" id="rs-reset">Reset</button>
+    <button type="button" class="hub-reset" id="hub-reset">Reset</button>
 </form>
-<div id="rs-results" class="rs-results"></div>
+<div id="hub-results" class="hub-results"></div>
 
-<div class="rs-layout">
-<div class="rs-main">
-    <section class="rs-section">
+<div class="hub-layout">
+<div class="hub-main">
+    <section class="hub-section">
         <div class="page-section-head">
             <div>Calendar<p class="page-section-sub">Each week's strongest fields</p></div>
-            <a class="section-link" id="cal-link" href="{{ '/upcoming' if tab == 'up' else '/recent' }}">{{ 'Full calendar' if tab == 'up' else 'All results' }}</a>
+            <a class="section-link" data-follows="cal" href="{{ '/upcoming' if tab == 'up' else '/recent' }}">{{ 'Full calendar' if tab == 'up' else 'All results' }}</a>
         </div>
-        <div class="rs-tabs" role="tablist">
-            <button type="button" class="rs-tab{{ ' active' if tab == 'up' }}" role="tab" aria-selected="{{ 'true' if tab == 'up' else 'false' }}" data-tab="up" data-link="/upcoming" data-label="Full calendar">Upcoming</button>
-            <button type="button" class="rs-tab{{ ' active' if tab == 'res' }}" role="tab" aria-selected="{{ 'true' if tab == 'res' else 'false' }}" data-tab="res" data-link="/recent" data-label="All results">Results</button>
+        <div class="hub-tabs" role="tablist">
+            <button type="button" class="hub-tab{{ ' active' if tab == 'up' }}" role="tab" aria-selected="{{ 'true' if tab == 'up' else 'false' }}" data-group="cal" data-tab="up" data-link="/upcoming" data-label="Full calendar">Upcoming</button>
+            <button type="button" class="hub-tab{{ ' active' if tab == 'res' }}" role="tab" aria-selected="{{ 'true' if tab == 'res' else 'false' }}" data-group="cal" data-tab="res" data-link="/recent" data-label="All results">Results</button>
         </div>
 
         <div class="rs-cal" data-pane="up"{% if tab != 'up' %} hidden{% endif %}>
@@ -88,7 +87,7 @@
                     {% for g, label in [('male', 'Men'), ('female', 'Women')] %}
                     {% set r = e[g] %}
                     <span class="rs-cell rs-cell--{{ g }}"><span class="rs-lbl">{{ label }}</span>
-                        {%- if r and r.favourite %}{{ who(r.favourite) }}<span class="rs-pred"><span class="rs-bar"><i style="width: {{ '%.1f'|format(r.favourite.win_pct * 100) }}%"></i></span>{{ '%.0f'|format(r.favourite.win_pct * 100) }}%</span>
+                        {%- if r and r.favourite %}{{ who(r.favourite) }}<span class="hub-pred"><span class="hub-bar"><i style="width: {{ '%.1f'|format(r.favourite.win_pct * 100) }}%"></i></span>{{ '%.0f'|format(r.favourite.win_pct * 100) }}%</span>
                         {%- elif r and r.entry_count %}<span class="rs-none">Start list out</span>
                         {%- elif r %}<span class="rs-none">No start list yet</span>
                         {%- else %}<span class="rs-none">No race</span>{% endif %}</span>
@@ -99,7 +98,7 @@
             </div>
             {% endfor %}
             {% else %}
-            <p class="rs-empty">No start lists published yet.</p>
+            <p class="hub-empty">No start lists published yet.</p>
             {% endif %}
         </div>
 
@@ -129,14 +128,14 @@
             </div>
             {% endfor %}
             {% else %}
-            <p class="rs-empty">No results in the last ten weeks.</p>
+            <p class="hub-empty">No results in the last ten weeks.</p>
             {% endif %}
         </div>
     </section>
 </div>
 
-<aside class="rs-side">
-    <section class="rs-section">
+<aside class="hub-side">
+    <section class="hub-section">
         <div class="page-section-head page-section-head--sm"><span>Series</span><a class="section-link" href="/series">All series</a></div>
         <ul class="rs-rail">
             {% for s in series %}
@@ -152,7 +151,7 @@
         </ul>
     </section>
 
-    <section class="rs-section">
+    <section class="hub-section">
         <div class="page-section-head page-section-head--sm"><span>Races with history</span><a class="section-link" href="/recurring">Race directory</a></div>
         <ul class="rs-rail">
             {% for h in history %}
@@ -168,20 +167,20 @@
         </ul>
     </section>
 
-    <section class="rs-section rs-wide">
-        {% if ag_event %}<p class="rs-note"><b>Age-group results.</b> {{ ag_event.short_name }}, every age band with splits and ratings. <a class="section-link" href="/event/{{ ag_event.event_id }}">Find your race</a></p>{% endif %}
-        <p class="rs-note"><b>Compare two races.</b> Field strength, times and head-to-heads from the athletes who raced both. <a class="section-link" href="/race-compare">Compare races</a></p>
+    <section class="hub-section hub-wide">
+        {% if ag_event %}<p class="hub-note"><b>Age-group results.</b> {{ ag_event.short_name }}, every age band with splits and ratings. <a class="section-link" href="/event/{{ ag_event.event_id }}">Find your race</a></p>{% endif %}
+        <p class="hub-note"><b>Compare two races.</b> Field strength, times and head-to-heads from the athletes who raced both. <a class="section-link" href="/race-compare">Compare races</a></p>
     </section>
 </aside>
 </div>
 
-<section class="rs-section">
+<section class="hub-section">
     <div class="page-section-head">
         <span>The {{ season_year }} season{{ ' so far' if season_open }}</span>
         <a class="section-link" href="/race-leaderboard">Race leaderboard</a>
     </div>
     <div class="rs-season">
-        <div class="rs-ss">
+        <div class="hub-card rs-ss">
             <h3>Strongest fields</h3>
             <ol>
                 {% for r in strongest %}
@@ -192,7 +191,7 @@
                 {% endfor %}
             </ol>
         </div>
-        <div class="rs-ss">
+        <div class="hub-card rs-ss">
             <h3>Biggest upsets</h3>
             <ol>
                 {% for r in upsets %}
@@ -203,7 +202,7 @@
                 {% endfor %}
             </ol>
         </div>
-        <div class="rs-ss">
+        <div class="hub-card rs-ss">
             <h3>Closest finishes</h3>
             <ol>
                 {% for r in closest %}
@@ -217,10 +216,11 @@
     </div>
 </section>
 
-<p class="rs-counts"><span><b>{{ "{:,}".format(summary.events) }}</b> events</span><span><b>{{ "{:,}".format(summary.races) }}</b> races</span><span><b>{{ summary.countries }}</b> host countries</span><span>since {{ summary.first_year }}</span></p>
+<p class="hub-counts"><span><b>{{ "{:,}".format(summary.events) }}</b> events</span><span><b>{{ "{:,}".format(summary.races) }}</b> races</span><span><b>{{ summary.countries }}</b> host countries</span><span>since {{ summary.first_year }}</span></p>
 
 {% endblock %}
 
 {% block extra_js %}
+<script src="{{ STATIC_BASE_URL }}js/hub.js?v={{ ASSET_VERSION }}"></script>
 <script src="{{ STATIC_BASE_URL }}js/race_search.js?v={{ ASSET_VERSION }}"></script>
 {% endblock %}

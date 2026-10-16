@@ -11,6 +11,16 @@ from ptd_users import queries as uq
 router = APIRouter()
 
 
+def format_athlete_results(res):
+    """Age in place of year of birth on queries.search_athletes output, the
+    shape header.js's athlete rows render."""
+    year = date.today().year
+    for a in res["athletes"]:
+        yob = a.pop("year_of_birth")
+        a["age"] = year - yob if yob else None
+    return res
+
+
 def format_race_results(res):
     """Dates as display strings and an upcoming flag on queries.search_races
     output, the shape header.js's race and series rows render."""
@@ -39,11 +49,8 @@ async def global_search(q: str = Query("")):
     res["users"] = [{"user_id": u["user_id"], "name": u["display_name"], "country_alpha3": u["country"],
                      "club": u["club"], "followers": u["followers"], "comments": u["comments"],
                      "avatar_version": u["avatar_version"], "tone": avatar_tone(u["user_id"])} for u in users]
-    today = date.today()
 
-    for a in res["athletes"]:
-        yob = a.pop("year_of_birth")
-        a["age"] = today.year - yob if yob else None
+    format_athlete_results(res)
     format_race_results(res)
     # Edge-cached like every page, but without the default
     # stale-while-revalidate: browsers honour it, and a day-old response

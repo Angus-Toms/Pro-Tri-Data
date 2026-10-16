@@ -1,0 +1,5 @@
+{# Shared by the hub pages (/races, /athletes). An athlete wherever one is
+   named: photo, name, flag (styles in hub.css). #}
+{% macro who(p) -%}
+<a href="/athlete/{{ p.athlete_id }}" class="hub-who"><img class="hub-av" src="{{ STATIC_BASE_URL }}{{ 'athlete_imgs/128/' ~ p.athlete_id ~ '.webp' if p.profile_img else 'imgs/default_user_64.webp' }}" alt="" loading="lazy" width="24" height="24"><span>{{ p.name }}{{ flag(p.country_alpha3) }}</span></a>
+{%- endmacro %}

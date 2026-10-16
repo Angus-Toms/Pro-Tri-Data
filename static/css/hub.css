@@ -1,0 +1,261 @@
+/* ============================================
+   HUB PAGES (/races, /athletes)
+   Shared by the section landing pages: a hero with search, a filter bar and
+   results card for that search, a main column beside a rail, text tabs whose
+   section link follows them (hub.js), and the small parts every list uses.
+   Search result rows themselves are the header search's (gs-* in base.css).
+   ============================================ */
+
+/* ── Hero: title and search ── */
+.hub-hero {
+    background: var(--navy);
+    border-bottom: 3px solid var(--primary-color);
+}
+.hub-hero-inner {
+    width: 90%;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1.5rem 0 1.6rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+    gap: 1rem 2.5rem;
+    align-items: center;
+}
+.hub-title h1 { margin: 0; color: #fff; font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; }
+.hub-title p { margin: 0.15rem 0 0; color: rgba(255,255,255,0.55); font-size: 0.85rem; }
+.hub-search {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    height: 46px;
+    padding: 0 0.4rem 0 0.9rem;
+    background: var(--white);
+    border-radius: var(--border-radius);
+}
+.hub-search:focus-within { box-shadow: 0 0 0 3px rgba(232, 93, 4, 0.35); }
+.hub-search svg { width: 18px; height: 18px; color: var(--text-lighter); flex: none; }
+.hub-search input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: none;
+    font: inherit;
+    font-size: 0.95rem;
+    color: var(--text-color);
+}
+.hub-search button {
+    flex: none;
+    padding: 0.35rem 0.65rem;
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-light);
+    cursor: pointer;
+}
+.hub-search button[aria-expanded="true"],
+.hub-search button.active { color: var(--primary-color); border-color: var(--primary-color); }
+
+/* ── Search filters: one bar, closed until the hero button opens it ── */
+.hub-filters {
+    display: none;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.5rem;
+    margin: 0 0 0.75rem;
+    padding: 0.7rem 1.25rem;
+    background: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+}
+.hub-filters.open { display: flex; }
+.hub-f { display: flex; align-items: center; gap: 0.5rem; margin: 0; }
+.hub-f > span:first-child {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-lighter);
+}
+.hub-f select,
+.hub-f input:not([type="checkbox"]) {
+    height: 34px;
+    padding: 0 0.6rem;
+    box-sizing: border-box;
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    font: inherit;
+    font-size: 0.85rem;
+    color: var(--text-color);
+}
+.hub-f select:focus,
+.hub-f input:focus { outline: none; border-color: var(--primary-color); }
+.hub-f input[type="number"] { width: 5rem; }
+.hub-f input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var(--primary-color); }
+.hub-years { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--text-lighter); }
+.hub-preset {
+    padding: 0.3rem 0.55rem;
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-light);
+    cursor: pointer;
+}
+.hub-preset:hover { color: var(--primary-color); border-color: var(--primary-color); }
+.hub-reset {
+    margin-left: auto;
+    padding: 0.4rem 0;
+    background: none;
+    border: 0;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-light);
+    cursor: pointer;
+}
+.hub-reset:hover { color: var(--primary-color); }
+
+/* ── Search results: the header search's rows and tabs ── */
+.hub-results {
+    margin-bottom: 2rem;
+    background: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    overflow: hidden;
+    transition: opacity var(--transition-fast);
+}
+.hub-results:empty { display: none; }
+.hub-results.is-loading { opacity: 0.6; }
+.hub-results-body { padding: 0.3rem 0 0.4rem; }
+
+/* ── Layout: main column beside a rail ── */
+.hub-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 3rem;
+    align-items: start;
+    padding-top: 0.5rem;
+}
+.hub-section { margin-bottom: 2.5rem; }
+.hub-empty { margin: 0; padding: 1rem 1.25rem; font-size: 0.9rem; color: var(--text-light); }
+
+/* Text tabs; hub.js swaps their panes */
+.hub-tabs { display: flex; gap: 1.25rem; border-bottom: 1px solid var(--border-color); margin-bottom: 0.75rem; }
+.hub-tab {
+    background: none;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    padding: 0.3rem 0 0.45rem;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-light);
+    cursor: pointer;
+}
+.hub-tab.active { color: var(--text-color); border-color: var(--primary-color); }
+[data-pane][hidden] { display: none; }
+
+/* A card: white, navy group header, ruled rows */
+.hub-card {
+    background: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    overflow: hidden;
+}
+.hub-card h3 {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0;
+    padding: 0.55rem 1.25rem;
+    background: var(--navy);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.6);
+}
+.hub-card h3 span { color: rgba(255,255,255,0.4); }
+.hub-card ol, .hub-card ul { list-style: none; margin: 0; padding: 0; }
+
+/* An athlete wherever one is named: photo, name, flag */
+.hub-who {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+    max-width: 100%;
+    font-weight: 600;
+    color: var(--text-color);
+    text-decoration: none;
+}
+.hub-who:hover { color: var(--primary-color); }
+.hub-who > span { min-width: 0; }
+.hub-av {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--border-color);
+}
+
+/* Win chance as a filled bar, in the prediction tables' colours (.pct-bar) */
+.hub-pred {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.3rem;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--text-light);
+    font-variant-numeric: tabular-nums;
+}
+.hub-bar { flex: 0 1 5rem; height: 6px; background: var(--border-color); border-radius: 3px; overflow: hidden; }
+.hub-bar i { display: block; height: 100%; background: var(--primary-color); border-radius: 3px; }
+
+/* A pointer to another page, between rules */
+.hub-note {
+    margin: 0;
+    padding: 0.9rem 0;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.88rem;
+    color: var(--text-light);
+}
+.hub-note b { color: var(--text-color); }
+.hub-note + .hub-note { border-top: 0; }
+.hub-note .section-link { white-space: normal; }
+
+.hub-counts { margin: 0.5rem 0 1rem; text-align: center; font-size: 0.75rem; color: var(--text-lighter); }
+.hub-counts b { font-weight: 600; color: var(--text-light); }
+.hub-counts span + span::before { content: "\00b7"; margin: 0 0.5rem; }
+
+/* ── Responsive: the site's three breakpoints, 1024 / 768 / 480 ── */
+@media (max-width: 1024px) {
+    /* One column; the rail becomes a two-up grid under the main column */
+    .hub-layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .hub-side { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 2rem; }
+    .hub-wide { grid-column: 1 / -1; }
+}
+@media (max-width: 768px) {
+    .hub-hero-inner { grid-template-columns: minmax(0, 1fr); padding: 1.1rem 0 1.25rem; gap: 0.75rem; }
+    .hub-side { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 480px) {
+    .hub-title h1 { font-size: 1.5rem; }
+    /* Filters: a label column and full-width controls */
+    .hub-filters.open { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.6rem; padding: 0.75rem 1rem; }
+    .hub-f { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); }
+    .hub-f select, .hub-years input[type="number"] { width: 100%; }
+    .hub-years { flex-wrap: wrap; }
+    .hub-reset { margin: 0; justify-self: end; }
+}

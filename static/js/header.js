@@ -202,10 +202,10 @@
         group.querySelector('[data-gs-expand]').setAttribute('aria-expanded', String(open));
     };
 
-    // The /races hero search lists the same race and series rows. Highlighting
+    // The /races and /athletes hero searches list the same rows. Highlighting
     // reads the last query set here or by the modal, so set it before rendering.
     window.gsRows = {
-        groupRow, eventRow, seriesRow, setOpen,
+        athleteRow, groupRow, eventRow, seriesRow, setOpen,
         highlight: (q) => { tokens = fold(q).split(/\s+/).filter(Boolean); },
     };
 

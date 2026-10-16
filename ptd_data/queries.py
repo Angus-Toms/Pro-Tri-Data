@@ -577,20 +577,25 @@ def get_calendar_results(since):
     return list(events.values())
 
 
-def get_race_favourites(race_ids):
-    """{race_id: predicted winner} for races with stored predictions."""
+def get_predicted_top(race_ids, n):
+    """{race_id: its n predicted leaders, favourite first} for races with
+    stored predictions."""
     if not race_ids:
         return {}
     ph = ",".join("?" * len(race_ids))
     rows = _get_conn().execute(f"""
-        SELECT rp.race_id, a.athlete_id, a.name, n.alpha3, a.profile_img, rp.win_pct
+        SELECT rp.race_id, a.athlete_id, a.name, n.alpha3, a.profile_img, rp.win_pct, rp.podium_pct
         FROM race_predictions rp
         JOIN athletes a USING (athlete_id)
         JOIN nationalities n ON n.country_full = a.country_full
-        WHERE rp.race_id IN ({ph}) AND rp.predicted_position = 1
-    """, list(race_ids)).fetchall()
-    cols = ["athlete_id", "name", "country_alpha3", "profile_img", "win_pct"]
-    return {r[0]: dict(zip(cols, r[1:])) for r in rows}
+        WHERE rp.race_id IN ({ph}) AND rp.predicted_position <= ?
+        ORDER BY rp.race_id, rp.predicted_position
+    """, list(race_ids) + [n]).fetchall()
+    cols = ["athlete_id", "name", "country_alpha3", "profile_img", "win_pct", "podium_pct"]
+    out = defaultdict(list)
+    for r in rows:
+        out[r[0]].append(dict(zip(cols, r[1:])))
+    return out
 
 
 def standard_rank_shares(items):
@@ -798,13 +803,42 @@ def global_search(query, limit=20):
     word must appear somewhere in the name (accents and order ignored), so
     "yee alex" and "lopez" both find their targets. Each list carries its
     total match count."""
+    return {**search_athletes(query, limit), **search_races(query, limit)}
+
+
+def search_athletes(query, limit=20, country=None, yob_start=None, yob_end=None,
+                    program=None, active_only=False):
+    """Athletes matching `query`, for the header search and the /athletes
+    search, each with one world rank to show. The filters narrow to a
+    nationality, a birth-year range (unknown years left out: a name search
+    narrowed to U23s shouldn't list masters with no birth year), a program ('short' / 'long' elite or 'ag') the athlete holds
+    a rank in, and a race in the last 18 months. With a program set, the rank
+    shown is that program's."""
     conn = _get_conn()
     tokens = query.lower().split()
 
-    def match(expr):
-        return _match_words(expr, len(tokens))
+    conds, f_params = [], []
+    if country:
+        conds.append("a.country_full = ?")
+        f_params.append(country)
+    if yob_start:
+        conds.append("a.year_of_birth >= ?")
+        f_params.append(yob_start)
+    if yob_end:
+        conds.append("a.year_of_birth BETWEEN 1 AND ?")
+        f_params.append(yob_end)
+    if program:
+        category, course = ("ag", "short") if program == "ag" else ("elite", program)
+        conds.append(f"""EXISTS (SELECT 1 FROM rankings rk JOIN races r ON r.race_id = rk.race_id
+                                 WHERE rk.athlete_id = a.athlete_id AND rk.category = ?
+                                   AND {_COURSE_CASE} = ?)""")
+        f_params += [category, course]
+    if active_only:
+        conds.append("""EXISTS (SELECT 1 FROM results x JOIN races r ON r.race_id = x.race_id
+                                WHERE x.athlete_id = a.athlete_id
+                                  AND r.race_date >= CURRENT_DATE - INTERVAL 18 MONTH)""")
+    in_filter = " AND ".join(conds) or "TRUE"
 
-    # --- Athletes ---
     # A word of the name starting with the first token beats a mid-word hit,
     # then elites before age-groupers, then the best world rank ever held
     # (so Alistair Brownlee still leads "brown" after retiring).
@@ -814,7 +848,7 @@ def global_search(query, limit=20):
                    (' ' || strip_accents(lower(replace(a.name, '-', ' '))))
                        LIKE '% ' || strip_accents(?) || '%' AS word_start
             FROM athletes a
-            WHERE {match('a.name')}
+            WHERE {_match_words('a.name', len(tokens))} AND {in_filter}
         ),
         progs AS (
             SELECT rk.athlete_id, rk.category, {_COURSE_CASE} AS course,
@@ -839,7 +873,7 @@ def global_search(query, limit=20):
         JOIN nationalities n ON n.country_full = a.country_full
         ORDER BY h.word_start DESC, s.prominence, a.name
         LIMIT ?
-    """, [tokens[0]] + tokens + [limit]).fetchall()
+    """, [tokens[0]] + tokens + f_params + [limit]).fetchall()
 
     current = _current_world_ranks()
     athletes = []
@@ -847,7 +881,10 @@ def global_search(query, limit=20):
         # One rank per athlete. Elite programs beat AG. A course raced in the
         # last 18 months shows today's rank (as the athlete page does) and
         # beats a finished course's best; among equals the better rank wins.
-        shown = [p for p in progs if p["category"] == "elite"] or progs
+        if program:
+            shown = [p for p in progs if (p["category"], p["course"]) == (category, course)]
+        else:
+            shown = [p for p in progs if p["category"] == "elite"] or progs
         options = []
         for p in shown:
             now = current.get(aid, {}).get((p["category"], p["course"]))
@@ -858,10 +895,7 @@ def global_search(query, limit=20):
         athletes.append({"athlete_id": aid, "name": name, "year_of_birth": yob, "gender": gender,
                          "country_full": country, "country_alpha3": alpha3,
                          "has_img": bool(img), "rank": rank})
-
-    return {"athletes": athletes,
-            "athletes_total": athlete_rows[0][-1] if athlete_rows else 0,
-            **search_races(query, limit)}
+    return {"athletes": athletes, "athletes_total": athlete_rows[0][-1] if athlete_rows else 0}
 
 
 def search_races(query, limit=20, country=None, year_start=None, year_end=None, sort="desc"):

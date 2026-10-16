@@ -84,7 +84,7 @@ def _upcoming_calendar(today):
             e[g] = next((r for r in e["races"] if r["gender"] == g and r["category"] == "elite"), None)
 
     progs = [e[g] for e in events for g in ("male", "female") if e[g]]
-    favourites = queries.get_race_favourites([r["race_id"] for r in progs])
+    favourites = queries.get_predicted_top([r["race_id"] for r in progs], 1)
     # Strength from the elite / pro fields only, as for completed events. The
     # upcoming feed is World Triathlon's, so every field is short course.
     elite = [r for r in progs if r["prog_name"].split()[0].lower() in ("elite", "pro")]
@@ -95,7 +95,7 @@ def _upcoming_calendar(today):
     for e in events:
         for g in ("male", "female"):
             if e[g]:
-                e[g]["favourite"] = favourites.get(e[g]["race_id"])
+                e[g]["favourite"] = (favourites.get(e[g]["race_id"]) or [None])[0]
         own = [shares[e[g]["race_id"]] for g in ("male", "female") if e[g] and e[g]["race_id"] in shares]
         e["strength"] = min(own) if own else None
     return events
