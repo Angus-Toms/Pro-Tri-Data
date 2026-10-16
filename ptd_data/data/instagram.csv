@@ -21,10 +21,12 @@ athlete_id,name,handle,updated_at
 32745,Laura Siddall,lmsid,2026-10-14T16:17:02Z
 33705,Nicola Azzano,nicola_azzano,2026-10-14T16:16:19Z
 39137,Amelia Watkinson,ameliarosewatkinson,2026-10-07T15:50:15Z
+39264,Kenji Nener,kenji_nener,2026-10-15T17:48:33Z
 39664,Holly Lawrence,hollylawrencetri,2026-10-05T14:53:39Z
 40311,Marten Van Riel,martenvanriel,2026-10-05T14:49:15Z
 41158,Leonie Periault,leonieperio,2026-10-05T14:47:28Z
 41831,Gregor Payet,gregorpayet,2026-10-13T10:43:34Z
+45915,Jacob Birtwhistle,,2026-10-15T17:41:55Z
 47139,Bradley Weiss,bsweiss_tri,2026-10-14T16:14:09Z
 47630,Gustav Iden,gustav_iden,2026-10-05T14:52:15Z
 47901,Rodolphe Von Berg,rudyvonberg,2026-10-07T09:40:21Z
@@ -41,6 +43,7 @@ athlete_id,name,handle,updated_at
 63429,Roberto Sanchez Mantecon,sanchezmantecon,2026-10-14T16:08:56Z
 63651,Tom Richard,tomrichardtri,2026-10-14T16:10:22Z
 64282,Kacper Stepniak,stepniakacper,2026-10-07T09:46:55Z
+64519,Henrik Goesch,,2026-10-15T17:47:51Z
 66197,Alissa Konig,alissa.koenig,2026-10-14T16:12:45Z
 68330,Emma Pallant,em_pallant,2026-10-05T14:54:05Z
 68903,Kyle Smith,kylesmithnzl,2026-10-14T16:09:32Z
@@ -49,29 +52,39 @@ athlete_id,name,handle,updated_at
 70613,India Lee,indielee_tri,2026-10-14T16:09:06Z
 71161,Sian Rainsley,sian_rainsley,2026-10-07T15:49:18Z
 71738,Gianluca Pozzatti,gingip,2026-10-07T15:51:30Z
+74402,Sophie Alden,,2026-10-15T17:45:00Z
 74419,Alberto Gonzalez Garcia,albertogonzaleztri,2026-10-05T14:54:26Z
 74420,Kieran Lindars,kieranlindars,2026-10-13T10:42:24Z
+74423,Jack Willis,jackwillis27,2026-10-15T17:46:20Z
 75629,Frederic Funk,fredericfunk97,2026-10-14T16:10:01Z
 75945,Sara Perez Sala,saraperezsala,2026-10-14T16:11:45Z
 76425,Seth Rider,rethsider,2026-10-14T16:10:12Z
 76434,Casper Stornes,casperstornes,2026-10-05T14:47:44Z
 78775,Jessica Learmonth,jesslearmonth,2026-10-07T15:50:53Z
+79059,Lena Meißner,_lenameissner,2026-10-15T17:41:18Z
 79065,Lisa Tertsch,lisa_tertsch,2026-10-05T14:52:31Z
 79066,Nina Eim,ninaeim,2026-10-05T14:54:42Z
 79706,Charles Paquet,charles_paquet,2026-10-06T08:32:31Z
+80060,Maja Stage Nielsen,majastage,2026-10-15T17:47:26Z
 80582,Thomas Steger,steger_thomas,2026-10-14T16:17:44Z
 80601,Nathan Grayel,nathangrayel,2026-10-14T16:11:08Z
 80605,Mathilde Gautier,mathgautier,2026-10-14T16:12:23Z
+80630,Jason West,jasonwesttri,2026-10-15T17:45:40Z
 80795,Matthew Hauser,matt_hauser,2026-10-05T14:42:43Z
 80813,Rosa Maria Tapia Vidal,rosatapiav,2026-10-14T16:14:45Z
 81334,Taylor Spivey,tkspivey,2026-10-05T14:46:54Z
 82486,Marta Sanchez Hernandez,martasan95,2026-10-07T15:50:37Z
+83091,Hanne De Vet,hannedevet,2026-10-15T17:46:31Z
 83263,Olivia Mathias,livvymathias,2026-10-13T10:42:43Z
+83323,Maria Carolina Velasquez Soto,,2026-10-15T17:42:31Z
+83434,Ben Dijkstra,ben.dijkstra,2026-10-15T17:44:21Z
 84816,Julie Derron,juliederron,2026-10-05T14:52:00Z
+85178,Braden Currie,bradencurrie,2026-10-15T17:43:16Z
 85218,Daniel Bækkegård,danielbaekkegard,2026-10-07T09:42:42Z
 86042,Vasco Vilaca,vascovilaca,2026-10-05T14:44:01Z
 88205,Samuel Dickinson,samdickotri,2026-10-07T15:52:16Z
 90934,Jan Stratmann,stratmannjan,2026-10-13T10:42:09Z
+92284,Mathias Lyngsø Petersen,mathiastri,2026-10-15T17:44:34Z
 92430,Callum McClusky,calmcclusky,2026-10-14T16:12:09Z
 93364,Arnaud Mengal,arnaudmengal,2026-10-14T16:18:56Z
 93402,Martin Sobey,martin.sobey,2026-10-07T15:52:50Z
@@ -81,7 +94,9 @@ athlete_id,name,handle,updated_at
 94975,Sara Svensk,svensksara,2026-10-14T16:08:41Z
 96040,Vetle Bergsvik Thorn,vetlethorn,2026-10-13T10:44:12Z
 96441,Mathis Margirier,mathismargirier,2026-10-07T15:48:42Z
+96687,Lea Coninx,lea_coninx,2026-10-15T17:43:41Z
 96694,Sam Laidlow,samlaidlow,2026-10-05T14:45:57Z
+96759,Valentina Riasova,riasovalentina_,2026-10-15T17:46:54Z
 98051,Fenella Langridge,fanella.langridge,2026-10-14T16:18:45Z
 98121,Ricardo Batista,ricfbat,2026-10-05T14:52:46Z
 98125,Louis Vitiello,vitiello.louis,2026-10-14T16:18:19Z
@@ -90,8 +105,10 @@ athlete_id,name,handle,updated_at
 103943,Jamie Riddle,jamie__riddle,2026-10-14T16:12:34Z
 104333,Jessica Fullagar,jessica_fullagar,2026-10-07T09:40:40Z
 106358,Roksana Slupek,roksana.slupek,2026-10-07T09:47:12Z
+106503,Annika Koch,annika_koch_,2026-10-15T17:48:47Z
 106885,Tim Hellwig,timhellwig99,2026-10-06T08:34:10Z
 107730,Alessio Crociani,__alessiocrociani__,2026-10-07T09:46:01Z
+110763,Jordi Montraveta,jordimontra,2026-10-15T17:47:41Z
 112738,Maria Tomé,mariaamrt,2026-10-14T16:08:03Z
 112892,Chelsea Sodaro,chelseasodaro,2026-10-05T14:54:58Z
 114712,Lucy Charles-Barclay,lucycharles93,2026-10-05T14:44:20Z
@@ -101,7 +118,9 @@ athlete_id,name,handle,updated_at
 117231,Clement Mignon,clementmignon_tri,2026-10-07T09:47:59Z
 123392,Morgan Pearson,morgan_cadwell_pearson,2026-10-07T09:48:21Z
 123455,Sophie Linn,sophielinn,2026-10-14T16:15:55Z
+125061,Djenyfer Arnold,djenyferarnold,2026-10-15T17:41:40Z
 125064,Henry Graf,henry_graf,2026-10-06T08:29:05Z
+125089,Marc Dubrick,mdubrick7,2026-10-15T17:43:05Z
 125294,Connor Bentley,_connorbentley,2026-10-14T16:08:15Z
 125375,Emma Lombardi,emma__lombardi,2026-10-05T14:48:21Z
 125627,Tanja Neubert,tanjaneubert_,2026-10-07T09:40:03Z
@@ -119,11 +138,15 @@ athlete_id,name,handle,updated_at
 140588,Lucy Byram,lucymaybyram,2026-10-13T10:43:51Z
 140594,Cameron Wurf,cjwurf,2026-10-13T10:43:08Z
 144208,Mathis Beaulieu,beaulieu_mathis,2026-10-14T16:16:32Z
+158362,Euan De Nigro,euan_de_nigro,2026-10-15T17:45:53Z
 158795,Ilona Hadhoum,ilona_hadhoum,2026-10-07T15:52:03Z
 159329,Laura Jansen,laurajansen,2026-10-14T16:16:43Z
 159411,Trevor Foley,tfoleyracing,2026-10-07T09:41:30Z
+160628,Michael Gar,michaelgar_tri,2026-10-15T17:43:55Z
 160772,Tom Lerno,tom__lerno,2026-10-13T10:43:21Z
 162101,Tilly Anema,tilly_anema,2026-10-14T16:10:33Z
+163053,Ambre Grasset,_ambre_tri,2026-10-15T17:47:07Z
+165926,Lydia Russell,lydiarusselll,2026-10-15T17:46:08Z
 168492,Léa Houart,leaaa.houart,2026-10-07T09:47:34Z
 168603,Oliver Conway,oliverconwayy,2026-10-13T10:45:45Z
 169633,Nils Serre Gehri,nils_serre,2026-10-07T09:46:17Z
@@ -131,12 +154,16 @@ athlete_id,name,handle,updated_at
 173756,Igor Dupuis,igordupuis,2026-10-14T16:11:20Z
 176057,Alanis Siffert,alanis.siffert,2026-10-07T09:45:02Z
 177434,Katrina Matthews,katr_matthews,2026-10-05T14:45:25Z
+180958,Anouk Danna,anoukdanna,2026-10-15T17:44:06Z
 96917789,Lizzie Rayner,lizzierayner97,2026-10-14T16:15:13Z
 116867676,Hannah Berry,dr_hannah_wells,2026-10-06T08:33:53Z
 179160272,Haley Chura,haleychura23,2026-10-14T16:16:06Z
+212897738,Anne-Sophie Pierre,annesophie.pierre,2026-10-15T17:48:05Z
+360287547,Gurutze Frades Larralde,gurutzefrades,2026-10-15T17:45:29Z
 500383706,Daniela Kleiser,,2026-10-14T16:13:00Z
 548500102,Nick Thompson,nick_thompson00,2026-10-07T15:52:36Z
 589378969,Skye Moench,skyemoench,2026-10-06T08:33:33Z
+662983468,Kristian Høgenhaug,mr_hoegen,2026-10-15T17:40:28Z
 692696266,Laura Philipp,,2026-10-05T14:45:00Z
 763470935,Jeanni Metzler,jeanni_metzler,2026-10-07T09:44:31Z
 810217695,Imogen Simmonds,imosimmonds,2026-10-06T08:29:20Z
@@ -145,8 +172,11 @@ athlete_id,name,handle,updated_at
 935711100,Jocelyn McCauley,jocelynmccauley,2026-10-14T16:13:39Z
 975589552,Katrine Græsbøll Christensen,,2026-10-13T10:41:55Z
 1031971353,Nikki Bartlett,nikkibartlett1,2026-10-13T10:45:07Z
+1061811436,Joe Skipper,notanotheraveragejoe,2026-10-15T17:44:49Z
+1301565744,Rasmus Svenningsson,rasmusstri,2026-10-15T17:48:21Z
 1403493268,Tamara Jewett,tamarajewett,2026-10-14T16:09:48Z
 1548510533,Rachel Zilinskas,rachzili13,2026-10-14T16:13:12Z
+1562797087,Elisabetta Curridori,elisabettacurridori,2026-10-15T17:42:51Z
 1594670649,Lionel Sanders,lsanderstri,2026-10-14T16:20:07Z
 1611263670,Matt Hanson,matthansontri,2026-10-14T16:10:42Z
 1658809804,Anne Reischmann,anne_reischmann,2026-10-13T10:45:27Z
@@ -154,4 +184,6 @@ athlete_id,name,handle,updated_at
 1845262680,Chris Leiferman,chris_leiferman,2026-10-14T16:19:13Z
 1879426764,Matthew Marquardt,matthewdmarquardt,2026-10-05T14:53:25Z
 2059604022,Ruth Astle,rastle07,2026-10-14T16:17:53Z
+2072171633,Laura Madsen,_lauramadsen,2026-10-15T17:41:04Z
+2085636948,Alice Alberts,aliceg_alberts,2026-10-15T17:40:43Z
 2111082254,Sam Long,samgolong,2026-10-05T14:55:27Z
