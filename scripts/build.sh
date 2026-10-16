@@ -38,7 +38,9 @@ step "PTO long-course results";       python -m ptd_data.pto_ingest $WINDOW
 
 # Hand-kept CSVs in ptd_data/data/. Merges run after every source so new
 # entries land before the derived passes; stages run after ignored because
-# they add stage rows to ignored_races.
+# they add stage rows to ignored_races. Race dates go first: everything
+# after reads them.
+step "Race dates";                    db load_race_dates
 step "Athlete merges";                db apply_athlete_merges
 step "Rejected auto-links";           db apply_athlete_no_merge
 step "Doping bans";                   db load_doping_bans

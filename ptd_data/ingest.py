@@ -182,22 +182,28 @@ def parse_lnglat(coord):
 
 
 def prog_race_date(prog, event):
-    """A program's date, falling back to the event date when the year is mangled.
+    """A program's date, falling back to the event date when the feed's is bogus.
 
     The WT feed occasionally ships a typo'd prog_date: prog 8535 (2003 Ixtapa
     Pan-American Cup, elite men) comes through as '0200-09-27'. Year 200 sorts
     the race to the far end of history, poisons the 2-digit year in
     short_course_race_handle, and Google/Bing reject the <lastmod> it produces
-    as an invalid date. Only an implausible year triggers the fallback: the
-    feed also has races legitimately offset by a day or two from their event
-    date, and those are left alone.
+    as an invalid date. It also uses YYYY-01-01 as an unknown-date placeholder
+    while the event carries the real date (2013 FIN and 2019 AUS national
+    champs), and ratings would rate such a race before everything else that
+    year. Only those two cases trigger the fallback: the feed also has races
+    legitimately offset by a day or two from their event date, and those are
+    left alone. When the event is dated 1 Jan as well there is nothing better
+    to use, so the placeholder stands.
     """
     race_date = str(prog.get('prog_date', ''))
-    if race_date[:4].isdigit() and 1970 <= int(race_date[:4]) <= 2100:
+    event_date = str(event.get('event_date', ''))
+    plausible_year = race_date[:4].isdigit() and 1970 <= int(race_date[:4]) <= 2100
+    jan1_placeholder = race_date.endswith('-01-01') and race_date != event_date
+    if plausible_year and not jan1_placeholder:
         return race_date
 
-    event_date = str(event.get('event_date', ''))
-    print(f"  Implausible prog_date {race_date!r} for prog {prog.get('prog_id')}, "
+    print(f"  Bad prog_date {race_date!r} for prog {prog.get('prog_id')}, "
           f"using event date {event_date!r}")
     return event_date
 
