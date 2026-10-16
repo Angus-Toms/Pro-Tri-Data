@@ -835,15 +835,11 @@
         border: 0 !important;
         width: auto !important;
     }
-    /* Whole-row tint for the podium (was per-cell on desktop). The
-       desktop per-td tints have !important + higher specificity, so we
-       null them out at the same level here. */
-    .w1-table tbody tr.gold-row.gold-row > td,
-    .w1-table tbody tr.gold-row.gold-row:hover > td,
-    .w1-table tbody tr.silver-row.silver-row > td,
-    .w1-table tbody tr.silver-row.silver-row:hover > td,
-    .w1-table tbody tr.bronze-row.bronze-row > td,
-    .w1-table tbody tr.bronze-row.bronze-row:hover > td { background: transparent !important; }
+    /* Whole-row tint for the podium (was per-cell on desktop), so the
+       desktop per-td tints are nulled out here. */
+    .w1-table tbody tr.gold-row > td,
+    .w1-table tbody tr.silver-row > td,
+    .w1-table tbody tr.bronze-row > td { background: transparent !important; }
     .w1-table tbody tr.gold-row   { background: rgba(245, 200, 66, 0.13); }
     .w1-table tbody tr.silver-row { background: rgba(168, 169, 173, 0.14); }
     .w1-table tbody tr.bronze-row { background: rgba(205, 127, 50, 0.11); }
@@ -920,15 +916,11 @@
     white-space: nowrap;
 }
 .w1-table tbody tr:last-child td { border-bottom: none; }
-/* Light gold/silver/bronze tint on each podium row. The hover overrides
-   re-state the same colour to defeat the global `table tr:hover td`
-   highlight in base.css - we want the medal tint to persist on hover. */
-.w1-table tbody tr.gold-row   td,
-.w1-table tbody tr.gold-row:hover   td { background: rgba(245, 200, 66, 0.13) !important; }
-.w1-table tbody tr.silver-row td,
-.w1-table tbody tr.silver-row:hover td { background: rgba(168, 169, 173, 0.14) !important; }
-.w1-table tbody tr.bronze-row td,
-.w1-table tbody tr.bronze-row:hover td { background: rgba(205, 127, 50, 0.11) !important; }
+/* Light gold/silver/bronze tint on each podium row; it outranks the row
+   hover, so it stays put */
+.w1-table tbody tr.gold-row   td { background: rgba(245, 200, 66, 0.13); }
+.w1-table tbody tr.silver-row td { background: rgba(168, 169, 173, 0.14); }
+.w1-table tbody tr.bronze-row td { background: rgba(205, 127, 50, 0.11); }
 
 /* Tight # column - just enough for the 24px pos circle. */
 .w1-table thead th:first-child,

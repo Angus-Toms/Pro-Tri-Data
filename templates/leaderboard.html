@@ -1,281 +1,131 @@
 {% extends "base.html" %}
 
 {% set cat_label = 'Age Group' if category == 'ag' else 'Elite' %}
-{% block title %}{{ gender | title }} {{ cat_label }} Triathlon Rankings - {{ disc | title }} | Pro Tri Data{% endblock %}
+{% set head = 'Mixed Relay Triathlon Rankings' if is_relay else (gender | title ~ ' ' ~ cat_label ~ ' Triathlon Rankings') %}
+{% block title %}{{ head }} - {{ disc | title }} | Pro Tri Data{% endblock %}
 
 {% block meta %}
-{% set desc %}World rankings for {{ cat_label | lower }} {{ gender }} triathletes by {{ disc }} ELO rating{% if active_only %}, active athletes only{% endif %}. Updated after every race.{% endset %}
-<meta name="description" content="{{ desc }}">
+<meta name="description" content="{{ subtitle }} Updated after every race.">
 <meta property="og:site_name" content="Pro Tri Data">
 <meta property="og:type" content="website">
-<meta property="og:title" content="{{ gender | title }} {{ cat_label }} Triathlon Rankings - {{ disc | title }} | Pro Tri Data">
-<meta property="og:description" content="{{ desc }}">
+<meta property="og:title" content="{{ head }} - {{ disc | title }} | Pro Tri Data">
+<meta property="og:description" content="{{ subtitle }}">
 <meta property="og:image" content="{{ STATIC_BASE_URL }}imgs/logo-512.webp">
 {% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/leaderboard.css?v={{ ASSET_VERSION }}">
+<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/hub.css?v={{ ASSET_VERSION }}">
 <link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/users.css?v={{ ASSET_VERSION }}">
+<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/leaderboard.css?v={{ ASSET_VERSION }}">
 {% endblock %}
 
 {% block hero %}
-<div class="page-hero">
-    <div class="page-hero-inner">
-        <h1>Athlete Leaderboard</h1>
+<div class="hub-hero">
+    <div class="hub-hero-inner">
+        <div class="hub-title">
+            <h1>{{ title }}</h1>
+            <p>{{ subtitle }}</p>
+        </div>
+        <form class="hub-search" role="search" onsubmit="return false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" id="lb-input" data-program="{{ category }}:{{ course }}" placeholder="Find an athlete" autocomplete="off" aria-label="Find an athlete">
+        </form>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
-<div class="filters-card">
-    <form method="get" action="/athlete-leaderboard" class="filters-form" id="filtersForm">
+<div id="lb-results" class="hub-results"></div>
 
-        {% if is_relay %}
-        {% set _summary_parts = ['Relay', disc | title, ('Trending' if order == 'hot' else 'All-time')] %}
-        {% else %}
-        {% set _summary_parts = [
-            ('Male' if gender == 'male' else 'Female'),
-            ('Short' if course == 'short' else 'Long'),
-            ('Age Group' if category == 'ag' else 'Elite'),
-            disc | title,
-            ('Trending' if order == 'hot' else 'All-time'),
-        ] %}
+{# One row on the list, in the race table's switches and buttons: what it
+   shows on the left; its discipline, what it is ranked by and the filters
+   on the right #}
+<div class="lb-toolbar">
+    <div class="lb-views">
+        <nav class="race-view-toggle lb-prog" aria-label="Programme">
+            {% for p in programs %}
+            <a class="race-view-btn{{ ' active' if p.active }}" href="{{ p.href }}"{% if p.active %} aria-current="page"{% endif %}><span class="lb-full">{{ p.label }}</span><span class="lb-short">{{ p.short }}</span></a>
+            {% endfor %}
+        </nav>
+        {% if not is_relay %}
+        <nav class="race-view-toggle lb-gender" aria-label="Gender">
+            {% for g in genders %}
+            <a class="race-view-btn{{ ' active' if g.active }}" href="{{ g.href }}"{% if g.active %} aria-current="page"{% endif %}>{{ g.label }}</a>
+            {% endfor %}
+        </nav>
         {% endif %}
-        {% if active_only %}{% set _summary_parts = _summary_parts + ['Active'] %}{% endif %}
-
-        <div class="filter-summary-bar">
-            <div class="filter-summary">
-                {% for part in _summary_parts %}{% if not loop.first %}<span class="filter-summary-sep">·</span>{% endif %}{{ part }}{% endfor %}
-            </div>
-            {% if not is_relay %}{% with download_url = "/download/leaderboard", download_id = "downloadBtn" %}{% include "partials/download_button.html" %}{% endwith %}{% endif %}
-            <button type="button" class="btn-filter-toggle" id="filterToggle" aria-expanded="false" aria-controls="filterPanel">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                </svg>
-                Filters
+    </div>
+    <div class="lb-tools">
+        <select id="lb-disc" class="lb-select" aria-label="Discipline">
+            {% for d in ['overall', 'swim', 'bike', 'run', 'transition'] %}
+            <option value="{{ d }}"{{ ' selected' if d == disc }}>{{ d | title }}</option>
+            {% endfor %}
+        </select>
+        <nav class="race-view-toggle lb-rank" aria-label="Rank by">
+            <a class="race-view-btn{{ ' active' if order == 'top' }}" href="{{ rank_links.top }}" rel="nofollow">Rating</a>
+            <a class="race-view-btn{{ ' active' if order == 'hot' }}" href="{{ rank_links.hot }}" rel="nofollow">1y change</a>
+        </nav>
+        <span class="table-actions">
+            <button type="button" class="btn-table-action{{ ' active' if n_filters }}" id="filterToggle" aria-expanded="false" aria-controls="filterPanel">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                Filters{% if n_filters %} ({{ n_filters }}){% endif %}
             </button>
-        </div>
-
-        <div class="filter-panel" id="filterPanel">
-            <div class="filter-panel-grid">
-
-                {% if not is_relay %}
-                <div class="filter-chip-group">
-                    <span class="filter-chip-label">Category</span>
-                    <div class="radio-chips">
-                        <input type="radio" name="category" value="elite" id="cat-elite"
-                            {% if category == 'elite' %}checked{% endif %}>
-                        <label for="cat-elite">Elite</label>
-                        <input type="radio" name="category" value="ag" id="cat-ag"
-                            {% if category == 'ag' %}checked{% endif %}>
-                        <label for="cat-ag">Age Group</label>
-                    </div>
-                </div>
-                {% endif %}
-
-                <div class="filter-chip-group">
-                    <span class="filter-chip-label">Course</span>
-                    <div class="radio-chips">
-                        <input type="radio" name="course" value="short" id="course-short"
-                            {% if course == 'short' %}checked{% endif %}>
-                        <label for="course-short">Short</label>
-                        <input type="radio" name="course" value="long" id="course-long"
-                            {% if course == 'long' %}checked{% endif %}>
-                        <label for="course-long">Long</label>
-                        <input type="radio" name="course" value="relay" id="course-relay"
-                            {% if course == 'relay' %}checked{% endif %}>
-                        <label for="course-relay">Relay</label>
-                    </div>
-                </div>
-
-                {% if not is_relay %}
-                <div class="filter-chip-group">
-                    <span class="filter-chip-label">Gender</span>
-                    <div class="radio-chips">
-                        <input type="radio" name="gender" value="male" id="gender-male"
-                            {% if gender == 'male' %}checked{% endif %}>
-                        <label for="gender-male">Male</label>
-                        <input type="radio" name="gender" value="female" id="gender-female"
-                            {% if gender == 'female' %}checked{% endif %}>
-                        <label for="gender-female">Female</label>
-                    </div>
-                </div>
-                {% endif %}
-
-                <div class="filter-chip-group">
-                    <span class="filter-chip-label">Discipline</span>
-                    <div class="radio-chips">
-                        <input type="radio" name="disc" value="overall" id="disc-overall"
-                            {% if disc == "overall" %}checked{% endif %}>
-                        <label for="disc-overall">Overall</label>
-                        <input type="radio" name="disc" value="swim" id="disc-swim"
-                            {% if disc == "swim" %}checked{% endif %}>
-                        <label for="disc-swim">Swim</label>
-                        <input type="radio" name="disc" value="bike" id="disc-bike"
-                            {% if disc == "bike" %}checked{% endif %}>
-                        <label for="disc-bike">Bike</label>
-                        <input type="radio" name="disc" value="run" id="disc-run"
-                            {% if disc == "run" %}checked{% endif %}>
-                        <label for="disc-run">Run</label>
-                        <input type="radio" name="disc" value="transition" id="disc-transition"
-                            {% if disc == "transition" %}checked{% endif %}>
-                        <label for="disc-transition">Transition</label>
-                    </div>
-                </div>
-
-                <div class="filter-chip-group">
-                    <span class="filter-chip-label">Rank by</span>
-                    <div class="radio-chips">
-                        <input type="radio" name="order" value="top" id="order-top"
-                            {% if order == 'top' %}checked{% endif %}>
-                        <label for="order-top">All-time</label>
-                        <input type="radio" name="order" value="hot" id="order-hot"
-                            {% if order == 'hot' %}checked{% endif %}>
-                        <label for="order-hot">Trending</label>
-                    </div>
-                </div>
-
-                <div class="filter-chip-group">
-                    <span class="filter-chip-label">Active only</span>
-                    <input type="hidden" name="active_only" id="active-only-input"
-                           value="{{ 'true' if active_only else 'false' }}">
-                    <label class="filter-toggle">
-                        <input type="checkbox" id="active-only-cb"
-                               {% if active_only %}checked{% endif %}>
-                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                        <span class="toggle-text" id="active-only-text">{% if active_only %}On{% else %}Off{% endif %}</span>
-                    </label>
-                </div>
-
-                {% if not is_relay %}
-                <div class="filter-group">
-                    <label for="country">Country</label>
-                    <select name="country" id="country">
-                        <option value="all" {% if country == "all" %}selected{% endif %}>All Countries</option>
-                        {% for c in all_countries %}
-                            <option value="{{ c }}" {% if country == c %}selected{% endif %}>{{ c }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="filter-group">
-                    <label>Birth Year</label>
-                    <div class="year-range">
-                        <input type="number" name="yob_start" id="yob_start"
-                            min="1930" max="2010" value="{{ yob_start }}" step="1">
-                        <span class="range-sep">–</span>
-                        <input type="number" name="yob_end" id="yob_end"
-                            min="1930" max="2010" value="{{ yob_end }}" step="1">
-                        <button type="button" class="btn-age-preset" data-age="19">Junior</button>
-                        <button type="button" class="btn-age-preset" data-age="23">U23</button>
-                    </div>
-                </div>
-                {% endif %}
-
-            </div>
-
-            <div class="filter-panel-actions">
-                <a href="/athlete-leaderboard" class="btn-reset">Reset</a>
-            </div>
-        </div>
-
-    </form>
+            {% if not is_relay %}{% with download_url = download_url, download_id = "downloadBtn" %}{% include "partials/download_button.html" %}{% endwith %}{% endif %}
+        </span>
+    </div>
 </div>
 
-<div class="leaderboard-grid">
-    {% for athlete in athletes %}
-    <a href="{{ ('/country/' ~ athlete.country_alpha3) if is_relay else ('/athlete/' ~ athlete.athlete_id) }}" class="athlete-card {{ 'rank-' ~ athlete.rank if athlete.rank <= 3 else '' }}">
-        <div class="rank-badge {{ 'rank-' ~ athlete.rank ~ '-text' if athlete.rank <= 3 else '' }}">#{{athlete.rank}}</div>
-        <div class="athlete-card-content">
-            <div class="athlete-main-info">
-                {% if not is_relay %}
-                <img src="{{ STATIC_BASE_URL ~ 'athlete_imgs/128/' ~ athlete.athlete_id ~ '.webp' if athlete.profile_img_exists else STATIC_BASE_URL ~ 'imgs/default_user_64.webp' }}"
-                     alt="{{ athlete.name }}"
-                     loading="lazy"
-                     class="athlete-profile-img">
-                {% endif %}
+<!-- Narrows the list; closed until asked for, and any change reloads it -->
+<form class="hub-filters" id="filterPanel" onsubmit="return false">
+    {% if not is_relay %}
+    <label class="hub-f"><span>Country</span>
+        <select name="country">
+            <option value="all">All countries</option>
+            {% for c in all_countries %}
+            <option value="{{ c }}"{{ ' selected' if c == country }}>{{ c }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <div class="hub-f"><span>Born</span>
+        <span class="hub-years">
+            <input type="number" name="yob_start" placeholder="From" min="1930" max="2010" value="{{ yob_start if yob_start != 1930 }}" aria-label="Born from">
+            <span>to</span>
+            <input type="number" name="yob_end" placeholder="To" min="1930" max="2010" value="{{ yob_end if yob_end != 2010 }}" aria-label="Born to">
+            <button type="button" class="hub-preset{{ ' active' if yob_start == year - 22 and yob_end == 2010 }}" data-born="{{ year - 22 }}">U23</button>
+            <button type="button" class="hub-preset{{ ' active' if yob_start == year - 19 and yob_end == 2010 }}" data-born="{{ year - 19 }}">Junior</button>
+        </span>
+    </div>
+    {% endif %}
+    <label class="hub-f"><span>Active only</span><input type="checkbox" name="active_only"{{ ' checked' if active_only }}></label>
+    <a class="hub-reset" href="{{ reset_url }}">Reset</a>
+</form>
 
-                <div class="athlete-details">
-                    <div class="athlete-name">{{ athlete.name }} {{ flag(athlete.country_alpha3, athlete.country_full) }}</div>
-                    <div class="athlete-meta">
-                        <span class="meta-item-sep"> · </span><span class="meta-item">{{ athlete.country_full }}</span>
-                        {% if athlete.year_of_birth > 0 %}
-                        <span class="meta-item-sep"> · </span><span class="meta-item">b. {{ athlete.year_of_birth }}</span>
-                        {% endif %}
-                        <span class="meta-item-sep"> · </span><span class="meta-item"><span class="meta-val">{{ athlete.race_starts }}</span> races</span>
-                        <span class="meta-item-sep"> · </span><span class="meta-item"><span class="meta-val">{{ athlete.win_count }}</span> wins</span>
-                    </div>
-                </div>
-                {% with follow_kind = 'athlete', follow_id = athlete.athlete_id %}{% include "_follow_button.html" %}{% endwith %}
-            </div>
-
-            {% if order == "top" %}
-            <div class="athlete-ratings">
-                <div class="rating-item">
-                    <span class="rating-label">Overall</span>
-                    <span class="rating-value {% if disc == 'overall' %}rating-highlight{% endif %}">{{ athlete.overall_rating }}</span>
-                </div>
-                <div class="rating-item">
-                    <span class="rating-label">Swim</span>
-                    <span class="rating-value {% if disc == 'swim' %}rating-highlight{% endif %}">{{ athlete.swim_rating }}</span>
-                </div>
-                <div class="rating-item">
-                    <span class="rating-label">Bike</span>
-                    <span class="rating-value {% if disc == 'bike' %}rating-highlight{% endif %}">{{ athlete.bike_rating }}</span>
-                </div>
-                <div class="rating-item">
-                    <span class="rating-label">Run</span>
-                    <span class="rating-value {% if disc == 'run' %}rating-highlight{% endif %}">{{ athlete.run_rating }}</span>
-                </div>
-                <div class="rating-item">
-                    <span class="rating-label">Transition</span>
-                    <span class="rating-value {% if disc == 'transition' %}rating-highlight{% endif %}">{{ athlete.transition_rating }}</span>
-                </div>
-            </div>
-
-            {% elif order == "hot" %}
-            <div class="athlete-ratings athlete-ratings-hot">
-                <div class="rating-item">
-                    <span class="rating-label">Overall</span>
-                    <span class="rating-value {{ athlete.overall_change.css_class }} {{ 'rating-highlight' if disc == 'overall' }}">{{ athlete.overall_change.formatted_str | safe }}</span>
-                </div>
-                <div class="rating-item">
-                    <span class="rating-label">Swim</span>
-                    <span class="rating-value {{ athlete.swim_change.css_class }} {{ 'rating-highlight' if disc == 'swim' }}">{{ athlete.swim_change.formatted_str | safe }}</span>
-                </div>
-                <div class="rating-item">
-                    <span class="rating-label">Bike</span>
-                    <span class="rating-value {{ athlete.bike_change.css_class }} {{ 'rating-highlight' if disc == 'bike' }}">{{ athlete.bike_change.formatted_str | safe }}</span>
-                </div>
-                <div class="rating-item">
-                    <span class="rating-label">Run</span>
-                    <span class="rating-value {{ athlete.run_change.css_class }} {{ 'rating-highlight' if disc == 'run' }}">{{ athlete.run_change.formatted_str | safe }}</span>
-                </div>
-                <div class="rating-item">
-                    <span class="rating-label">Transition</span>
-                    <span class="rating-value {{ athlete.transition_change.css_class }} {{ 'rating-highlight' if disc == 'transition' }}">{{ athlete.transition_change.formatted_str | safe }}</span>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-    </a>
-    {% endfor %}
+{% if athletes %}
+{# The column the list is ranked by is underlined #}
+<div class="hub-card lb">
+    <div class="lb-head{{ ' lb-head--relay' if is_relay }}">
+        <span class="lb-pos">#</span>
+        <span class="lb-who">{{ 'Nation' if is_relay else 'Athlete' }}</span>
+        {% for d in ['overall', 'swim', 'bike', 'run', 'transition'] %}
+        <span class="lb-r lb-r--{{ d }}{{ ' lb-on' if d == disc }}{{ ' lb-sorted' if d == disc and order == 'top' }}">{{ d | title }}</span>
+        {% endfor %}
+        <span class="lb-chg{{ ' lb-sorted' if order == 'hot' }}">1y change</span>
+        {% if not is_relay %}<span class="lb-follow"></span>{% endif %}
+    </div>
+    <ol id="lb-list" class="{{ 'lb-list--relay' if is_relay }}">
+        {% include "partials/more_athlete_leaderboard.html" %}
+    </ol>
 </div>
-
-{% if athletes|length == 50 %}
-<div class="load-more-container">
-    <button id="loadMoreBtn" class="btn-search">Load More</button>
-</div>
+{% if has_more %}
+<div class="lb-more"><button type="button" id="lb-more" data-url="{{ more_url }}">Show 50 more</button></div>
+{% endif %}
+{% else %}
+<p class="hub-empty lb-empty">No athletes match these filters. <a href="{{ reset_url }}">Reset filters</a></p>
 {% endif %}
 
-{% if not athletes %}
-<div class="no-results">
-    <p>No athletes found matching your filters.</p>
-    <a href="/athlete-leaderboard" class="btn-search">Reset Filters</a>
-</div>
-{% endif %}
 {% endblock %}
 
 {% block extra_js %}
+<script src="{{ STATIC_BASE_URL }}js/hub.js?v={{ ASSET_VERSION }}"></script>
 <script src="{{ STATIC_BASE_URL }}js/leaderboard.js?v={{ ASSET_VERSION }}"></script>
 {% endblock %}

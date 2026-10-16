@@ -986,11 +986,6 @@
 .relay-fastest-table .position-col,
 .rating-table.relay-sortable .position-col { width: 48px; }
 
-/* Fastest-legs zebra is driven by JS (.zebra on visible rows) so it stays
-   correct after filtering; cancel the site-wide nth-child striping here. */
-.relay-fastest-table tbody tr:nth-child(even) td { background: transparent; }
-.relay-fastest-table tbody tr.zebra td { background: #f2f4f6; }
-
 /* Relay team rows keep the expand chevron visible on desktop (unlike the
    individual results table, where the toggle is a mobile-only splits reveal). */
 /* The always-visible chevron column and the fastest-split annotation are

@@ -307,7 +307,7 @@ function initRaceTable() {
     function refresh() {
         const q = norm(find.value.trim());
         const filtered = !!q || maxAge !== null;
-        let shown = 0, matched = 0, total = 0;
+        let matched = 0, total = 0;
         for (const row of tbody.rows) {
             const added = row.classList.contains('predicted-row');
             if (!added) total++;
@@ -318,7 +318,6 @@ function initRaceTable() {
             if (match && !added) matched++;
             const visible = match && (added || filtered || showAll || matched <= RACE_TABLE_TOP);
             row.classList.toggle('is-hidden', !visible);
-            if (visible) row.classList.toggle('stripe', shown++ % 2 === 1);
         }
         const limited = !filtered && !showAll && total > RACE_TABLE_TOP;
         count.textContent = filtered ? `${matched} of ${total} athletes`

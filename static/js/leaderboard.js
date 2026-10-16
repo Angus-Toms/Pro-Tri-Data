@@ -1,110 +1,59 @@
-let leaderboardOffset = 50;
+// ── Athlete leaderboard (/athlete-leaderboard) ──
+const filterBtn = document.getElementById('filterToggle');
+const panel     = document.getElementById('filterPanel');
 
-function initLoadMore() {
-    const loadMoreBtn = document.getElementById("loadMoreBtn");
-    if (!loadMoreBtn) return;
-
-    loadMoreBtn.addEventListener("click", async () => {
-        const params = new URLSearchParams(window.location.search);
-        params.append("offset", leaderboardOffset);
-
-        try {
-            const res = await fetch(`/athlete-leaderboard/more?${params.toString()}`);
-            const html = await res.text();
-            document.querySelector(".leaderboard-grid").insertAdjacentHTML("beforeend", html);
-            initFollowButtons();
-            leaderboardOffset += 50;
-            if (html.trim().length === 0) loadMoreBtn.style.display = "none";
-        } catch (err) {
-            console.error("Error loading more athletes", err);
-        }
-    });
+function setOpen(open) {
+    panel.classList.toggle('open', open);
+    filterBtn.setAttribute('aria-expanded', open);
+}
+filterBtn.addEventListener('click', () => setOpen(!panel.classList.contains('open')));
+// A filter change reloads the page; reopen the panel so the next can be set
+if (sessionStorage.getItem('lbFiltersOpen')) {
+    sessionStorage.removeItem('lbFiltersOpen');
+    setOpen(true);
 }
 
-function initFilterPanelToggle() {
-    const btn   = document.getElementById("filterToggle");
-    const panel = document.getElementById("filterPanel");
-    if (!btn || !panel) return;
-    btn.addEventListener("click", () => {
-        const open = panel.classList.toggle("open");
-        btn.setAttribute("aria-expanded", open);
-    });
+// A change reloads the list. The URL keeps only what differs from the
+// router's defaults (gender is always written).
+function go(changes, fromPanel) {
+    const p = new URLSearchParams(location.search);
+    for (const [k, v] of Object.entries(changes)) {
+        if (v === null) p.delete(k);
+        else p.set(k, v);
+    }
+    if (fromPanel) sessionStorage.setItem('lbFiltersOpen', '1');
+    location.href = `/athlete-leaderboard?${p}`;
 }
+document.getElementById('lb-disc').addEventListener('change', e => {
+    go({ disc: e.target.value === 'overall' ? null : e.target.value });
+});
+panel.addEventListener('change', e => {
+    const el = e.target;
+    if (el.name === 'active_only') go({ active_only: el.checked ? null : 'false' }, true);
+    else if (el.name === 'country') go({ country: el.value === 'all' ? null : el.value }, true);
+    else if (el.name === 'yob_start' || el.name === 'yob_end') {
+        if (!el.checkValidity()) return el.reportValidity();
+        go({ [el.name]: el.value || null }, true);
+    }
+});
+// U23 and Junior: born in that year or later
+panel.querySelectorAll('[data-born]').forEach(b => b.addEventListener('click', () => {
+    go({ yob_start: b.dataset.born, yob_end: null }, true);
+}));
 
-// Auto-submit the filter form whenever any chip/select/toggle changes. The
-// active-only checkbox is the visible UI; the hidden input next to it holds
-// the form value and is updated separately by initActiveOnlyToggle().
-function initFilterAutoSubmit() {
-    const form = document.getElementById("filtersForm");
-    if (!form) return;
-    form.addEventListener("change", e => {
-        if (e.target.id === "active-only-cb") return; // bubble waits for hidden input update
-        form.submit();
-    });
-}
+// Hero search: athletes in this list's programme (hub.js)
+const input = document.getElementById('lb-input');
+const program = { 'elite:short': 'short', 'elite:long': 'long', 'ag:short': 'ag' }[input.dataset.program];
+hubAthleteSearch(input, document.getElementById('lb-results'), () => program ? { program } : {});
 
-function initAgePresets() {
-    const yobStart = document.getElementById("yob_start");
-    const yobEnd   = document.getElementById("yob_end");
-    if (!yobStart || !yobEnd) return;
-
-    const currentYear = new Date().getFullYear();
-
-    document.querySelectorAll(".btn-age-preset").forEach(btn => {
-        const maxAge = parseInt(btn.dataset.age);
-        // Highlight if the inputs currently match this preset
-        if (parseInt(yobStart.value) === currentYear - maxAge && parseInt(yobEnd.value) === 2010) {
-            btn.classList.add("active");
-        }
-
-        btn.addEventListener("click", () => {
-            yobStart.value = currentYear - maxAge;
-            yobEnd.value   = 2010;
-            document.querySelectorAll(".btn-age-preset").forEach(b => b.classList.remove("active"));
-            btn.classList.add("active");
-            const form = document.getElementById("filtersForm");
-            if (form) form.submit();
-        });
-    });
-
-    // Clear active state if the user manually edits the inputs
-    [yobStart, yobEnd].forEach(input => {
-        input.addEventListener("input", () => {
-            document.querySelectorAll(".btn-age-preset").forEach(b => b.classList.remove("active"));
-        });
-    });
-}
-
-function initActiveOnlyToggle() {
-    const cb     = document.getElementById("active-only-cb");
-    const hidden = document.getElementById("active-only-input");
-    const text   = document.getElementById("active-only-text");
-    const form   = document.getElementById("filtersForm");
-    if (!cb || !hidden || !text) return;
-
-    cb.addEventListener("change", () => {
-        hidden.value     = cb.checked ? "true" : "false";
-        text.textContent = cb.checked ? "On" : "Off";
-        if (form) form.submit();
-    });
-}
-
-// Keep the download button's URL in sync with the active filters.
-function initDownloadUrl() {
-    const btn  = document.getElementById("downloadBtn");
-    const form = document.getElementById("filtersForm");
-    if (!btn || !form) return;  // download button is hidden for the relay board
-    const setUrl = () => {
-        const params = new URLSearchParams(new FormData(form));
-        btn.dataset.downloadUrl = `/download/leaderboard?${params.toString()}`;
-    };
-    setUrl();
-    form.addEventListener("change", setUrl);
-}
-
-initLoadMore();
-initFilterPanelToggle();
-initFilterAutoSubmit();
-initAgePresets();
-initActiveOnlyToggle();
-initDownloadUrl();
+// Show 50 more
+const moreBtn = document.getElementById('lb-more');
+if (moreBtn) moreBtn.addEventListener('click', async () => {
+    moreBtn.disabled = true;
+    const list = document.getElementById('lb-list');
+    const res = await fetch(`${moreBtn.dataset.url}&offset=${list.children.length}`);
+    list.insertAdjacentHTML('beforeend', await res.text());
+    initFollowButtons(list);
+    if (res.headers.get('X-Has-More') === '1') moreBtn.disabled = false;
+    else moreBtn.parentElement.remove();
+});

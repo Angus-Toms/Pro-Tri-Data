@@ -221,7 +221,7 @@ function toggleNotableResults(button, targetId) {
         const res = result.value;
         const filtered = !!(q || d || res);
         const years = new Map();   // year -> tally of matching races, first visible row
-        let matched = 0, total = 0, shown = 0;
+        let matched = 0, total = 0;
         for (const row of tbody.querySelectorAll('tr.race-row')) {
             total++;
             const r = row.dataset.res;
@@ -236,10 +236,7 @@ function toggleNotableResults(button, targetId) {
             y.races++;
             if (r === 'win') y.wins++;
             if (r === 'win' || r === 'podium') y.podiums++;
-            if (visible) {
-                row.classList.toggle('stripe', shown++ % 2 === 1);
-                y.first ??= row;
-            }
+            if (visible) y.first ??= row;
         }
         // Heats show only under an open, visible final.
         for (const sub of tbody.querySelectorAll('tr.sub-race-row')) {

@@ -3,7 +3,8 @@ so the routes look like any unknown page, robots.txt disallows /admin/, and
 responses are no-store so Cloudflare never caches them.
 
 /admin/instagram: collate athletes' Instagram handles. Suggests the next
-athlete in priority order (recent elite starts, then rank), saves a handle
+athlete in priority order (best predicted place, overall or per split, in
+an upcoming race, then rank, then recent elite starts), saves a handle
 or a skip to an append-only pending CSV in RUNTIME_DATA_DIR. The nightly
 workflow pulls that file into data/instagram.csv, so entries reach the DB
 (and athlete pages) that night.
@@ -95,7 +96,7 @@ def instagram_tool(request: Request, error: str = "", q: int | None = None):
         current = queries.get_athlete_info(q)
         if current is None:
             raise HTTPException(status_code=404, detail="Athlete not found")
-        current["recent_elite"] = current["active_world_overall"] = None
+        current["recent_elite"] = current["active_world_overall"] = current["best_upcoming_place"] = None
     else:
         current = queue[0] if queue else None
     with_handle, skipped, remaining = queries.get_instagram_stats()

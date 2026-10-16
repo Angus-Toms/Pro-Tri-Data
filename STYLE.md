@@ -307,8 +307,8 @@ thead th {
 
 ### Body rows
 
-- Alternating rows: subtle `#fafafa` stripe.
-- Row hover: `--highlight` (soft orange tint).
+- No alternating stripes: rows are separated by a 1px `--border-color` rule.
+- Row hover: `--highlight` (soft orange tint), not `!important`, so a row with its own tint (podium, prediction, open panel) keeps it.
 - Last row's `border-bottom` is removed to avoid doubling at the card edge.
 - Position-tinted rows: `.position-gold`, `.position-silver`, `.position-bronze` apply a very subtle background to highlight podium rows in history tables.
 
