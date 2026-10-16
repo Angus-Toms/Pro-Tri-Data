@@ -1174,6 +1174,46 @@ def load_corrections(conn):
     print(f"Loaded {n_csv} manual corrections ({len(long_rows)} long rows)")
 
 
+def load_race_dates(conn):
+    """Apply manual race dates from data/race_dates.csv.
+
+    For races stored with a YYYY-01-01 placeholder before the ingests learned
+    to avoid it. insert_race never overwrites a stored row, so a fixed ingest
+    alone leaves them where they are. Each touched event's start/end is
+    re-spanned over its races. Already-rated races keep their old ratings until
+    a full ratings rebuild: --extend only walks forward from unrated races.
+    """
+    with open(_DATA_DIR / 'race_dates.csv', newline='', encoding='utf-8') as f:
+        rows = [(int(r['race_id']), r['race_date']) for r in csv.DictReader(f)]
+    race_ids = [race_id for race_id, _ in rows]
+    found = {r[0] for r in conn.execute(
+        "SELECT race_id FROM races WHERE list_contains(?, race_id)", [race_ids]
+    ).fetchall()}
+    missing = sorted(set(race_ids) - found)
+    if missing:
+        raise ValueError(f"race_dates.csv race_ids not in races: {missing}")
+
+    # DuckDB runs an update to an indexed column as delete + insert, which the
+    # foreign keys onto races and events reject, so the date indexes come off
+    # for the update.
+    conn.execute("DROP INDEX idx_races_race_date")
+    conn.execute("DROP INDEX idx_events_date")
+    conn.executemany(
+        "UPDATE races SET race_date = ? WHERE race_id = ?",
+        [(race_date, race_id) for race_id, race_date in rows],
+    )
+    conn.execute("""
+        UPDATE events SET start_date = s.lo, end_date = s.hi
+        FROM (SELECT event_id, MIN(race_date) AS lo, MAX(race_date) AS hi
+              FROM races GROUP BY event_id) s
+        WHERE events.event_id = s.event_id
+          AND events.event_id IN (SELECT event_id FROM races WHERE list_contains(?, race_id))
+    """, [race_ids])
+    conn.execute("CREATE INDEX idx_races_race_date ON races(race_date)")
+    conn.execute("CREATE INDEX idx_events_date ON events(start_date)")
+    print(f"Applied {len(rows)} manual race dates")
+
+
 def load_doping_bans(conn):
     """Load doping sanctions from data/doping_bans.csv into the doping_bans table.
 

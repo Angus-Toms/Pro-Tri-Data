@@ -410,10 +410,13 @@ class PTOIngester:
                 m_date = re.search(r"\d{1,2}\s+[A-Za-z]{3,}", txt)
                 date_label = m_date.group(0) if m_date else ""
 
-            # Best-effort sort key: combine "12 Dec" with the race year so we
-            # can order races chronologically before ingest. Falls back to
-            # Jan 1 of the year when the date label is missing.
-            sort_date = _parse_date(f"{date_label} {race_year}") or date(race_year, 1, 1)
+            # Sort key: combine "12 Dec" with the race year so we can order
+            # races chronologically before ingest. It also gates the --days
+            # recheck, so a missing label raises rather than sorting to Jan 1
+            # (every card back to 1979 has one).
+            sort_date = _parse_date(f"{date_label} {race_year}")
+            if sort_date is None:
+                raise ValueError(f"{slug}/{race_year}: no date on the results listing card")
 
             # Per-gender race_ids are minted in _ingest_race
             event_id = db.slug_id(f"{slug}-{race_year}")
@@ -472,13 +475,14 @@ class PTOIngester:
 
         venue, country_raw = _split_location(info.get("location", ""))
         country_full = _resolve_pto_country(country_raw)
-        gender_dates = _parse_race_dates(info, year)
-        event_start, event_end = min(gender_dates.values()), max(gender_dates.values())
 
         # Skip races with no results tables (future races)
         if not soup.find("table", class_="race-results"):
             print(f"  No race-results tables — race hasn't happened yet, skipping")
             return False
+
+        gender_dates = _parse_race_dates(info)
+        event_start, event_end = min(gender_dates.values()), max(gender_dates.values())
 
         print(f"  Venue: {venue!r}  Country: {country_full!r}  "
               f"Dates: {event_start}..{event_end}  "
@@ -1159,28 +1163,27 @@ def _parse_date(text):
     return None
 
 
-def _parse_race_dates(info, year):
+def _parse_race_dates(info):
     """Return {'male': date, 'female': date} from a PTO Race Info block.
 
     Single-day races expose 'Date: 26 Apr 2026'. Multi-day championship events
     (Kona, PTO/T100 majors) run the pro fields on different days and expose
     'Dates: 06 Oct 2022 (FPRO) | 08 Oct 2022 (MPRO)' - the gender-tag order is
     not fixed, so we key each parsed date by its own tag rather than position.
-    A gender left unresolved (untagged single-date race, or one field missing)
-    falls back to the other gender's date, then to Jan 1 of the year.
+    A gender with no tag of its own takes the other gender's date. No usable
+    date raises: ratings walk races in date order, so a guessed date (this
+    used to be Jan 1) rates the race ahead of everything else that year.
     """
     raw = info.get("dates") or info.get("date") or ""
-    tagged = {}
-    for m in re.finditer(r"(\d{1,2}\s+[A-Za-z]{3,}\s+\d{4})\s*\((M|F)PRO\)", raw):
-        d = _parse_date(m.group(1))
-        if d:
-            tagged["male" if m.group(2) == "M" else "female"] = d
+    tagged = {"male" if g == "M" else "female": _parse_date(d)
+              for d, g in re.findall(r"(\d{1,2}\s+[A-Za-z]{3,}\s+\d{4})\s*\((M|F)PRO\)", raw)}
     if not tagged:
         # Single-day or untagged: one date shared by both genders.
         d = _parse_date(raw)
-        if d:
-            tagged = {"male": d, "female": d}
-    fallback = next(iter(tagged.values()), date(year, 1, 1))
+        tagged = {"male": d, "female": d}
+    if None in tagged.values():
+        raise ValueError(f"Unparseable PTO race date {raw!r}")
+    fallback = next(iter(tagged.values()))
     return {g: tagged.get(g, fallback) for g in ("male", "female")}
 
 
