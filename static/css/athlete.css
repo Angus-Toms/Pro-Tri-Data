@@ -303,7 +303,7 @@
     border-radius: 999px;
 }
 /* A plain grid, not a data table: undo the site-wide table look (navy
-   headers, zebra rows, hover highlight, fixed layout). */
+   headers, row rules, hover highlight, fixed layout). */
 .career-form-table { width: 100%; table-layout: auto; font-variant-numeric: tabular-nums; }
 .career-form-table th, .career-form-table td,
 .career-form-table th:first-child, .career-form-table td:first-child,
@@ -315,8 +315,7 @@
     cursor: default;
 }
 .career-form-table tbody tr { border-bottom: none; }
-.career-form-table tbody tr:nth-child(even) td,
-.career-form-table tr:hover td { background-color: transparent !important; }
+.career-form-table tr:hover td { background-color: transparent; }
 .career-form-table thead th { font-size: 0.75rem; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--text-lighter); padding-bottom: 0.15rem; }
 /* Not sortable, so no hover colour (the site-wide th:hover turns heads blue). */
 .career-form-table thead th:hover, .cf-phone thead th:hover { background: none; color: var(--text-lighter); cursor: default; }
@@ -941,7 +940,7 @@
 .cf-phone th:first-child, .cf-phone td:first-child,
 .cf-phone th:last-child, .cf-phone td:last-child { background: none; padding: 0.2rem 0.4rem 0.2rem 0; text-align: left; cursor: default; }
 .cf-phone thead th { font-size: 0.75rem; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--text-lighter); }
-.cf-phone tbody tr:nth-child(even) td, .cf-phone tr:hover td { background: transparent !important; }
+.cf-phone tr:hover td { background: transparent; }
 .cf-phone tbody th { font-size: 0.78rem; font-weight: 600; color: var(--text-light); text-transform: none; letter-spacing: 0; }
 .cf-phone tbody td { font-size: 0.88rem; font-weight: 700; color: var(--text-color); }
 @media (max-width: 480px) {

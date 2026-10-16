@@ -529,7 +529,7 @@
 }
 
 /* Race column pinned while the athlete columns scroll (--n set inline).
-   Backgrounds are set explicitly because sticky cells float over the zebra. */
+   Backgrounds are set explicitly because the scrolled cells pass under it. */
 .h2h-table { min-width: calc(220px + var(--n) * 150px); }
 .h2h-table .race-col {
     position: sticky;
@@ -541,7 +541,7 @@
     box-shadow: 1px 0 0 var(--border-color);
 }
 .h2h-table thead .race-col { background: var(--navy); }
-.h2h-table tbody tr:nth-child(even) td { background: #f2f4f6; }
+.h2h-table tbody tr:hover .race-col { background: var(--highlight); }
 
 .h2h-race-name {
     display: block;

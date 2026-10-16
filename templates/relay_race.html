@@ -75,10 +75,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // ── Fastest legs: leg × gender filter, with per-column diffs + zebra
-    // recomputed over the *visible* rows (so diffs are relative to the
-    // selected leg(s) and striping stays correct after filtering). Picking a
-    // specific leg hides the gender switcher (a leg is single-gender).
+    // ── Fastest legs: leg × gender filter, with per-column diffs recomputed
+    // over the *visible* rows (so diffs are relative to the selected leg(s)).
+    // Picking a specific leg hides the gender switcher (a leg is single-gender).
     const fastBody = document.querySelector('.relay-fastest-table tbody');
     const genderGroup = document.getElementById('relay-gender-group');
     const COLS = ['swim', 'bike', 'run', 'legtime'];
@@ -109,7 +108,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         visible.forEach((tr, i) => {
             tr.querySelector('.relay-leg-pos').textContent = i + 1;
-            tr.classList.toggle('zebra', i % 2 === 1);
             COLS.forEach(c => {
                 const cell = tr.querySelector(`[data-col="${c}"]`);
                 const main = cell.querySelector('.time-cell-main');
@@ -183,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (detail) tbody.appendChild(detail);
                     }
                 });
-                if (isFast) applyFastest();  // re-number + restripe + rediff
+                if (isFast) applyFastest();  // re-number + rediff
             });
         });
     });

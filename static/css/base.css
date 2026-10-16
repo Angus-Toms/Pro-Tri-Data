@@ -1451,18 +1451,15 @@ table tbody tr:last-child {
     border-bottom: none;
 }
 
-/* Alternating rows */
-tbody tr:nth-child(even) td {
-    background: #f2f4f6;
-}
-
 table th:hover {
     background-color: #252545;
     color: #fff;
 }
 
-table tr:hover td {
-    background-color: var(--highlight) !important;
+/* Rows are ruled, not striped. Hover tints a table's own rows, and gives
+   way to any row that carries its own tint (podiums, predictions) */
+table tbody > tr:hover > td {
+    background-color: var(--highlight);
 }
 
 /* Overall time: dark + bold, column last */
@@ -2163,26 +2160,13 @@ sup.ordinal-suffix {
     white-space: nowrap;
 }
 
-/* Zebra striping reads as noise once expandable panels are interleaved between
-   the rows: the alternation counts the hidden panel rows, so it flips
-   unpredictably as rows open. Result rows stay white and the panel row alone
-   carries the shading, which is what actually signals the nesting. Both rules
-   out-specify the site-wide `tbody tr:nth-child(even) td` stripe; row hover
-   still wins over both, being !important. */
-/* transparent, not white: on desktop the white card shows through, and the
-   mobile stacked layout keeps its own per-row shading underneath. */
-.relay-teams-table   > tbody > tr:not(.relay-legs-detail) > td,
-.relay-results-table > tbody > tr:not(.relay-legs-detail) > td {
-    background: transparent;
-}
+/* An open leg-splits panel is shaded, which is what signals the nesting */
 .relay-teams-table   > tbody > tr.relay-legs-detail > td,
 .relay-results-table > tbody > tr.relay-legs-detail > td,
 .relay-legs-detail > td {
     padding: 0;
     background: var(--highlight);
 }
-/* The panel nests its own table, so it picks up the site stripe a second time. */
-.relay-legs-table tbody tr:nth-child(even) td { background: transparent; }
 .relay-legs-panel {
     padding: 0.75rem 1rem 1rem;
 }
@@ -2330,13 +2314,12 @@ sup.ordinal-suffix {
     letter-spacing: 0.08em;
     white-space: nowrap;
 }
-/* White rows with thin inset dividers, as in Head-to-head: no zebra
-   stripes, no hover highlight. The divider is a cell border, so the edge
+/* White rows with thin inset dividers, as in Head-to-head: no hover
+   highlight. The divider is a cell border, so the edge
    cells draw theirs as a 1px background line that starts where their text
    does (1.25rem, the site's edge-cell padding). */
 .ratings-table tbody tr, .ratings-table tbody tr:hover { border-bottom: 0; background: none; }
-.ratings-table tbody tr:nth-child(even) td,
-.ratings-table tr:hover td { background-color: transparent !important; }
+.ratings-table tr:hover td { background-color: transparent; }
 .ratings-table tbody td { border-top: 0; }
 .ratings-table tbody tr + tr td { border-top: 1px solid var(--border-color); }
 .ratings-table tbody tr + tr td:first-child,
@@ -4078,31 +4061,13 @@ body.help-tour-open { overflow: hidden; }
     .results-table td.split-col .time-cell-main { font-size: 0.8rem; }
     .results-table td.split-col .time-cell-gap  { font-size: 0.65rem; }
 
-    /* Striping + hover: cells no longer span the row (they're individual
-       flex items with gaps between), so per-td backgrounds leave holes.
-       Null out the inherited per-td shades (covers both stripe sources:
-       `tbody tr:nth-child(even) td` from base.css site-wide, plus the
-       JS-applied `.stripe-even` class on athlete page). */
-    .results-table tbody tr:nth-child(even) td,
-    .rating-table  tbody tr:nth-child(even) td,
-    .results-table tbody tr.stripe-even td,
-    .rating-table  tbody tr.stripe-even td,
+    /* Cells no longer span the row (they're individual flex items with gaps
+       between), so per-td backgrounds leave holes: shading goes on the row */
     .results-table tr.sub-race-row td,
     .results-table tr:hover td,
     .rating-table  tr:hover td {
         background: transparent !important;
     }
-    /* Athlete page (wrapper has .table-section) uses the JS-applied
-       .stripe-even class so re-sorts restripe correctly while skipping
-       sub-race rows. CSS nth-child(even) is suppressed there (athlete.css
-       sets `background: unset` on the td-level rule, and we don't add a
-       tr-level nth-child stripe so JS is the only source). */
-    .table-section.results-table tbody tr.stripe-even,
-    .table-section.rating-table  tbody tr.stripe-even { background: #f2f4f6; }
-    /* Race page (wrapper has .race-table-section) has no sub-race rows
-       and no re-stripe JS, so plain nth-child(even) is fine. */
-    .race-table-section tbody tr:nth-child(even) { background: #f2f4f6; }
-
     .results-table tr.sub-race-row { background: #f2f4f6; }
     .results-table tr:hover,
     .rating-table  tr:hover        { background: var(--highlight); }
@@ -4367,11 +4332,8 @@ a.race-view-btn { text-decoration: none; }
 .low-conf-mark { margin-left: 0.2rem; }
 .low-conf-mark svg { width: 0.95em; height: 0.95em; }
 
-/* JS stripes the visible rows (a search or the top-20 cut hides some) */
-.race-table tbody tr:nth-child(even) td { background: transparent; }
-.race-table tbody tr.stripe td { background: #f2f4f6; }
 .race-table tbody tr.is-hidden { display: none; }
-/* Added predictions keep their tint over the stripes */
+/* Added predictions keep their tint, hovered or not */
 .race-table tbody tr.predicted-row td { background: rgba(231, 100, 30, 0.13); }
 
 @media (max-width: 1024px) {
@@ -4446,7 +4408,6 @@ a.race-view-btn { text-decoration: none; }
         border: 0;
         background: transparent !important;
     }
-    .race-table tbody tr.stripe { background: #f2f4f6; }
     .race-table tbody tr:hover { background: var(--highlight); }
     .race-table tbody tr.predicted-row { background: rgba(231, 100, 30, 0.13); }
 

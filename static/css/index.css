@@ -236,8 +236,7 @@
 .home-rank th:hover { background: var(--navy); color: rgba(255,255,255,0.6); }
 .home-rank td { padding: 0.5rem 0.75rem; }
 .home-rank tbody td,
-.home-rank tbody tr:nth-child(even) td,
-.home-rank tr:hover td { background: var(--white) !important; }
+.home-rank tr:hover td { background: var(--white); }
 .home-rank .num { font-weight: 700; font-size: 0.95rem; color: var(--text-color); }
 .home-rank .home-rank-pos { width: 3rem; }
 .home-rank .home-rank-num { width: 5rem; }
@@ -299,10 +298,9 @@
 .home-mine th.num { padding-left: 0.5rem; }
 .home-mine th:hover { background: var(--navy); color: rgba(255,255,255,0.6); }
 .home-mine td { padding: 0.8rem 0.75rem; }
-/* Plain white rows: no site-wide zebra stripe or hover tint here */
+/* Plain white rows: no hover tint here */
 .home-mine tbody td,
-.home-mine tbody tr:nth-child(even) td,
-.home-mine tr:hover td { background: var(--white) !important; }
+.home-mine tr:hover td { background: var(--white); }
 .home-mine .home-who-name { white-space: normal; overflow: visible; }
 .home-mine .home-who-name .nb { white-space: nowrap; }
 .home-mine .race a { color: inherit; text-decoration: none; }
