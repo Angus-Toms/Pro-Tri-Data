@@ -4138,9 +4138,9 @@ body.help-tour-open { overflow: hidden; }
     font-family: inherit;
 }
 
-.btn-download:hover,
 /* Its display would otherwise beat the hidden attribute. */
 .btn-table-action[hidden] { display: none; }
+.btn-download:hover,
 .btn-table-action:hover {
     color: var(--primary-color);
     border-color: var(--primary-color);
@@ -4248,6 +4248,8 @@ body.help-tour-open { overflow: hidden; }
     color: var(--primary-color);
     box-shadow: 0 1px 3px rgba(0,0,0,0.12);
 }
+/* The switch as links, where each option is its own page (the leaderboard) */
+a.race-view-btn { text-decoration: none; }
 
 /* ============================================
    RACE TABLE - one table with several views of the same rows

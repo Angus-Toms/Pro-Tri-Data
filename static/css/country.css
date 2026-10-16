@@ -1,312 +1,100 @@
-/* ---------------------------------------------------------------------------
-   Country pages - /countries (index) and /country/{alpha3} (detail)
+/* ============================================
+   COUNTRIES (/countries and /country/{alpha3})
+   The hero, search, layout, tabs, cards and athlete names are hub.css's;
+   these are the lists. The relay tables use base.css's table rules.
+   ============================================ */
 
-   The detail page reuses .athlete-card / .rank-badge / .athlete-ratings from
-   leaderboard.css (loaded alongside this file), and the .event-card stack
-   from event_cards.css for the Recent Events section. Everything prefixed
-   .country- is local.
-   ------------------------------------------------------------------------- */
+/* Men left, women right */
+.ct-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.25rem; }
 
+/* Every list row: ruled, fixed columns at the right of a growing name, so a
+   column can drop out at a breakpoint without the others moving */
+.ct-list li { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 1.25rem; border-bottom: 1px solid var(--border-color); }
+.ct-list li:last-child { border-bottom: 0; }
+.ct-list li.hub-empty { display: block; }
+.ct-pos { flex: 0 0 1.25rem; font-size: 0.8rem; font-weight: 700; color: var(--text-light); text-align: center; font-variant-numeric: tabular-nums; }
+.ct-list li:nth-child(-n+3) .ct-pos { color: var(--text-color); }
+.ct-who { flex: 1 1 0; min-width: 0; }
+.ct-who small { display: block; margin-top: 0.1rem; font-size: 0.74rem; color: var(--text-light); }
+.ct-who small a { color: inherit; text-decoration: none; }
+.ct-who small a:hover { color: var(--primary-color); }
+.ct-num { flex: 0 0 3.5rem; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ct-list .hub-chg { flex: 0 0 3.5rem; }
+.ct-list .hub-who { font-size: 0.88rem; }
+.ct-nation { font-size: 0.88rem; font-weight: 600; color: var(--text-color); text-decoration: none; }
+.ct-nation:hover { color: var(--primary-color); }
+.ct-none { padding: 1rem 0; }
 
-/* ============================================================
-   Detail page hero
-   ============================================================ */
-.country-hero-inner {
-    display: flex;
+/* Strongest nations: places held as a bar, on one scale for men and women */
+.ct-nations .ct-who { flex: 0 0 8rem; }
+.ct-bar { flex: 1 1 0; height: 8px; background: var(--border-color); border-radius: 4px; overflow: hidden; }
+.ct-bar i { display: block; height: 100%; background: var(--navy); border-radius: 4px; }
+.ct-nations .ct-num { flex-basis: 2rem; }
+
+/* Medal tables: each count in its medal's colour */
+.ct-medal {
+    flex: none;
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: var(--spacing-lg);
-}
-
-.country-hero-copy h1 {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
-    margin: 0;
-}
-
-.country-hero-name {
-    display: inline-block;
-}
-
-.country-hero-emoji {
-    font-size: 2.2rem;
-    line-height: 1;
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
-}
-
-
-/* ============================================================
-   Layout wrappers
-   ============================================================ */
-.country-page,
-.country-index-page {
-    max-width: 1100px;
-    margin: 0 auto;
-    /* No horizontal padding: this sits inside .page-container, which already
-       constrains to 1100px and provides the side gutter. Padding here would
-       make every table narrower than the athlete page's. */
-    padding: var(--spacing-lg) 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xl);
-}
-
-.country-section {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-sm);
-}
-
-/* Stack title + small subtitle so the heading reads cleanly without trying
-   to inline-mix two type sizes. Override .page-section-head's row layout. */
-.country-section-head {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: flex-start;
-    gap: 0.1rem;
-    margin-bottom: 0;
-}
-
-.country-section-subtitle {
-    font-weight: 500;
-    color: var(--text-light);
-    font-size: 0.85rem;
-    text-transform: none;
-    letter-spacing: 0;
-    line-height: 1.2;
-}
-
-
-/* ============================================================
-   Leaderboard AJAX wrapper (loading fade)
-   ============================================================ */
-.country-leaderboard-wrap {
-    transition: opacity 0.15s;
-}
-.country-leaderboard-wrap--loading {
-    opacity: 0.4;
-    pointer-events: none;
-}
-
-.country-empty {
-    padding: var(--spacing-lg);
-    color: var(--text-light);
-    text-align: center;
-    font-size: 0.9rem;
-    background: #fff;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-}
-
-.country-more-wrap {
-    display: flex;
     justify-content: center;
-    margin-top: var(--spacing-sm);
-}
-
-.btn-country-more {
-    padding: 0.5rem 1.25rem;
-    background: #fff;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    color: var(--text-color);
-    font-size: 0.85rem;
-    font-weight: 500;
-    font-family: inherit;
-    cursor: pointer;
-    transition: border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
-}
-
-.btn-country-more:hover:not(:disabled) {
-    border-color: var(--primary-color);
-    color: var(--primary-color);
-}
-
-.btn-country-more:disabled {
-    opacity: 0.6;
-    cursor: wait;
-}
-
-
-/* ============================================================
-   Championship medals - Olympic-style medal board
-   ============================================================ */
-.medal-board {
-    background: #fff;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    padding: 0.25rem 1.25rem;
-}
-
-.medal-board-row {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
-    padding: 0.65rem 0;
-}
-.medal-board-row + .medal-board-row { border-top: 1px solid var(--border-color); }
-.medal-board-head { padding: 0.5rem 0 0.35rem; }
-
-.medal-board-label {
-    flex: 0 0 180px;
-    font-weight: 600;
-    color: var(--text-color);
-    font-size: 0.9rem;
-}
-
-/* Stacked medal bar: total length is the championship's share of the biggest
-   haul, split into gold/silver/bronze segments. */
-.medal-board-bar {
-    flex: 1;
-    display: flex;
-    height: 10px;
-    gap: 2px;
-}
-/* Pill segments: the bar rarely spans the full track, so rounding on the
-   container's overflow never reaches the right-hand end. Round each segment
-   instead; min-width keeps a 1-medal sliver visible as a dot. */
-.medal-bar-seg { height: 100%; border-radius: 5px; min-width: 10px; }
-.medal-bar-gold   { background: var(--gold); }
-.medal-bar-silver { background: var(--silver); }
-.medal-bar-bronze { background: var(--bronze); }
-
-.medal-count-col {
-    flex: 0 0 2.5rem;
-    text-align: center;
-    font-weight: 600;
-    color: var(--text-color);
-    font-variant-numeric: tabular-nums;
-    font-size: 0.9rem;
-}
-.medal-count-zero { color: var(--text-lighter); font-weight: 400; }
-.medal-total-col {
-    flex: 0 0 3rem;
-    font-weight: 700;
-}
-.medal-board-head .medal-total-col {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-light);
-}
-.medal-board-head .pos-circle--sm {
-    width: 20px;
-    height: 20px;
-    font-size: 0.7rem;
-}
-
-@media (max-width: 640px) {
-    /* Drop the bar; label + counts stay aligned. */
-    .medal-board-bar { display: none; }
-    .medal-board-label { flex: 1 1 auto; }
-}
-
-
-/* ============================================================
-   Upcoming events
-   ============================================================ */
-.country-upcoming-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: var(--spacing-md);
-}
-
-.country-upcoming-card {
-    position: relative;
-    background: #fff;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    padding: var(--spacing-md);
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-sm);
-    transition: border-color 0.15s, box-shadow 0.15s;
-}
-.country-upcoming-card:hover {
-    border-color: var(--primary-color);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-}
-
-.country-upcoming-overlay {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-}
-
-.country-upcoming-header,
-.country-upcoming-body {
-    position: relative;
-    z-index: 1;
-}
-
-.country-upcoming-title {
-    font-weight: 600;
-    color: var(--text-color);
-    font-size: 1rem;
-    margin-bottom: 0.15rem;
-}
-
-.country-upcoming-meta {
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.3rem;
+    box-sizing: border-box;
+    border-radius: 1rem;
     font-size: 0.8rem;
-    color: var(--text-light);
-    display: flex;
-    gap: 0.4rem;
-    flex-wrap: wrap;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
 }
+.ct-medal--gold   { background: var(--gold);   color: var(--gold-text); }
+.ct-medal--silver { background: var(--silver); color: var(--silver-text); }
+.ct-medal--bronze { background: var(--bronze); color: var(--bronze-text); }
+.ct-medal--none   { opacity: 0.3; }
+.ct-medals li { gap: 0.5rem; }
+.ct-medals li .ct-who { font-size: 0.86rem; }
+.ct-wtcs .ct-who { color: var(--text-light); }
+.ct-wtcs .ct-medal { opacity: 0.6; }
 
-.country-upcoming-body {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    border-top: 1px solid var(--border-color);
-    padding-top: var(--spacing-sm);
-}
+/* Recent results: the place at the right, in the site's position marks */
+.ct-place { flex: 0 0 1.75rem; text-align: center; }
+.ct-place .pos-other { font-size: 0.88rem; font-weight: 700; color: var(--text-color); }
 
-.country-upcoming-race {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--spacing-md);
-    font-size: 0.85rem;
-}
+/* Racing next: win and podium chance under the name, as on /athletes */
+.ct-racing li { display: block; }
+.ct-odds { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
+.ct-odds .hub-bar { flex: 1 1 auto; }
+.ct-odds-lbl { flex: none; width: 2.9rem; font-weight: 500; color: var(--text-lighter); }
 
-.country-upcoming-race-title {
-    color: var(--text-color);
-    text-decoration: none;
-    font-weight: 500;
-}
-.country-upcoming-race-title:hover { color: var(--primary-color); }
-
-.country-upcoming-race-meta {
-    color: var(--text-light);
-    font-size: 0.78rem;
-}
-
-.country-upcoming-more {
-    font-size: 0.78rem;
-    color: var(--text-lighter);
-    font-style: italic;
-}
-
-
-/* ============================================================
-   Map
-   ============================================================ */
-.country-map-card {
-    background: #fff;
+/* Mixed relay: the record on one line, results trimmed until asked */
+.ct-relay-line { margin: 0 0 0.75rem; font-size: 0.88rem; color: var(--text-light); }
+.ct-relay-line b { font-weight: 700; color: var(--text-color); font-variant-numeric: tabular-nums; }
+.relay-results-table:not(.ct-all) .ct-later { display: none; }
+.ct-more { margin: 0.75rem 0 0; text-align: center; }
+.ct-more button {
+    padding: 0.5rem 1.25rem;
+    background: var(--white);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
-    overflow: hidden;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-color);
+    cursor: pointer;
 }
+.ct-more button:hover { color: var(--primary-color); border-color: var(--primary-color); }
+.relay-legs-ath .hub-who { font-weight: 500; }
 
-#country-map {
-    width: 100%;
-    height: 360px;
-}
-
+/* Races in the country: the list beside the map */
+.ct-hosted { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+.ct-events h3 { justify-content: flex-start; gap: 0.75rem; }
+.ct-date { flex: 0 0 5.25rem; font-size: 0.8rem; color: var(--text-light); font-variant-numeric: tabular-nums; }
+.ct-events h3 .ct-date, .ct-events h3 .ct-who { font-size: inherit; color: inherit; }
+.ct-events h3 .ct-num { font-weight: inherit; }
+.ct-win { flex: 0 0 11.5rem; min-width: 0; }
+.ct-win-lbl { display: none; }
+.ct-none-lbl { color: var(--text-lighter); }
+.ct-map { background: var(--white); border-radius: var(--border-radius); box-shadow: var(--box-shadow); overflow: hidden; }
+#country-map { width: 100%; height: 360px; }
 .country-map-pin-dot {
     width: 12px;
     height: 12px;
@@ -335,194 +123,30 @@
 .country-map-popup .leaflet-popup-tip { background: var(--navy); }
 
 
-/* ============================================================
-   /countries index
-   ============================================================ */
-.country-index-group {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-md);
-}
 
-.country-index-grid {
+/* ── /countries: every country by continent, down each column then across ── */
+.ct-dir + .ct-dir { margin-top: 1rem; }
+.ct-dir ol {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--spacing-md);
+    grid-auto-flow: column;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(var(--r3), auto);
+    column-gap: 2.5rem;
+    padding: 0.35rem 1.25rem 0.5rem;
 }
+.ct-dir li { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.35rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.86rem; }
+/* The last country in each column goes without a rule */
+.ct-dir li.e3 { border-bottom: 0; }
+.ct-dir li a { font-weight: 500; color: var(--text-color); text-decoration: none; }
+.ct-dir li a:hover { color: var(--primary-color); }
+.ct-dir li span { color: var(--text-light); font-variant-numeric: tabular-nums; }
+/* Searching: the few matches run across the row, unruled */
+.ct-filtering .ct-dir ol { grid-auto-flow: row; grid-template-rows: none; }
+.ct-filtering .ct-dir li, .ct-filtering .ct-dir li.e3 { border-bottom: 0; }
+/* Searching hides rows, cards and the lists above; display rules would beat the attribute */
+.ct-dir li[hidden], #ct-top[hidden] { display: none; }
 
-.country-index-card {
-    position: relative;
-    display: grid;
-    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr) minmax(0, 1fr);
-    align-items: center;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-md);
-    background: #fff;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    color: inherit;
-    transition: box-shadow 0.15s, border-color 0.15s;
-}
-
-.country-index-card--single {
-    grid-template-columns: minmax(0, 0.85fr) minmax(0, 2fr);
-}
-
-.country-index-card:hover {
-    border-color: var(--primary-color);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-}
-
-.country-index-overlay {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    border-radius: inherit;
-}
-
-.country-index-left {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-    min-width: 0;
-    position: relative;
-    z-index: 1;
-    pointer-events: none;
-}
-
-.country-index-head {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    min-width: 0;
-}
-
-.country-index-flag {
-    font-size: 1.6rem;
-    line-height: 1;
-    flex-shrink: 0;
-}
-
-.country-index-name {
-    font-weight: 600;
-    color: var(--text-color);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-size: 0.92rem;
-    min-width: 0;
-}
-
-.country-index-meta {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.35rem 0.4rem;
-    font-size: 0.78rem;
-    color: var(--text-light);
-    line-height: 1.3;
-}
-
-.country-index-top-card {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    min-width: 0;
-    position: relative;
-    z-index: 1;
-    pointer-events: none;
-}
-
-.country-index-top-img {
-    width: 46px;
-    height: 46px;
-    border-radius: 50%;
-    object-fit: cover;
-    flex-shrink: 0;
-    border: 1px solid var(--border-color);
-}
-
-.country-index-top-info {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-
-.country-index-top-name {
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: var(--text-color);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-decoration: none;
-    pointer-events: auto;
-    position: relative;
-    z-index: 2;
-}
-
-.country-index-top-name:hover { color: var(--primary-color); }
-
-.country-index-top-rank {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    font-size: 0.72rem;
-    color: var(--text-light);
-    font-variant-numeric: tabular-nums;
-}
-
-@media (max-width: 768px) {
-    .country-index-grid { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 480px) {
-    .hero-stats { display: none; }
-}
-
-
-/* ============================================================
-   Mobile
-   ============================================================ */
-@media (max-width: 768px) {
-    .country-hero-inner {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    .country-hero-emoji { font-size: 1.8rem; }
-}
-
-/* ── Mixed team relay section ───────────────────────────────────────────── */
-/* Career stat strip - the athlete hero's starts/wins/podiums line, recoloured
-   for the light page and mounted as the ratings card's header bar. */
-.relay-stat-line {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.375rem;
-    font-size: 0.875rem;
-    color: var(--text-light);
-    padding: 0.7rem 1rem;
-    background: #fafbfc;
-    border-bottom: 1px solid var(--border-color);
-}
-.relay-stat-n {
-    font-weight: 700;
-    color: var(--text-color);
-    font-variant-numeric: tabular-nums;
-}
-.relay-stat-pct { color: var(--text-lighter); font-size: 0.8rem; }
-.relay-stat-dot { color: var(--text-lighter); user-select: none; }
-.relay-subhead {
-    font-weight: 600;
-    margin: 1.25rem 0 0.6rem;
-}
-.relay-subhead-note {
-    font-weight: 400;
-    color: var(--text-light);
-    font-size: 0.85rem;
-    margin-left: 0.4rem;
-}
+/* ── Mixed relay tables ── */
 /* The table's own header row already reads as the top edge, so the card
    border above it is a redundant line. Corners stay rounded like every other
    table card - the card clips its contents, so the header follows the curve. */
@@ -558,4 +182,39 @@
 .relay-rating-table .overall-col  { width: 110px; }
 @media (min-width: 769px) {
     .relay-rating-table { min-width: 988px; }
+}
+
+/* ── Responsive: the site's three breakpoints, 1024 / 768 / 480 ── */
+@media (max-width: 1024px) {
+    /* The rail drops under the main column, so the medal table stops
+       filling down beside it */
+    .ct-medal-table li:nth-child(n+11) { display: none; }
+    .ct-results li:nth-child(n+9) { display: none; }
+}
+@media (max-width: 768px) {
+    /* Pairs stack, men first; lists show their top five */
+    .ct-pair { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+    .ct-rank li:nth-child(n+6), .ct-nations li:nth-child(n+6), .ct-medal-table li:nth-child(n+6) { display: none; }
+    .ct-results li:nth-child(n+6) { display: none; }
+    .ct-list li { padding-left: 1rem; padding-right: 1rem; }
+    .ct-list h3 { padding-left: 1rem; padding-right: 1rem; }
+    /* The map goes under the list */
+    .ct-hosted { grid-template-columns: minmax(0, 1fr); }
+    #country-map { height: 280px; }
+    .ct-dir ol { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(var(--r2), auto); padding-left: 1rem; padding-right: 1rem; }
+    .ct-dir li.e3 { border-bottom: 1px solid var(--border-color); }
+    .ct-dir li.e2 { border-bottom: 0; }
+}
+@media (max-width: 480px) {
+    .ct-nations li:nth-child(n+4), .ct-medal-table li:nth-child(n+4), .ct-results li:nth-child(n+5) { display: none; }
+    .ct-list li { gap: 0.5rem; }
+    .ct-dir ol { column-gap: 1.25rem; }
+    /* Hosted results: date, then event, then the two winners side by side, labelled */
+    .ct-events--res h3 .ct-date, .ct-events--res h3 .ct-win { display: none; }
+    .ct-events--res li { flex-wrap: wrap; row-gap: 0.25rem; }
+    .ct-events--res .ct-date, .ct-events--res .ct-who { flex-basis: 100%; }
+    .ct-events--res .ct-win { flex: 1 1 0; }
+    .ct-win-lbl { display: block; font-size: 0.68rem; color: var(--text-lighter); }
+    /* Relay results: the team is the nation's own name */
+    .relay-results-table .relay-team-col { display: none; }
 }

@@ -12,219 +12,195 @@
 {% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/leaderboard.css?v={{ ASSET_VERSION }}">
-<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/event_cards.css?v={{ ASSET_VERSION }}">
+<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/hub.css?v={{ ASSET_VERSION }}">
 <link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/country.css?v={{ ASSET_VERSION }}">
 {% if map_locations %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 {% endif %}
 {% endblock %}
 
+{% from "partials/hub_macros.html" import who with context %}
+{% from "partials/country_macros.html" import medal_discs %}
+
+{% macro chg(c) -%}
+<span class="hub-chg {{ c.css_class }}">{{ c.formatted_str | safe if c.formatted_str else '-' }}</span>
+{%- endmacro %}
+
+{% macro pos(p) -%}
+{% if p == 1 %}<span class="pos-circle gold">1</span>
+{%- elif p == 2 %}<span class="pos-circle silver">2</span>
+{%- elif p == 3 %}<span class="pos-circle bronze">3</span>
+{%- else %}<span class="pos-other">{{ p }}</span>{% endif %}
+{%- endmacro %}
+
 {% block hero %}
-<div class="page-hero country-hero">
-    <div class="page-hero-inner country-hero-inner">
-        <div class="country-hero-copy">
-            <h1>
-                <span class="country-hero-name">{{ country.country_full }}</span>
-                <span class="country-hero-emoji" aria-hidden="true">{{ flag(country.alpha3, country.country_full, 'flag-xl') }}</span>
-            </h1>
+<div class="hub-hero">
+    <div class="hub-hero-inner">
+        <div class="hub-title">
+            <h1>{{ country.country_full }}</h1>
+            <p>{{ subtitle }}</p>
         </div>
-        <div class="hero-stats">
-            {% for stat in hero_stats %}
-            <div class="hero-stat">
-                <span class="hero-stat-num">{{ stat.num }}</span>
-                <span class="hero-stat-lbl">{{ stat.label }}</span>
-            </div>
-            {% if not loop.last %}<div class="hero-stat-sep"></div>{% endif %}
-            {% endfor %}
-        </div>
+        <form class="hub-search" role="search" onsubmit="return false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" id="ct-input" data-country="{{ country.country_full }}" placeholder="Find an athlete from {{ country.country_full }}" autocomplete="off" aria-label="Find an athlete from {{ country.country_full }}">
+        </form>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
-<div class="country-page"
-     data-alpha3="{{ country.alpha3 }}"
-     data-discipline="{{ discipline }}"
-     data-gender="{{ gender }}"
-     data-course="{{ course }}"
-     data-active-only="{{ 'true' if active_only else 'false' }}">
+<div id="ct-results" class="hub-results"></div>
 
-    <!-- ── National leaderboard ────────────────────────────────────────── -->
-    <section class="country-section">
-        <div class="page-section-head country-section-head">
-            <span class="country-section-title">National Leaders</span>
+<section class="hub-section">
+    <div class="page-section-head">
+        <span>National rankings</span>
+        {% if rank_link %}<a class="section-link" data-follows="rk" href="{{ rankings[0].href }}">{{ country.country_full }} rankings</a>{% endif %}
+    </div>
+    {% if rankings %}
+    {% if rankings | length > 1 %}
+    <div class="race-view-toggle hub-tabs" role="tablist">
+        {% for p in rankings %}
+        <button type="button" class="race-view-btn hub-tab{{ ' active' if loop.first }}" role="tab" aria-selected="{{ 'true' if loop.first else 'false' }}" data-group="rk" data-tab="rk-{{ p.key }}" data-link="{{ p.href }}">{{ p.label }}</button>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="race-view-toggle hub-tabs"><span class="race-view-btn hub-tab active">{{ rankings[0].label }}</span></div>
+    {% endif %}
+    {% for p in rankings %}
+    <div class="ct-pair" data-pane="rk-{{ p.key }}"{% if not loop.first %} hidden{% endif %}>
+        {% for g, label in [('male', 'Men'), ('female', 'Women')] %}
+        <div class="hub-card ct-list ct-rank">
+            <h3>{{ label }}<span>Rating · 1y change</span></h3>
+            <ol>
+                {% for a in p[g] %}
+                <li>
+                    <span class="ct-pos">{{ loop.index }}</span>
+                    <span class="ct-who">{{ who(a) }}<small>World rank {{ a.world }}</small></span>
+                    <span class="ct-num">{{ "{:,}".format(a.rating) }}</span>
+                    {{ chg(a.chg) }}
+                </li>
+                {% else %}
+                <li class="hub-empty">No {{ label | lower }} ranked: none have raced in the last 18 months.</li>
+                {% endfor %}
+            </ol>
         </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <p class="hub-empty ct-none">No athletes from {{ country.country_full }} have raced in the last 18 months. Search above for past athletes.</p>
+    {% endif %}
+</section>
 
-        <div class="filters-card">
-            <div class="filter-summary-bar">
-                <div class="filter-summary">{{ discipline_label }} · {{ gender_label }}{% if course %} · {{ 'Short' if course == 'short' else 'Long' }}{% endif %}{% if active_only %} · Active{% endif %}</div>
-                <button type="button" class="btn-filter-toggle" id="filterToggle" aria-expanded="false" aria-controls="filterPanel">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                    </svg>
-                    Filters
-                </button>
-            </div>
-
-            <div class="filter-panel" id="filterPanel" aria-label="Leaderboard filters">
-                <div class="filter-panel-grid">
-                    <div class="filter-chip-group">
-                        <span class="filter-chip-label">Discipline</span>
-                        <div class="radio-chips">
-                            {% for d in discs %}
-                            <input type="radio" name="country-discipline" value="{{ d }}" id="country-disc-{{ d }}"
-                                   {% if d == discipline %}checked{% endif %}>
-                            <label for="country-disc-{{ d }}">{{ disc_labels[d] }}</label>
-                            {% endfor %}
-                        </div>
-                    </div>
-
-                    <div class="filter-chip-group">
-                        <span class="filter-chip-label">Course</span>
-                        <div class="radio-chips">
-                            <input type="radio" name="country-course" value="short" id="country-course-short"
-                                   {% if course == 'short' %}checked{% endif %}>
-                            <label for="country-course-short">Short</label>
-                            <input type="radio" name="country-course" value="long" id="country-course-long"
-                                   {% if course == 'long' %}checked{% endif %}>
-                            <label for="country-course-long">Long</label>
-                        </div>
-                    </div>
-
-                    <div class="filter-chip-group">
-                        <span class="filter-chip-label">Gender</span>
-                        <div class="radio-chips">
-                            {% for g, label in gender_options %}
-                            <input type="radio" name="country-gender" value="{{ g }}" id="country-gender-{{ g }}"
-                                   {% if g == gender %}checked{% endif %}>
-                            <label for="country-gender-{{ g }}">{{ label }}</label>
-                            {% endfor %}
-                        </div>
-                    </div>
-
-                    <div class="filter-chip-group">
-                        <span class="filter-chip-label">Active only</span>
-                        <label class="filter-toggle">
-                            <input type="checkbox" id="country-active-cb"
-                                   {% if active_only %}checked{% endif %}>
-                            <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                            <span class="toggle-text" id="country-active-text">{% if active_only %}On{% else %}Off{% endif %}</span>
-                        </label>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="country-leaderboard-wrap" class="country-leaderboard-wrap">
-            {% with athletes=leaderboard, disc=discipline, has_more=has_more %}
-                {% include "partials/country_leaderboard.html" %}
-            {% endwith %}
-        </div>
-    </section>
-
-    <!-- ── Championship medals ────────────────────────────────────────── -->
-    {% if medals %}
-    <section class="country-section">
-        <div class="page-section-head">Championship Medals</div>
-        {# Olympic-style medal board: one row per championship, counts in
-           aligned columns, with a stacked medal bar scaled to the biggest
-           haul so the relative size of each is readable at a glance. #}
-        {% set max_total = medals | map(attribute='total') | max %}
-        <div class="medal-board">
-            <div class="medal-board-row medal-board-head" aria-hidden="true">
-                <span class="medal-board-label"></span>
-                <span class="medal-board-bar"></span>
-                <span class="medal-count-col"><span class="pos-circle pos-circle--sm gold">1</span></span>
-                <span class="medal-count-col"><span class="pos-circle pos-circle--sm silver">2</span></span>
-                <span class="medal-count-col"><span class="pos-circle pos-circle--sm bronze">3</span></span>
-                <span class="medal-count-col medal-total-col">Total</span>
-            </div>
-            {% for m in medals %}
-            <div class="medal-board-row">
-                <span class="medal-board-label">{{ m.label }}</span>
-                <span class="medal-board-bar">
-                    {% if m.gold %}<span class="medal-bar-seg medal-bar-gold" style="width: {{ '%.2f' % (m.gold / max_total * 100) }}%"></span>{% endif %}
-                    {% if m.silver %}<span class="medal-bar-seg medal-bar-silver" style="width: {{ '%.2f' % (m.silver / max_total * 100) }}%"></span>{% endif %}
-                    {% if m.bronze %}<span class="medal-bar-seg medal-bar-bronze" style="width: {{ '%.2f' % (m.bronze / max_total * 100) }}%"></span>{% endif %}
-                </span>
-                <span class="medal-count-col{{ ' medal-count-zero' if not m.gold }}">{{ m.gold }}</span>
-                <span class="medal-count-col{{ ' medal-count-zero' if not m.silver }}">{{ m.silver }}</span>
-                <span class="medal-count-col{{ ' medal-count-zero' if not m.bronze }}">{{ m.bronze }}</span>
-                <span class="medal-count-col medal-total-col">{{ m.total }}</span>
+{# Results beside a rail of who races next and medals; either alone runs full width #}
+{% set has_main = results.male or results.female %}
+{% set has_rail = racing.male or racing.female or medals or wtcs %}
+<div class="{{ 'hub-layout' if has_main and has_rail else 'ct-single' }}">
+<div class="hub-main">
+    {% if results.male or results.female %}
+    <section class="hub-section">
+        <div class="page-section-head"><span>Recent results</span></div>
+        <div class="ct-pair">
+            {% for g, label in [('male', 'Men'), ('female', 'Women')] %}
+            <div class="hub-card ct-list ct-results">
+                <h3>{{ label }}<span>Position</span></h3>
+                <ol>
+                    {% for r in results[g] %}
+                    <li>
+                        <span class="ct-who">{{ who(r) }}<small class="hub-dots"><a href="/race/{{ r.race_id }}">{{ r.race }}</a><span>{{ r.race_date.strftime('%-d %b') }}</span></small></span>
+                        <span class="ct-place">{{ pos(r.position) }}</span>
+                    </li>
+                    {% else %}
+                    <li class="hub-empty">No top-ten finishes in the last {{ result_days }} days.</li>
+                    {% endfor %}
+                </ol>
             </div>
             {% endfor %}
         </div>
     </section>
     {% endif %}
+</div>
 
-    <!-- ── Mixed team relay ────────────────────────────────────────────── -->
-    {% if relay_summary %}
-    <section class="country-section">
-        <div class="page-section-head">Mixed Team Relay</div>
-        {# Per-discipline ratings widget - same .ratings-table component as the
-           athlete page, with the career stat strip as the card's header bar. #}
-        <div class="ratings-section">
-            <div class="relay-stat-line">
-                <span><span class="relay-stat-n">{{ relay_summary.race_count }}</span> relays</span>
-                <span class="relay-stat-dot">·</span>
-                <span><span class="relay-stat-n">{{ relay_summary.wins }}</span> wins <span class="relay-stat-pct">({{ "%.1f"|format(relay_summary.win_pct * 100) }}%)</span></span>
-                <span class="relay-stat-dot">·</span>
-                <span><span class="relay-stat-n">{{ relay_summary.podiums }}</span> podiums <span class="relay-stat-pct">({{ "%.1f"|format(relay_summary.podium_pct * 100) }}%)</span></span>
-            </div>
-            <div class="ratings-table-scroll">
-                <table class="ratings-table">
-                    <thead>
-                        <tr>
-                            <th class="rt-disc">Discipline</th>
-                            <th class="rt-rating">Rating</th>
-                            <th class="rt-rank">World</th>
-                            <th class="rt-peak">Peak Rating</th>
-                            <th class="rt-best">Best Race</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for row in relay_ratings %}
-                        <tr class="rt-row rt-row--{{ row.disc }}">
-                            <td class="rt-disc"><span class="rt-disc-name">{{ row.label }}</span></td>
-                            <td class="rt-rating">{{ row.rating }}</td>
-                            <td class="rt-rank">
-                                {% if row.rank %}
-                                <a href="/athlete-leaderboard?course=relay&disc={{ row.disc }}" rel="nofollow" class="ranking-link">{{ row.rank.n }}<sup class="ordinal-suffix">{{ row.rank.suffix }}</sup></a>
-                                {% else %}<span class="no-data">-</span>{% endif %}
-                            </td>
-                            <td class="rt-peak">
-                                <span class="rt-peak-main">{{ row.peak }}</span>
-                                <a href="/race/{{ row.peak_race_id }}" class="rt-peak-sub">{{ row.peak_race }}</a>
-                            </td>
-                            <td class="rt-best">
-                                {% if row.best_race_id %}
-                                <a href="/race/{{ row.best_race_id }}" class="rt-best-race">{{ row.best_race }}</a>
-                                <span class="rt-best-change {{ row.best_change.css_class }}">{{ row.best_change.formatted_str | safe }}</span>
-                                {% else %}<span class="no-data">-</span>{% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+{% if has_rail %}
+<aside class="hub-side">
+    {% if racing.male or racing.female %}
+    <section class="hub-section">
+        <div class="page-section-head page-section-head--sm"><span>Racing next</span></div>
+        <div class="hub-card ct-list ct-racing">
+            {% for g, label in [('male', 'Men'), ('female', 'Women')] %}
+            {% if racing[g] %}
+            <h3>{{ label }}<span>Predicted chance</span></h3>
+            <ol>
+                {% for a in racing[g] %}
+                <li>
+                    <span class="ct-who">{{ who(a) }}<small class="hub-dots"><a href="/race/{{ a.race_id }}">{{ a.race }}</a><span>{{ a.race_date.strftime('%a %-d %b') }}</span></small></span>
+                    <span class="ct-odds">
+                        <span class="hub-pred"><span class="ct-odds-lbl">Win</span><span class="hub-bar"><i style="width: {{ '%.1f' | format(a.win_pct * 100) }}%"></i></span>{{ '%.0f' | format(a.win_pct * 100) }}%</span>
+                        <span class="hub-pred"><span class="ct-odds-lbl">Podium</span><span class="hub-bar hub-bar--podium"><i style="width: {{ '%.1f' | format(a.podium_pct * 100) }}%"></i></span>{{ '%.0f' | format(a.podium_pct * 100) }}%</span>
+                    </span>
+                </li>
+                {% endfor %}
+            </ol>
+            {% endif %}
+            {% endfor %}
         </div>
+    </section>
+    {% endif %}
 
-        {% if relay_results %}
-        {# Split cell for the expanded leg-splits panel: an inline discipline
-           label above the time (the panel table has no header row). Mirrors
-           the macro on the relay race page. #}
-        {% macro leg_split(label, time, show_label, fastest, behind) %}
-        <td class="time-col split-col" data-value="{{ time }}">
-            {% if show_label %}<span class="time-disc-label">{{ label }}</span>{% endif %}
-            <span class="time-cell-main">{{ time if time else '-' }}</span>
-            {% if fastest %}<span class="time-cell-gap time-cell-gap--fastest">fastest</span>
-            {% else %}<span class="time-cell-gap">{{ behind }}</span>{% endif %}
-        </td>
-        {% endmacro %}
-        <div class="relay-subhead">Relay results</div>
+    {% if medals or wtcs %}
+    <section class="hub-section">
+        <div class="page-section-head page-section-head--sm"><span>Championship medals</span></div>
+        <div class="hub-card ct-list ct-medals">
+            <h3>Elite, all time</h3>
+            <ol>
+                {% for m in medals %}
+                <li><span class="ct-who">{{ m.label }}</span>{{ medal_discs(m.gold, m.silver, m.bronze) }}</li>
+                {% endfor %}
+                {% if wtcs %}
+                {# Podiums at single WTCS rounds: race places, not medals #}
+                <li class="ct-wtcs"><span class="ct-who">WTCS race podiums</span>{{ medal_discs(wtcs[0], wtcs[1], wtcs[2]) }}</li>
+                {% endif %}
+            </ol>
+        </div>
+    </section>
+    {% endif %}
+</aside>
+{% endif %}
+</div>
+
+{% if relay %}
+{# Split cell for the expanded leg-splits panel: an inline discipline label
+   above the time (the panel table has no header row). Mirrors the macro on
+   the relay race page. #}
+{% macro leg_split(label, time, show_label, fastest, behind) %}
+<td class="time-col split-col" data-value="{{ time }}">
+    {% if show_label %}<span class="time-disc-label">{{ label }}</span>{% endif %}
+    <span class="time-cell-main">{{ time if time else '-' }}</span>
+    {% if fastest %}<span class="time-cell-gap time-cell-gap--fastest">fastest</span>
+    {% else %}<span class="time-cell-gap">{{ behind }}</span>{% endif %}
+</td>
+{% endmacro %}
+<section class="hub-section">
+    <div class="page-section-head">
+        <span>Mixed relay</span>
+        <a class="section-link" href="/athlete-leaderboard?gender=male&amp;course=relay">Relay rankings</a>
+    </div>
+    <p class="ct-relay-line hub-dots">
+        <span>Rating <b>{{ "{:,}".format(relay.rating) }}</b></span>
+        <span>{% if relay.rank %}World rank <b>{{ relay.rank }}</b>{% else %}Unranked, no relay in 18 months{% endif %}</span>
+        <span><b>{{ relay.starts }}</b> elite finish{{ 'es' if relay.starts != 1 }}</span>
+        <span><b>{{ relay.wins }}</b> win{{ 's' if relay.wins != 1 }}</span>
+        <span><b>{{ relay.podiums }}</b> podium{{ 's' if relay.podiums != 1 }}</span>
+    </p>
+    <div class="race-view-toggle hub-tabs" role="tablist">
+        <button type="button" class="race-view-btn hub-tab active" role="tab" aria-selected="true" data-group="rl" data-tab="rl-results">Results</button>
+        {% if relay.history %}<button type="button" class="race-view-btn hub-tab" role="tab" aria-selected="false" data-group="rl" data-tab="rl-history">Rating changes</button>{% endif %}
+        <button type="button" class="race-view-btn hub-tab" role="tab" aria-selected="false" data-group="rl" data-tab="rl-ratings">Ratings</button>
+    </div>
+
+    <div data-pane="rl-results">
         <div class="table-section relay-table-section">
-            <table class="relay-results-table relay-sortable">
+            <table class="relay-results-table relay-sortable" id="relay-results">
                 <thead>
                     <tr>
                         <th class="relay-date-col sortable" data-sort="date">Date</th>
@@ -237,18 +213,16 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for r in relay_results %}
-                    <tr class="relay-team-row{{ ' has-legs' if r.legs }}" data-team-key="{{ r.race_id }}-{{ r.team_id }}">
+                    {% for r in relay.results %}
+                    {% set later = ' ct-later' if loop.index > relay_rows else '' %}
+                    <tr class="relay-team-row{{ ' has-legs' if r.legs }}{{ later }}" data-team-key="{{ r.race_id }}-{{ r.team_id }}">
                         <td class="muted-col relay-date-col" data-value="{{ r.race_date }}">{{ r.race_date.strftime('%d %b %Y') }}</td>
                         <td class="relay-race-col" data-value="{{ r.race_title }}"><a href="/race/{{ r.race_id }}" class="link">{{ r.race_title }}</a></td>
                         <td class="muted-col relay-program-col" data-value="{{ r.program }}">{{ r.program }}</td>
                         <td class="muted-col relay-team-col" data-value="{{ r.team_name }}">{{ r.team_name }}</td>
                         <td class="relay-pos-col" data-value="{{ r.position if r.position is not none else r.status }}">
-                            {% if r.position == 1 %}<span class="pos-circle gold">1</span>
-                            {% elif r.position == 2 %}<span class="pos-circle silver">2</span>
-                            {% elif r.position == 3 %}<span class="pos-circle bronze">3</span>
-                            {% elif r.status in ['DNF', 'DNS', 'DQ', 'LAP', 'NC'] %}<span class="pos-dnf">{{ r.status }}</span>
-                            {% else %}<span class="pos-other">{{ r.position }}</span>{% endif %}
+                            {% if r.status in ['DNF', 'DNS', 'DQ', 'LAP', 'NC'] %}<span class="pos-dnf">{{ r.status }}</span>
+                            {% else %}{{ pos(r.position) }}{% endif %}
                         </td>
                         <td class="relay-total-col" data-value="{{ r.total }}">
                             <span class="time-cell-main">{{ r.total }}</span>
@@ -275,7 +249,7 @@
                                             </td>
                                             <td class="relay-legs-ath">
                                                 {% if loop.first %}<span class="time-disc-label">Athlete</span>{% endif %}
-                                                <a href="/athlete/{{ leg.athlete_id }}" class="link">{{ leg.name }}</a>
+                                                {{ who(leg) }}
                                             </td>
                                             {{ leg_split('Swim', leg.swim, loop.first, leg.swim_fastest, leg.swim_behind) }}
                                             {{ leg_split('T1',   leg.t1,   loop.first, leg.t1_fastest,   leg.t1_behind) }}
@@ -290,10 +264,7 @@
                                             </td>
                                             <td class="relay-legs-pos">
                                                 {% if loop.first %}<span class="time-disc-label">Leg Pos</span>{% endif %}
-                                                {% if leg.rank == 1 %}<span class="pos-circle gold">1</span>
-                                                {% elif leg.rank == 2 %}<span class="pos-circle silver">2</span>
-                                                {% elif leg.rank == 3 %}<span class="pos-circle bronze">3</span>
-                                                {% elif leg.rank %}<span class="pos-other">{{ leg.rank }}</span>{% endif %}
+                                                {% if leg.rank %}{{ pos(leg.rank) }}{% endif %}
                                             </td>
                                         </tr>
                                         {% endfor %}
@@ -307,10 +278,13 @@
                 </tbody>
             </table>
         </div>
+        {% if relay.results | length > relay_rows %}
+        <div class="ct-more"><button type="button" id="relay-all">All {{ relay.results | length }} relay results</button></div>
         {% endif %}
+    </div>
 
-        {% if relay_rating_history %}
-        <div class="relay-subhead">Rating changes</div>
+    {% if relay.history %}
+    <div data-pane="rl-history" hidden>
         <div class="table-section rating-table relay-table-section">
             <table class="relay-rating-table sortable-table relay-sortable">
                 <thead>
@@ -328,7 +302,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for h in relay_rating_history %}
+                    {% for h in relay.history %}
                     <tr>
                         <td class="date-col muted-col" data-value="{{ h.race_date }}">{{ h.race_date.strftime('%d %b %Y') }}</td>
                         <td class="race-col" data-value="{{ h.race_title }}">
@@ -336,11 +310,8 @@
                         </td>
                         <td class="program-col muted-col" data-value="{{ h.program }}">{{ h.program }}</td>
                         <td class="position-col" data-value="{{ h.position if h.position is not none else h.status }}">
-                            {% if h.position == 1 %}<span class="pos-circle gold">1</span>
-                            {% elif h.position == 2 %}<span class="pos-circle silver">2</span>
-                            {% elif h.position == 3 %}<span class="pos-circle bronze">3</span>
-                            {% elif h.status in ['DNF', 'DNS', 'DQ', 'LAP', 'NC'] %}<span class="pos-dnf">{{ h.status }}</span>
-                            {% else %}<span class="pos-other">{{ h.position }}</span>{% endif %}
+                            {% if h.status in ['DNF', 'DNS', 'DQ', 'LAP', 'NC'] %}<span class="pos-dnf">{{ h.status }}</span>
+                            {% else %}{{ pos(h.position) }}{% endif %}
                         </td>
                         {% for d, label in [('swim', 'Swim'), ('bike', 'Bike'), ('run', 'Run'), ('transition', 'Trans')] %}
                         <td class="split-col" data-value="{{ h[d ~ '_rating'] }}" data-change="{{ h[d ~ '_change'].raw if h[d ~ '_change'].raw is not none else '' }}">
@@ -364,120 +335,111 @@
                 </tbody>
             </table>
         </div>
-        {% endif %}
-    </section>
+    </div>
     {% endif %}
 
-    <!-- ── Upcoming events ─────────────────────────────────────────────── -->
-    {% if upcoming_events %}
-    <section class="country-section">
-        <div class="page-section-head">Upcoming Events</div>
-        <div class="country-upcoming-grid">
-            {% for event in upcoming_events %}
-            <div class="country-upcoming-card">
-                <a href="/event/{{ event.event_id }}" class="country-upcoming-overlay" aria-label="{{ event.name }}"></a>
-                <div class="country-upcoming-header">
-                    <div class="country-upcoming-title">{{ event.name }}</div>
-                    <div class="country-upcoming-meta">
-                        <span>{{ event.start_date.strftime('%-d %b %Y') }}</span>
-                        {% if event.venue %}<span>· {{ event.venue }}</span>{% endif %}
-                    </div>
-                </div>
-                <div class="country-upcoming-body">
-                    {% for race in event.races[:3] %}
-                    <div class="country-upcoming-race">
-                        <a href="/race/{{ race.race_id }}" class="country-upcoming-race-title">{{ race.prog_name }}</a>
-                        <span class="country-upcoming-race-meta">{{ race.entry_count }} entered</span>
-                    </div>
-                    {% endfor %}
-                    {% if event.races|length > 3 %}
-                    <div class="country-upcoming-more">+ {{ event.races|length - 3 }} more races</div>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </section>
-    {% endif %}
-
-    <!-- ── Recent events ───────────────────────────────────────────────── -->
-    {% if recent_events %}
-    <section class="country-section">
-        <div class="page-section-head">Recent Events</div>
-        <div class="home-events-grid">
-            {% for event in recent_events %}
-            <div class="event-card">
-                <a href="/event/{{ event.event_id }}" class="event-card-overlay" aria-label="{{ event.name }}"></a>
-                <div class="event-card-header">
-                    <div class="event-card-title">{{ event.name }}</div>
-                    <div class="event-card-header-meta">
-                        <span>{{ event.start_date.strftime('%-d %b %Y') }}</span>
-                        {% if event.venue %}<span class="event-card-header-meta-sep">·</span><span>{{ event.venue }}</span>{% endif %}
-                    </div>
-                </div>
-                <div class="event-card-body">
-                    <div class="event-card-info">
-                        <div class="event-meta-item">
-                            <svg class="event-meta-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                            <span class="event-meta-text">{{ event.start_date.strftime('%-d %b %Y') }}</span>
-                        </div>
-                        {% if event.venue %}
-                        <div class="event-meta-item">
-                            <svg class="event-meta-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                            <span class="event-meta-text">{{ event.venue }}</span>
-                        </div>
-                        {% endif %}
-                    </div>
-                    <div class="event-races">
-                        {% for race in event.races[:2] %}
-                        <div class="event-race">
-                            <div class="event-race-header">
-                                <a href="/race/{{ race.race_id }}" class="event-race-title">{{ race.prog_name }}</a>
-                            </div>
-                            {% if race.podium %}
-                            <ol class="event-race-podium">
-                                {% for p in race.podium[:3] %}
-                                <li class="event-race-entry">
-                                    <span class="event-podium-pos event-podium-pos--{{ p.position }}">{{ p.position }}</span>
-                                    <img src="{{ STATIC_BASE_URL }}{{ 'athlete_imgs/128/' ~ p.athlete_id ~ '.webp' if p.profile_img else 'imgs/default_user_64.webp' }}" alt="{{ p.name }}" class="event-race-entry-img">
-                                    <a href="/athlete/{{ p.athlete_id }}" class="event-entry-name">{{ p.name }} {{ flag(p.country_alpha3) }}</a>
-                                    {% if p.position == 1 and p.time %}
-                                        <span class="event-entry-time event-entry-time--winner">{{ p.time }}</span>
-                                    {% elif p.position > 1 and p.gap %}
-                                        <span class="event-entry-time event-entry-time--diff">{{ p.gap }}</span>
-                                    {% elif p.time %}
-                                        <span class="event-entry-time event-entry-time--diff">{{ p.time }}</span>
-                                    {% endif %}
-                                </li>
-                                {% endfor %}
-                            </ol>
-                            {% else %}
-                            <p class="event-race-pending">Results pending</p>
-                            {% endif %}
-                        </div>
+    {# Per-discipline ratings, the athlete page's ratings table #}
+    <div data-pane="rl-ratings" hidden>
+        <div class="ratings-section">
+            <div class="ratings-table-scroll">
+                <table class="ratings-table">
+                    <thead>
+                        <tr>
+                            <th class="rt-disc">Discipline</th>
+                            <th class="rt-rating">Rating</th>
+                            <th class="rt-rank">World</th>
+                            <th class="rt-peak">Peak Rating</th>
+                            <th class="rt-best">Best Race</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in relay.ratings %}
+                        <tr class="rt-row rt-row--{{ row.disc }}">
+                            <td class="rt-disc"><span class="rt-disc-name">{{ row.label }}</span></td>
+                            <td class="rt-rating">{{ row.rating }}</td>
+                            <td class="rt-rank">
+                                {% if row.rank %}<a href="/athlete-leaderboard?gender=male&amp;course=relay&amp;disc={{ row.disc }}" rel="nofollow" class="ranking-link">{{ row.rank | ordinal }}</a>
+                                {% else %}<span class="no-data">-</span>{% endif %}
+                            </td>
+                            <td class="rt-peak">
+                                <span class="rt-peak-main">{{ row.peak }}</span>
+                                <a href="/race/{{ row.peak_race_id }}" class="rt-peak-sub">{{ row.peak_race }}</a>
+                            </td>
+                            <td class="rt-best">
+                                {% if row.best_race_id %}
+                                <a href="/race/{{ row.best_race_id }}" class="rt-best-race">{{ row.best_race }}</a>
+                                <span class="rt-best-change {{ row.best_change.css_class }}">{{ row.best_change.formatted_str | safe }}</span>
+                                {% else %}<span class="no-data">-</span>{% endif %}
+                            </td>
+                        </tr>
                         {% endfor %}
-                    </div>
-                </div>
+                    </tbody>
+                </table>
             </div>
-            {% endfor %}
         </div>
-    </section>
-    {% endif %}
+    </div>
+</section>
+{% endif %}
 
-    <!-- ── Races hosted map ────────────────────────────────────────────── -->
-    {% if map_locations %}
-    <section class="country-section">
-        <div class="page-section-head">Races Hosted in {{ country.country_full }}</div>
-        <div class="country-map-card">
-            <div id="country-map"></div>
+{% if hosted_upcoming or hosted_recent or map_locations %}
+<section class="hub-section">
+    <div class="page-section-head"><span>Races in {{ country.country_full }}</span></div>
+    <div class="{{ 'ct-hosted' if map_locations }}">
+        <div>
+            {% if hosted_upcoming or hosted_recent %}
+            {% set first = 'up' if hosted_upcoming else 'res' %}
+            <div class="race-view-toggle hub-tabs" role="tablist">
+                {% if hosted_upcoming %}<button type="button" class="race-view-btn hub-tab active" role="tab" aria-selected="true" data-group="ho" data-tab="ho-up">Upcoming</button>{% endif %}
+                {% if hosted_recent %}<button type="button" class="race-view-btn hub-tab{{ ' active' if first == 'res' }}" role="tab" aria-selected="{{ 'true' if first == 'res' else 'false' }}" data-group="ho" data-tab="ho-res">Results</button>{% endif %}
+            </div>
+            {% if hosted_upcoming %}
+            <div class="hub-card ct-list ct-events" data-pane="ho-up">
+                <h3><span class="ct-date">Date</span><span class="ct-who">Event</span><span class="ct-num">Entries</span></h3>
+                <ol>
+                    {% for e in hosted_upcoming %}
+                    <li>
+                        <span class="ct-date">{{ e.start_date.strftime('%-d %b %Y') }}</span>
+                        <span class="ct-who"><a class="ct-nation" href="/event/{{ e.event_id }}">{{ e.short_name }}</a>{% if e.venue %}<small>{{ e.venue }}</small>{% endif %}</span>
+                        <span class="ct-num">{{ e.entries or '-' }}</span>
+                    </li>
+                    {% endfor %}
+                </ol>
+            </div>
+            {% endif %}
+            {% if hosted_recent %}
+            <div class="hub-card ct-list ct-events ct-events--res" data-pane="ho-res"{% if first != 'res' %} hidden{% endif %}>
+                <h3><span class="ct-date">Date</span><span class="ct-who">Event</span><span class="ct-win">Men winner</span><span class="ct-win">Women winner</span></h3>
+                <ol>
+                    {% for e in hosted_recent %}
+                    <li>
+                        <span class="ct-date">{{ e.date.strftime('%-d %b %Y') }}</span>
+                        <span class="ct-who"><a class="ct-nation" href="/event/{{ e.event_id }}">{{ e.short_name }}</a></span>
+                        {% for g, label in [('male', 'Men'), ('female', 'Women')] %}
+                        <span class="ct-win"><span class="ct-win-lbl">{{ label }}</span>{% if e[g] and e[g].athlete_id %}{{ who(e[g]) }}{% else %}<span class="ct-none-lbl">-</span>{% endif %}</span>
+                        {% endfor %}
+                    </li>
+                    {% endfor %}
+                </ol>
+            </div>
+            {% endif %}
+            {% endif %}
         </div>
-    </section>
-    {% endif %}
+        {% if map_locations %}
+        <div class="ct-map"><div id="country-map"></div></div>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
 
-</div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="{{ STATIC_BASE_URL }}js/hub.js?v={{ ASSET_VERSION }}"></script>
+<script>
+// Hero search: athletes from this country (hub.js)
+const ctInput = document.getElementById('ct-input');
+hubAthleteSearch(ctInput, document.getElementById('ct-results'), () => ({ country: ctInput.dataset.country }));
+</script>
 {% if map_locations %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
@@ -507,91 +469,17 @@
 </script>
 {% endif %}
 
+{% if relay %}
 <script>
-(function() {
-    const page   = document.querySelector('.country-page');
-    const alpha3 = page.dataset.alpha3;
-    const PAGE_SIZE = 5;
-    let disc        = page.dataset.discipline;
-    let gender      = page.dataset.gender;
-    let course      = page.dataset.course;
-    let activeOnly  = page.dataset.activeOnly !== 'false';
-    let rowCount    = document.querySelectorAll('#country-leaderboard-grid .athlete-card').length;
+// Relay results: the latest few until asked for all; sorting shows all.
+const relayResults = document.getElementById('relay-results');
+const relayAll = document.getElementById('relay-all');
+function showAllRelays() {
+    relayResults.classList.add('ct-all');
+    if (relayAll) relayAll.parentElement.remove();
+}
+if (relayAll) relayAll.addEventListener('click', showAllRelays);
 
-    const wrap       = document.getElementById('country-leaderboard-wrap');
-    const subtitleEl = document.getElementById('country-lb-subtitle');
-    const row        = document.getElementById('filterPanel');
-
-    // Filter toggle (mobile)
-    const filterBtn   = document.getElementById('filterToggle');
-    const filterPanel = document.getElementById('filterPanel');
-    if (filterBtn && filterPanel) {
-        filterBtn.addEventListener('click', () => {
-            const open = filterPanel.classList.toggle('open');
-            filterBtn.setAttribute('aria-expanded', open);
-        });
-    }
-
-    const DISC_LABELS   = { overall:'Overall', swim:'Swim', bike:'Bike', run:'Run', transition:'Transition' };
-    const GENDER_LABELS = { male:'Men', female:'Women' };
-
-    function buildParams(extra) {
-        const p = new URLSearchParams({
-            discipline: disc, gender, course, active_only: activeOnly ? 'true' : 'false',
-        });
-        for (const k in (extra || {})) p.set(k, extra[k]);
-        return p;
-    }
-
-    async function refresh() {
-        wrap.classList.add('country-leaderboard-wrap--loading');
-        const res = await fetch(`/country/${alpha3}/leaderboard?${buildParams()}`, { headers: { 'Accept': 'text/html' } });
-        const html = await res.text();
-        wrap.innerHTML = html;
-        wrap.classList.remove('country-leaderboard-wrap--loading');
-        rowCount = document.querySelectorAll('#country-leaderboard-grid .athlete-card').length;
-        subtitleEl.textContent = `${DISC_LABELS[disc]} · ${GENDER_LABELS[gender]}`;
-        history.replaceState(null, '', `/country/${alpha3}?${buildParams()}`);
-    }
-
-    async function loadMore(btn) {
-        btn.disabled = true;
-        const res  = await fetch(`/country/${alpha3}/leaderboard/more?${buildParams({ offset: rowCount })}`,
-                                 { headers: { 'Accept': 'text/html' } });
-        const html = await res.text();
-        const grid = document.getElementById('country-leaderboard-grid');
-        if (grid) grid.insertAdjacentHTML('beforeend', html);
-        rowCount = document.querySelectorAll('#country-leaderboard-grid .athlete-card').length;
-        if (res.headers.get('X-Has-More') === '1') {
-            btn.disabled = false;
-        } else {
-            btn.closest('.country-more-wrap').remove();
-        }
-    }
-
-    const activeText = document.getElementById('country-active-text');
-
-    row.addEventListener('change', e => {
-        const inp = e.target;
-        if (inp.name === 'country-discipline')    disc       = inp.value;
-        else if (inp.name === 'country-gender')   gender     = inp.value;
-        else if (inp.name === 'country-course')   course     = inp.value;
-        else if (inp.id   === 'country-active-cb') {
-            activeOnly = inp.checked;
-            if (activeText) activeText.textContent = inp.checked ? 'On' : 'Off';
-        }
-        else return;
-        refresh();
-    });
-
-    wrap.addEventListener('click', e => {
-        const btn = e.target.closest('#country-more-btn');
-        if (btn) loadMore(btn);
-    });
-})();
-</script>
-
-<script>
 // Relay tables: column sorting. Rolled here rather than using utils.js's
 // sortTable because the results table interleaves hidden leg-splits rows that
 // have to travel with their parent.
@@ -618,6 +506,7 @@
         const headers = Array.from(table.querySelectorAll('th'));
         table.querySelectorAll('th.sortable').forEach(th => {
             th.addEventListener('click', () => {
+                if (table === relayResults) showAllRelays();
                 const idx = headers.indexOf(th);
                 const type = th.dataset.sort;
                 const asc = !th.classList.contains('asc');
@@ -661,16 +550,14 @@ document.querySelectorAll('.relay-results-table .relay-team-row.has-legs').forEa
     row.addEventListener('click', (e) => {
         if (e.target.closest('a')) return;
         const detail = row.nextElementSibling;
-        if (!detail || !detail.classList.contains('relay-legs-detail')) return;
         const open = !detail.classList.contains('hidden');
         detail.classList.toggle('hidden', open);
         row.classList.toggle('expanded', !open);
         const btn = row.querySelector('.splits-toggle');
-        if (btn) {
-            btn.setAttribute('aria-expanded', String(!open));
-            btn.classList.toggle('open', !open);
-        }
+        btn.setAttribute('aria-expanded', String(!open));
+        btn.classList.toggle('open', !open);
     });
 });
 </script>
+{% endif %}
 {% endblock %}

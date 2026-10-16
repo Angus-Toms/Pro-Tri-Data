@@ -3,90 +3,139 @@
 {% block title %}Countries - Pro Tri Data{% endblock %}
 
 {% block meta %}
-<meta name="description" content="Browse {{ totals.countries }} triathlon nations with {{ totals.athletes }} ranked athletes on Pro Tri Data. National leaderboards, championship medals and races hosted by each country.">
+<meta name="description" content="Triathlon rankings, results and championship medals for {{ n_nations }} nations on Pro Tri Data: the strongest nations by places in the world top 100, and every country's page.">
 <meta property="og:site_name" content="Pro Tri Data">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Countries - Pro Tri Data">
-<meta property="og:description" content="Triathlon nations, national leaderboards and races hosted worldwide.">
+<meta property="og:description" content="Triathlon rankings, results and championship medals for {{ n_nations }} nations.">
 <meta property="og:image" content="{{ STATIC_BASE_URL }}imgs/logo-512.webp">
 {% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/hub.css?v={{ ASSET_VERSION }}">
 <link rel="stylesheet" href="{{ STATIC_BASE_URL }}css/country.css?v={{ ASSET_VERSION }}">
 {% endblock %}
 
+{% from "partials/country_macros.html" import medal_discs %}
+
 {% block hero %}
-<div class="page-hero">
-    <div class="page-hero-inner">
-        <div>
+<div class="hub-hero">
+    <div class="hub-hero-inner">
+        <div class="hub-title">
             <h1>Countries</h1>
+            <p>Rankings, results and championship medals for {{ n_nations }} nations</p>
         </div>
-        <div class="hero-stats">
-            <div class="hero-stat">
-                <span class="hero-stat-num">{{ totals.countries }}</span>
-                <span class="hero-stat-lbl">Nations</span>
-            </div>
-        </div>
+        <form class="hub-search" role="search" id="ct-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" id="ct-input" placeholder="Find a country" autocomplete="off" aria-label="Find a country">
+        </form>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
-<div class="country-index-page">
-    {% for block in continent_blocks %}
-    <section class="country-index-group">
-        <div class="page-section-head">{{ block.continent }}</div>
-        <div class="country-index-grid">
-            {% for c in block.countries if c.athlete_count > 0 %}
-            {% set both = c.top_female_id and c.top_male_id %}
-            <div class="country-index-card{{ ' country-index-card--single' if not both }}">
-                <a href="/country/{{ c.alpha3 }}" class="country-index-overlay" aria-label="{{ c.country_full }}"></a>
-                <div class="country-index-left">
-                    <div class="country-index-head">
-                        <span class="country-index-flag">{{ flag(c.alpha3, c.country_full, 'flag-lg') }}</span>
-                        <span class="country-index-name">{{ c.country_full }}</span>
-                    </div>
-                    <div class="country-index-meta">
-                        <span>{{ c.athlete_count }} athlete{{ 's' if c.athlete_count != 1 else '' }}</span>
-                        {% if c.race_host_count %}
-                        <span>{{ c.race_host_count }} event{{ 's' if c.race_host_count != 1 else '' }}</span>
-                        {% endif %}
-                    </div>
-                </div>
-                {% if c.top_female_id %}
-                <div class="country-index-top-card">
-                    <img src="{{ STATIC_BASE_URL }}{{ 'athlete_imgs/512/' ~ c.top_female_id ~ '.webp' if c.top_female_img else 'imgs/default_user_64.webp' }}"
-                         alt="{{ c.top_female_name }}" class="country-index-top-img">
-                    <div class="country-index-top-info">
-                        <a href="/athlete/{{ c.top_female_id }}" class="country-index-top-name">{{ c.top_female_name }}</a>
-                        {% if c.top_female_rank %}
-                        <div class="country-index-top-rank">
-                            World #{{ c.top_female_rank }}
-                            <span class="ptd-tag ptd-tag--sm ptd-tag--{{ 'lc' if c.top_female_course == 'long' else 'sc' }}">{{ 'LC' if c.top_female_course == 'long' else 'SC' }}</span>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endif %}
-                {% if c.top_male_id %}
-                <div class="country-index-top-card">
-                    <img src="{{ STATIC_BASE_URL }}{{ 'athlete_imgs/512/' ~ c.top_male_id ~ '.webp' if c.top_male_img else 'imgs/default_user_64.webp' }}"
-                         alt="{{ c.top_male_name }}" class="country-index-top-img">
-                    <div class="country-index-top-info">
-                        <a href="/athlete/{{ c.top_male_id }}" class="country-index-top-name">{{ c.top_male_name }}</a>
-                        {% if c.top_male_rank %}
-                        <div class="country-index-top-rank">
-                            World #{{ c.top_male_rank }}
-                            <span class="ptd-tag ptd-tag--sm ptd-tag--{{ 'lc' if c.top_male_course == 'long' else 'sc' }}">{{ 'LC' if c.top_male_course == 'long' else 'SC' }}</span>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endif %}
+
+<!-- Hidden while searching, so the matching countries sit under the hero -->
+<div class="hub-layout" id="ct-top">
+<div class="hub-main">
+    <section class="hub-section">
+        <div class="page-section-head">
+            <span>Strongest nations</span>
+            <a class="section-link" data-follows="sn" href="/athlete-leaderboard?gender=male&amp;course=short">World rankings</a>
+        </div>
+        <div class="race-view-toggle hub-tabs" role="tablist">
+            {% for p in nations %}
+            <button type="button" class="race-view-btn hub-tab{{ ' active' if loop.first }}" role="tab" aria-selected="{{ 'true' if loop.first else 'false' }}" data-group="sn" data-tab="sn-{{ p.key }}" data-link="/athlete-leaderboard?gender=male&amp;course={{ p.key }}">{{ p.label }}</button>
+            {% endfor %}
+        </div>
+        {% for p in nations %}
+        <div class="ct-pair" data-pane="sn-{{ p.key }}"{% if not loop.first %} hidden{% endif %}>
+            {% for g, label in [('male', 'Men'), ('female', 'Women')] %}
+            <div class="hub-card ct-list ct-nations">
+                <h3>{{ label }}<span>Places in the top 100</span></h3>
+                <ol>
+                    {% for n in p[g] %}
+                    <li>
+                        <span class="ct-pos">{{ loop.index }}</span>
+                        <a class="ct-nation ct-who" href="/country/{{ n.alpha3 }}">{{ n.name }}</a>
+                        <span class="ct-bar" aria-hidden="true"><i style="width: {{ n.bar }}%"></i></span>
+                        <span class="ct-num">{{ n.places }}</span>
+                    </li>
+                    {% endfor %}
+                </ol>
             </div>
             {% endfor %}
         </div>
+        {% endfor %}
     </section>
-    {% endfor %}
 </div>
+
+<aside class="hub-side">
+    <section class="hub-section">
+        <div class="page-section-head page-section-head--sm"><span>Championship medals</span></div>
+        <div class="hub-card ct-list ct-medals ct-medal-table">
+            <h3>Olympics and World Championships</h3>
+            <ol>
+                {% for m in medals %}
+                <li>
+                    <span class="ct-pos">{{ loop.index }}</span>
+                    <a class="ct-nation ct-who" href="/country/{{ m.alpha3 }}">{{ m.name }}</a>
+                    {{ medal_discs(m.gold, m.silver, m.bronze) }}
+                </li>
+                {% endfor %}
+            </ol>
+        </div>
+    </section>
+</aside>
+</div>
+
+<section class="hub-section" id="ct-all">
+    <div class="page-section-head"><span>All {{ n_nations }} countries</span></div>
+    {# Down each column, then across. e3 and e2 mark the last country in a
+       column of the three- and two-column layouts, which goes without a rule #}
+    {% for cont, rows in groups %}
+    {% set r3 = (rows | length / 3) | round(0, 'ceil') | int %}
+    {% set r2 = (rows | length / 2) | round(0, 'ceil') | int %}
+    <div class="hub-card ct-dir" data-dir>
+        <h3>{{ cont }}<span>Athletes</span></h3>
+        <ol style="--r3: {{ r3 }}; --r2: {{ r2 }}">
+            {% for c in rows %}
+            <li data-name="{{ c.country_full }}" class="{{ 'e3' if loop.index % r3 == 0 or loop.last }}{{ ' e2' if loop.index % r2 == 0 or loop.last }}"><a href="/country/{{ c.alpha3 }}">{{ c.country_full }}</a><span>{{ "{:,}".format(c.athletes) }}</span></li>
+            {% endfor %}
+        </ol>
+    </div>
+    {% endfor %}
+    <p class="hub-empty" id="ct-none" hidden>No country matches that name.</p>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ STATIC_BASE_URL }}js/hub.js?v={{ ASSET_VERSION }}"></script>
+<script>
+// Find a country: keep the names where every typed word starts one of theirs
+// (accents ignored), hide the rest; Enter opens the first match.
+(function() {
+    const input = document.getElementById('ct-input');
+    const top   = document.getElementById('ct-top');
+    const none  = document.getElementById('ct-none');
+    const dir   = document.getElementById('ct-all');
+    const fold  = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    const rows  = [...document.querySelectorAll('[data-dir] li')].map(li => ({ li, words: fold(li.dataset.name).split(/[\s,()-]+/) }));
+    input.addEventListener('input', () => {
+        const q = fold(input.value.trim());
+        const tokens = q.split(/\s+/);
+        rows.forEach(r => { r.li.hidden = !!q && !tokens.every(t => r.words.some(w => w.startsWith(t))); });
+        document.querySelectorAll('[data-dir]').forEach(card => { card.hidden = !card.querySelector('li:not([hidden])'); });
+        top.hidden = !!q;
+        dir.classList.toggle('ct-filtering', !!q);
+        none.hidden = !q || rows.some(r => !r.li.hidden);
+    });
+    document.getElementById('ct-search').addEventListener('submit', e => {
+        e.preventDefault();
+        const first = rows.find(r => !r.li.hidden);
+        if (first && input.value.trim()) location.href = first.li.querySelector('a').href;
+    });
+})();
+</script>
 {% endblock %}

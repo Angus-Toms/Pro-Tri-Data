@@ -11,7 +11,7 @@
 
 {# Rating change: the site's chevron arrows (format_rating_change), green up and red down only #}
 {% macro chg(c) -%}
-<span class="ah-chg {{ c.css_class }}">{{ c.formatted_str|safe if c.formatted_str else '-' }}</span>
+<span class="hub-chg {{ c.css_class }}">{{ c.formatted_str|safe if c.formatted_str else '-' }}</span>
 {%- endmacro %}
 
 {% block hero %}
@@ -71,9 +71,9 @@
         <span>World rankings</span>
         <a class="section-link" data-follows="rk" href="{{ rankings[0].href }}">Full rankings</a>
     </div>
-    <div class="hub-tabs" role="tablist">
+    <div class="race-view-toggle hub-tabs" role="tablist">
         {% for p in rankings %}
-        <button type="button" class="hub-tab{{ ' active' if loop.first }}" role="tab" aria-selected="{{ 'true' if loop.first else 'false' }}" data-group="rk" data-tab="rk-{{ p.key }}" data-link="{{ p.href }}">{{ p.label }}</button>
+        <button type="button" class="race-view-btn hub-tab{{ ' active' if loop.first }}" role="tab" aria-selected="{{ 'true' if loop.first else 'false' }}" data-group="rk" data-tab="rk-{{ p.key }}" data-link="{{ p.href }}">{{ p.label }}</button>
         {% endfor %}
     </div>
     {% for p in rankings %}
@@ -99,9 +99,9 @@
             <span>Breakthroughs</span>
             <a class="section-link" data-follows="bt" href="{{ breakthroughs[0].href }}">All risers</a>
         </div>
-        <div class="hub-tabs" role="tablist">
+        <div class="race-view-toggle hub-tabs" role="tablist">
             {% for b in breakthroughs %}
-            <button type="button" class="hub-tab{{ ' active' if loop.first }}" role="tab" aria-selected="{{ 'true' if loop.first else 'false' }}" data-group="bt" data-tab="bt-{{ b.key }}" data-link="{{ b.href }}">{{ b.label }}</button>
+            <button type="button" class="race-view-btn hub-tab{{ ' active' if loop.first }}" role="tab" aria-selected="{{ 'true' if loop.first else 'false' }}" data-group="bt" data-tab="bt-{{ b.key }}" data-link="{{ b.href }}">{{ b.label }}</button>
             {% endfor %}
         </div>
         {% for b in breakthroughs %}
@@ -163,7 +163,7 @@
                 <li class="ah-fav">{{ who(a) }}
                     <span class="ah-odds">
                         <span class="hub-pred"><span class="ah-odds-lbl">Win</span><span class="hub-bar"><i style="width: {{ '%.1f'|format(a.win_pct * 100) }}%"></i></span>{{ '%.0f'|format(a.win_pct * 100) }}%</span>
-                        <span class="hub-pred"><span class="ah-odds-lbl">Podium</span><span class="hub-bar ah-podium"><i style="width: {{ '%.1f'|format(a.podium_pct * 100) }}%"></i></span>{{ '%.0f'|format(a.podium_pct * 100) }}%</span>
+                        <span class="hub-pred"><span class="ah-odds-lbl">Podium</span><span class="hub-bar hub-bar--podium"><i style="width: {{ '%.1f'|format(a.podium_pct * 100) }}%"></i></span>{{ '%.0f'|format(a.podium_pct * 100) }}%</span>
                     </span>
                 </li>
                 {% endfor %}

@@ -26,22 +26,6 @@
 .ah-who small { display: block; margin-top: 0.1rem; font-size: 0.74rem; color: var(--text-light); }
 .hub-who { font-size: 0.88rem; }
 
-/* Rating change: the site's chevron arrows, green up and red down only */
-.ah-chg {
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0.15em;
-    font-weight: 600;
-    font-size: 0.85rem;
-    color: var(--text-lighter);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-}
-.ah-chg.rating-increase { color: var(--success-color); font-weight: 600; }
-.ah-chg.rating-decrease { color: var(--error-color); font-weight: 600; }
-.ah-chg .chg-arrow { width: 0.6em; height: 0.5em; }
-
 /* ── World rankings ── */
 .ah-rank li { grid-template-columns: 1.5rem minmax(0, 1fr) 3.75rem 3.75rem; padding-top: 0.45rem; padding-bottom: 0.45rem; }
 
@@ -68,12 +52,11 @@
 /* ── Rail ── */
 .ah-rail li { grid-template-columns: minmax(0, 1fr) auto; }
 /* This week's favourites: win and podium chance under the name, each a bar in
-   the prediction tables' colours (podium the lighter orange of .pct-col--podium) */
+   the prediction tables' colours (hub.css) */
 .ah-rail li.ah-fav { grid-template-columns: minmax(0, 1fr); gap: 0; }
 .ah-odds { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
 .ah-odds .hub-bar { flex: 1 1 auto; }
 .ah-odds-lbl { flex: none; width: 2.9rem; font-weight: 500; color: var(--text-lighter); }
-.ah-podium i { background: rgba(232, 93, 4, 0.45); }
 .ah-meta { margin: 0; padding: 0.6rem 1.25rem; border-bottom: 1px solid var(--border-color); font-size: 0.78rem; color: var(--text-light); }
 .ah-meta a { font-weight: 700; color: var(--text-color); text-decoration: none; }
 .ah-meta a:hover { color: var(--primary-color); }
@@ -94,14 +77,14 @@
     .ah-bt li:nth-child(n+6), .ah-gen li:nth-child(n+4) { display: none; }
     /* Specialists: three narrower cards, the change column goes */
     .ah-spec li { grid-template-columns: 1rem minmax(0, 1fr) 3.25rem; }
-    .ah-spec .ah-chg { display: none; }
+    .ah-spec .hub-chg { display: none; }
 }
 @media (max-width: 768px) {
     /* Pairs and the specialist cards stack, men first; rankings show their top five */
     .ah-pair, .ah-spec { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
     .ah-rank li:nth-child(n+6) { display: none; }
     .ah-spec li { grid-template-columns: 1rem minmax(0, 1fr) 3.75rem 3.5rem; }
-    .ah-spec .ah-chg { display: inline-flex; }
+    .ah-spec .hub-chg { display: inline-flex; }
     .ah-rank li, .ah-bt li, .ah-rail li, .ah-meta { padding-left: 1rem; padding-right: 1rem; }
     .ah-spec h4, .ah-spec li { padding-left: 1rem; padding-right: 1rem; }
 }
@@ -118,6 +101,6 @@
     .ah-spec h3 span, .ah-spec h4 { display: none; }
     .ah-spec ol { padding: 0; }
     .ah-spec li { grid-template-columns: minmax(0, 1fr); padding: 0.6rem 0.5rem; }
-    .ah-spec li .ah-pos, .ah-spec li .ah-num, .ah-spec li .ah-chg { display: none; }
+    .ah-spec li .ah-pos, .ah-spec li .ah-num, .ah-spec li .hub-chg { display: none; }
     .ah-spec li:nth-child(n+2) { display: none; }
 }

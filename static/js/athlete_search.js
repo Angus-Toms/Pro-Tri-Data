@@ -22,66 +22,27 @@ filterBtn.addEventListener('click', () => {
     filterBtn.setAttribute('aria-expanded', open);
 });
 
-let searchTimer;
-let data = null;      // last response, in the header search's shape
-let reqToken = 0;
-
-function runSearch() {
-    const q = input.value.trim().replace(/\s+/g, ' ');
-    const token = ++reqToken;
-    if (q.length < 2) {
-        data = null;
-        renderResults();
-        return;
-    }
-    const params = new URLSearchParams({ q });
-    if (programEl.value)  params.set('program', programEl.value);
-    if (countryEl.value)  params.set('country', countryEl.value);
-    if (yobStartEl.value) params.set('yob_start', yobStartEl.value);
-    if (yobEndEl.value)   params.set('yob_end', yobEndEl.value);
-    if (activeEl.checked) params.set('active_only', 'true');
-
-    results.classList.add('is-loading');
-    fetch(`/athletes/search?${params}`)
-        .then(r => r.json())
-        .then(d => {
-            if (token !== reqToken) return;
-            gsRows.highlight(q);
-            data = d;
-            renderResults();
-        })
-        .finally(() => { if (token === reqToken) results.classList.remove('is-loading'); });
-}
-
-// Results use the header search's athlete rows (header.js)
-function renderResults() {
-    if (!data) {
-        results.innerHTML = '';
-        return;
-    }
-    const q = escapeHtml(input.value.trim());
-    const total = data.athletes_total, n = data.athletes.length;
-    const foot = total > n ? `<div class="gs-message gs-foot">Top ${n} of ${total.toLocaleString()} athletes. Keep typing or filter to narrow it down.</div>` : '';
-    results.innerHTML = n
-        ? `<div class="hub-results-body"><div class="gs-section-head"><span>${total.toLocaleString()} athlete${total === 1 ? '' : 's'}</span></div>${data.athletes.map(gsRows.athleteRow).join('')}${foot}</div>`
-        : `<div class="gs-message">No athletes match "${q}".</div>`;
-}
+// Results use the header search's athlete rows (hub.js, header.js)
+const search = hubAthleteSearch(input, results, () => {
+    const p = {};
+    if (programEl.value)  p.program = programEl.value;
+    if (countryEl.value)  p.country = countryEl.value;
+    if (yobStartEl.value) p.yob_start = yobStartEl.value;
+    if (yobEndEl.value)   p.yob_end = yobEndEl.value;
+    if (activeEl.checked) p.active_only = 'true';
+    return p;
+});
 
 function onFilterChange() {
     updateFilterCount();
-    runSearch();
+    search.run();
 }
 
-input.addEventListener('input', () => {
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(runSearch, 200);
-});
 [programEl, countryEl, activeEl].forEach(el => el.addEventListener('change', onFilterChange));
-// Count now, search once typing pauses (the timer is shared with the search box)
+// Count now, search once typing pauses
 [yobStartEl, yobEndEl].forEach(el => el.addEventListener('input', () => {
     updateFilterCount();
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(runSearch, 400);
+    search.later(400);
 }));
 // U23 and Junior: born in that year or later
 document.querySelectorAll('[data-born]').forEach(b => b.addEventListener('click', () => {
@@ -97,7 +58,6 @@ resetBtn.addEventListener('click', () => {
     yobEndEl.value   = '';
     activeEl.checked = false;
     input.value      = '';
-    data             = null;
-    renderResults();
+    search.run();
     updateFilterCount();
 });

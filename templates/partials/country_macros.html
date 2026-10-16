@@ -1,0 +1,8 @@
+{# Shared by /countries and /country/{alpha3} (styles in country.css). A
+   medal count in gold, silver and bronze discs; a zero stays as a faint disc
+   so the columns line up. #}
+{% macro medal_discs(gold, silver, bronze) -%}
+{% for n, kind in [(gold, 'gold'), (silver, 'silver'), (bronze, 'bronze')] -%}
+<span class="ct-medal ct-medal--{{ kind }}{{ ' ct-medal--none' if not n }}" title="{{ n }} {{ kind }}">{{ n }}</span>
+{%- endfor %}
+{%- endmacro %}

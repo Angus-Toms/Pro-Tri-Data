@@ -118,6 +118,7 @@
     font-size: 0.82rem;
     font-weight: 600;
     color: var(--text-light);
+    text-decoration: none;
     cursor: pointer;
 }
 .hub-reset:hover { color: var(--primary-color); }
@@ -146,21 +147,9 @@
 .hub-section { margin-bottom: 2.5rem; }
 .hub-empty { margin: 0; padding: 1rem 1.25rem; font-size: 0.9rem; color: var(--text-light); }
 
-/* Text tabs; hub.js swaps their panes */
-.hub-tabs { display: flex; gap: 1.25rem; border-bottom: 1px solid var(--border-color); margin-bottom: 0.75rem; }
-.hub-tab {
-    background: none;
-    border: 0;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
-    padding: 0.3rem 0 0.45rem;
-    font: inherit;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--text-light);
-    cursor: pointer;
-}
-.hub-tab.active { color: var(--text-color); border-color: var(--primary-color); }
+/* Switches are the race table's (.race-view-toggle in base.css), sized to
+   their options; hub.js swaps the panes of those that carry data-group */
+.hub-tabs { display: inline-flex; margin-bottom: 0.6rem; }
 [data-pane][hidden] { display: none; }
 
 /* A card: white, navy group header, ruled rows */
@@ -221,6 +210,28 @@
 }
 .hub-bar { flex: 0 1 5rem; height: 6px; background: var(--border-color); border-radius: 3px; overflow: hidden; }
 .hub-bar i { display: block; height: 100%; background: var(--primary-color); border-radius: 3px; }
+/* Podium chance: the lighter orange of .pct-col--podium */
+.hub-bar--podium i { background: rgba(232, 93, 4, 0.45); }
+
+/* Rating change: the site's chevron arrows, green up and red down only */
+.hub-chg {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.15em;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-lighter);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.hub-chg.rating-increase { color: var(--success-color); font-weight: 600; }
+.hub-chg.rating-decrease { color: var(--error-color); font-weight: 600; }
+.hub-chg .chg-arrow { width: 0.6em; height: 0.5em; }
+
+/* A meta line's parts: the dot ends the part before it, so a wrapped line
+   never starts with one */
+.hub-dots > :not(:last-child)::after { content: "\00b7"; margin: 0 0.35rem; color: var(--text-lighter); }
 
 /* A pointer to another page, between rules */
 .hub-note {
@@ -252,10 +263,14 @@
 }
 @media (max-width: 480px) {
     .hub-title h1 { font-size: 1.5rem; }
+    /* Switches run the full width, options sharing it */
+    .hub-tabs { display: flex; }
+    .hub-tab { flex: 1 1 auto; padding-left: 0.5rem; padding-right: 0.5rem; }
     /* Filters: a label column and full-width controls */
     .hub-filters.open { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.6rem; padding: 0.75rem 1rem; }
     .hub-f { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); }
-    .hub-f select, .hub-years input[type="number"] { width: 100%; }
-    .hub-years { flex-wrap: wrap; }
+    .hub-f select { width: 100%; }
+    /* From, to and the presets on one line */
+    .hub-years input[type="number"] { flex: 1 1 0; width: auto; min-width: 0; }
     .hub-reset { margin: 0; justify-self: end; }
 }

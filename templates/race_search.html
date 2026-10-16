@@ -69,9 +69,9 @@
             <div>Calendar<p class="page-section-sub">Each week's strongest fields</p></div>
             <a class="section-link" data-follows="cal" href="{{ '/upcoming' if tab == 'up' else '/recent' }}">{{ 'Full calendar' if tab == 'up' else 'All results' }}</a>
         </div>
-        <div class="hub-tabs" role="tablist">
-            <button type="button" class="hub-tab{{ ' active' if tab == 'up' }}" role="tab" aria-selected="{{ 'true' if tab == 'up' else 'false' }}" data-group="cal" data-tab="up" data-link="/upcoming" data-label="Full calendar">Upcoming</button>
-            <button type="button" class="hub-tab{{ ' active' if tab == 'res' }}" role="tab" aria-selected="{{ 'true' if tab == 'res' else 'false' }}" data-group="cal" data-tab="res" data-link="/recent" data-label="All results">Results</button>
+        <div class="race-view-toggle hub-tabs" role="tablist">
+            <button type="button" class="race-view-btn hub-tab{{ ' active' if tab == 'up' }}" role="tab" aria-selected="{{ 'true' if tab == 'up' else 'false' }}" data-group="cal" data-tab="up" data-link="/upcoming" data-label="Full calendar">Upcoming</button>
+            <button type="button" class="race-view-btn hub-tab{{ ' active' if tab == 'res' }}" role="tab" aria-selected="{{ 'true' if tab == 'res' else 'false' }}" data-group="cal" data-tab="res" data-link="/recent" data-label="All results">Results</button>
         </div>
 
         <div class="rs-cal" data-pane="up"{% if tab != 'up' %} hidden{% endif %}>
