@@ -1,8 +1,10 @@
 import os
+import signal
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 import anyio
+import duckdb
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
@@ -139,6 +141,15 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
         },
         status_code = 404,
     )
+
+# A DuckDB internal error invalidates the database instance, so the shared read
+# connection fails every query from then on while the process looks healthy.
+# Shut down instead and let systemd (Restart=always) bring up a fresh one.
+@app.exception_handler(duckdb.InternalException)
+@app.exception_handler(duckdb.FatalException)
+async def duckdb_fatal_handler(request: Request, exc: duckdb.Error):
+    os.kill(os.getpid(), signal.SIGTERM)
+    return await unhandled_error_handler(request, exc)
 
 # Render unexpected errors with the same template
 @app.exception_handler(Exception)

@@ -975,7 +975,10 @@ def search_races(query, limit=20, country=None, year_start=None, year_end=None, 
         LEFT JOIN nationalities n ON n.country_full = e.country
         WHERE {match("e.name || ' ' || COALESCE(e.venue, '') || ' ' || COALESCE(e.country, '') || ' ' || YEAR(e.start_date)")}
           AND EXISTS (SELECT 1 FROM races r WHERE r.event_id = e.event_id)
-          AND e.event_id NOT IN (SELECT er.event_id FROM event_recurring er JOIN grp USING (recurring_event_id))
+          -- NOT EXISTS, not NOT IN: DuckDB 1.4.3 throws a fatal internal error
+          -- on the NOT IN form about once in 300 runs, which kills the read connection
+          AND NOT EXISTS (SELECT 1 FROM event_recurring er JOIN grp USING (recurring_event_id)
+                          WHERE er.event_id = e.event_id)
           AND {in_filter}
         ORDER BY e.start_date {direction}, e.event_id
         LIMIT ?
