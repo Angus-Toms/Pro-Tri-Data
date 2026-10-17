@@ -169,7 +169,9 @@ def predicted_race_context(race_id: int) -> dict:
     for i, r in enumerate(stored):
         r["position"] = i + 1
         r["name"], r["country_alpha3"] = entries[r["athlete_id"]]["name"], entries[r["athlete_id"]]["country_alpha3"]
-    best = {k: min(r[k] for r in stored if r[k]) for k in ("overall_s", "swim_s", "bike_s", "run_s")}
+    # No start list yet leaves stored empty; the empty podium tells the social
+    # runner to skip and retry next night.
+    best = {k: min((r[k] for r in stored if r[k]), default=None) for k in ("overall_s", "swim_s", "bike_s", "run_s")}
 
     def row(r):
         return {**person(r),
