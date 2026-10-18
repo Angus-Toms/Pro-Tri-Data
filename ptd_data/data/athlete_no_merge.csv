@@ -3,3 +3,4 @@ pto,louis-richard,83077,"Louis Richard (m, FRA, long course) is not Lucie Picard
 pto,kennett-peterson,29225,"Kennett Peterson (m, USA, long course) is not Kristen Peterson (f, USA, short course). Auto-linked on name sim 0.75 + shared country + yob."
 pto,kenneth-vandendriessche,179426,"Kenneth Vandendriessche (m, BEL, long course) is not Fanny Van Driessche (f, BEL). Auto-linked on name sim 0.71 + shared country + yob."
 pto,kelly-couch,8616,"Kelly Couch (m, USA, long course) is not Kelly Couch (f, USA, short course). Identical names, so no name-based rule can separate them - only the gender filter and this block."
+pto,daniela-bleymehl,128298,"Daniela Bleymehl (GER, pro long course) is not Daniela Rehrl (GER, AG; one 2018 Gold Coast AG sprint, 9 days before Bleymehl won Ironman Italy). Auto-linked on name sim 0.76 + shared country + yob 1988."
